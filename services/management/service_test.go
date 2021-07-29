@@ -48,9 +48,6 @@ func TestServiceService(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-		r := new(mockAgentsRegistry)
-		r.Test(t)
-
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
@@ -61,11 +58,10 @@ func TestServiceService(t *testing.T) {
 			uuid.SetRand(nil)
 
 			require.NoError(t, sqlDB.Close())
-			r.AssertExpectations(t)
 			vmdb.AssertExpectations(t)
 			state.AssertExpectations(t)
 		}
-		s = NewServiceService(db, r, state, vmdb)
+		s = NewServiceService(db, state, vmdb)
 
 		return
 	}

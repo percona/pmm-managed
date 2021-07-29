@@ -93,7 +93,7 @@ type pmmUpdateAuth struct {
 // Params holds the parameters needed to create a new service.
 type Params struct {
 	DB                   *reform.DB
-	AgentsState          agentsStateUpdater
+	AgentsStateUpdater   agentsStateUpdater
 	VMDB                 prometheusService
 	VMAlert              prometheusService
 	Alertmanager         alertmanagerService
@@ -120,7 +120,7 @@ func NewServer(params *Params) (*Server, error) {
 	s := &Server{
 		db:                   params.DB,
 		vmdb:                 params.VMDB,
-		agentsState:          params.AgentsState,
+		agentsState:          params.AgentsStateUpdater,
 		vmalert:              params.VMAlert,
 		alertmanager:         params.Alertmanager,
 		checksService:        params.ChecksService,

@@ -40,20 +40,20 @@ var (
 	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
 )
 
-// ConnectionCheck checks if connection can be established to service.
-type ConnectionCheck struct {
+// ConnectionChecker checks if connection can be established to service.
+type ConnectionChecker struct {
 	r *Registry
 }
 
-// NewConnectionCheck creates new connection check.
-func NewConnectionCheck(r *Registry) *ConnectionCheck {
-	return &ConnectionCheck{
+// NewConnectionChecker creates new connection check.
+func NewConnectionChecker(r *Registry) *ConnectionChecker {
+	return &ConnectionChecker{
 		r: r,
 	}
 }
 
 // CheckConnectionToService sends request to pmm-agent to check connection to service.
-func (c *ConnectionCheck) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
+func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -194,7 +194,7 @@ func (c *ConnectionCheck) CheckConnectionToService(ctx context.Context, q *refor
 	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
 }
 
-func (c *ConnectionCheck) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
+func (c *ConnectionChecker) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
 	pmmAgent, err := models.FindAgentByID(q, pmmAgentID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)

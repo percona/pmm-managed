@@ -130,8 +130,8 @@ type gRPCServerDeps struct {
 	agentsRegistry       *agents.Registry
 	handler              *agents.Handler
 	actions              *agents.ActionsService
-	agentsState          *agents.StateUpdater
-	connectionCheck      *agents.ConnectionCheck
+	agentsStateUpdater   *agents.StateUpdater
+	connectionCheck      *agents.ConnectionChecker
 	grafanaClient        *grafana.Client
 	checksService        *checks.Service
 	dbaasClient          *dbaas.Client
@@ -172,20 +172,20 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.handler))
 
-	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.agentsState, deps.vmdb)
-	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.agentsState, deps.vmdb)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.agentsState, deps.vmdb, deps.connectionCheck)
+	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb)
+	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb, deps.connectionCheck)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
-	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.agentsState, deps.vmdb)
-	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck)
-	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck)
-	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck)
-	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck)
+	nodeSvc := management.NewNodeService(deps.db)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsStateUpdater, deps.vmdb)
+	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -194,10 +194,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.actions, deps.db))
-	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck))
-	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry, deps.agentsState, deps.connectionCheck))
-	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.agentsRegistry, deps.vmdb, deps.agentsState, deps.connectionCheck))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.agentsRegistry, deps.vmdb, deps.agentsState, deps.connectionCheck))
+	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsStateUpdater, deps.connectionCheck))
+	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.connectionCheck))
+	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.vmdb, deps.agentsStateUpdater, deps.connectionCheck))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.vmdb, deps.agentsStateUpdater, deps.connectionCheck))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, management.NewChecksAPIService(deps.checksService))
 	jobs1beta1.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.jobsService))
@@ -602,10 +602,10 @@ func main() {
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, vmdb)
+	agentsRegistry := agents.NewRegistry(db)
 	prom.MustRegister(agentsRegistry)
 
-	connectionCheck := agents.NewConnectionCheck(agentsRegistry)
+	connectionCheck := agents.NewConnectionChecker(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
@@ -627,8 +627,8 @@ func main() {
 	prom.MustRegister(grafanaClient)
 
 	jobsService := agents.NewJobsService(db, agentsRegistry)
-	agentsStateUpdater := agents.NewStateUpdater(agentsRegistry)
-	agentsHandler := agents.NewHandler(qanClient, agentsRegistry, agentsStateUpdater)
+	agentsStateUpdater := agents.NewStateUpdater(db, agentsRegistry, vmdb)
+	agentsHandler := agents.NewHandler(db, qanClient, vmdb, agentsRegistry, agentsStateUpdater)
 
 	actionsService := agents.NewActionsService(agentsRegistry)
 
@@ -659,7 +659,7 @@ func main() {
 		DB:                   db,
 		VMDB:                 vmdb,
 		VMAlert:              vmalert,
-		AgentsState:          agentsStateUpdater,
+		AgentsStateUpdater:   agentsStateUpdater,
 		Alertmanager:         alertmanager,
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
@@ -830,7 +830,7 @@ func main() {
 			agentsRegistry:       agentsRegistry,
 			handler:              agentsHandler,
 			actions:              actionsService,
-			agentsState:          agentsStateUpdater,
+			agentsStateUpdater:   agentsStateUpdater,
 			connectionCheck:      connectionCheck,
 			grafanaClient:        grafanaClient,
 			checksService:        checksService,

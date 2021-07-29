@@ -30,19 +30,17 @@ import (
 
 // ProxySQLService ProxySQL Management Service.
 type ProxySQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewProxySQLService creates new ProxySQL Management Service.
-func NewProxySQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *ProxySQLService {
+func NewProxySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *ProxySQLService {
 	return &ProxySQLService{
-		db:       db,
-		registry: registry,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		state: state,
+		cc:    cc,
 	}
 }
 

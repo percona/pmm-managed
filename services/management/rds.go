@@ -50,19 +50,17 @@ const (
 
 // RDSService represents instance discovery service.
 type RDSService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewRDSService creates new instance discovery service.
-func NewRDSService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *RDSService {
+func NewRDSService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *RDSService {
 	return &RDSService{
-		db:       db,
-		registry: registry,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		state: state,
+		cc:    cc,
 	}
 }
 

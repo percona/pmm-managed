@@ -37,16 +37,20 @@ import (
 
 // Handler handles agent requests.
 type Handler struct {
+	db        *reform.DB
 	r         *Registry
+	vmdb      prometheusService
 	qanClient qanClient
 	state     *StateUpdater
 }
 
 // NewHandler creates new agents handler.
-func NewHandler(qanClient qanClient, registry *Registry, state *StateUpdater) *Handler {
+func NewHandler(db *reform.DB, qanClient qanClient, vmdb prometheusService, registry *Registry, state *StateUpdater) *Handler {
 	h := &Handler{
-		qanClient: qanClient,
+		db:        db,
 		r:         registry,
+		vmdb:      vmdb,
+		qanClient: qanClient,
 		state:     state,
 	}
 	return h
@@ -137,7 +141,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				err := models.ChangeActionResult(h.r.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
+				err := models.ChangeActionResult(h.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
 				if err != nil {
 					l.Warnf("Failed to change action: %+v", err)
 				}
@@ -164,7 +168,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 }
 
 func (h *Handler) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
-	return h.r.db.InTransaction(func(t *reform.TX) error {
+	return h.db.InTransaction(func(t *reform.TX) error {
 		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
 			PMMAgentID: agentID,
 		})
@@ -181,7 +185,7 @@ func (h *Handler) updateAgentStatusForChildren(ctx context.Context, agentID stri
 }
 
 func (h *Handler) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
-	e := h.r.db.InTransaction(func(tx *reform.TX) error {
+	e := h.db.InTransaction(func(tx *reform.TX) error {
 		agentIDs := h.r.roster.get(req.AgentId)
 		if agentIDs == nil {
 			agentIDs = []string{req.AgentId}
@@ -197,8 +201,8 @@ func (h *Handler) stateChanged(ctx context.Context, req *agentpb.StateChangedReq
 	if e != nil {
 		return e
 	}
-	h.r.vmdb.RequestConfigurationUpdate()
-	agent, err := models.FindAgentByID(h.r.db.Querier, req.AgentId)
+	h.vmdb.RequestConfigurationUpdate()
+	agent, err := models.FindAgentByID(h.db.Querier, req.AgentId)
 	if err != nil {
 		return err
 	}
@@ -212,7 +216,7 @@ func (h *Handler) stateChanged(ctx context.Context, req *agentpb.StateChangedReq
 // SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
 func (h *Handler) SetAllAgentsStatusUnknown(ctx context.Context) error {
 	agentType := models.PMMAgentType
-	agents, err := models.FindAgents(h.r.db.Querier, models.AgentFilters{AgentType: &agentType})
+	agents, err := models.FindAgents(h.db.Querier, models.AgentFilters{AgentType: &agentType})
 	if err != nil {
 		return errors.Wrap(err, "failed to get pmm-agents")
 

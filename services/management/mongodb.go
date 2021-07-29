@@ -31,19 +31,17 @@ import (
 // MongoDBService MongoDB Management Service.
 //nolint:unused
 type MongoDBService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewMongoDBService creates new MongoDB Management Service.
-func NewMongoDBService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *MongoDBService {
+func NewMongoDBService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *MongoDBService {
 	return &MongoDBService{
-		db:       db,
-		registry: registry,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		state: state,
+		cc:    cc,
 	}
 }
 

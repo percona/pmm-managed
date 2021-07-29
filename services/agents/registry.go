@@ -78,8 +78,7 @@ type pmmAgentInfo struct {
 
 // Registry keeps track of all connected pmm-agents.
 type Registry struct {
-	db   *reform.DB
-	vmdb prometheusService
+	db *reform.DB
 
 	rw     sync.RWMutex
 	agents map[string]*pmmAgentInfo // id -> info
@@ -94,11 +93,10 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, vmdb prometheusService) *Registry {
+func NewRegistry(db *reform.DB) *Registry {
 	agents := make(map[string]*pmmAgentInfo)
 	r := &Registry{
-		db:   db,
-		vmdb: vmdb,
+		db: db,
 
 		agents: agents,
 

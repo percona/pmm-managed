@@ -30,19 +30,17 @@ import (
 
 // PostgreSQLService PostgreSQL Management Service.
 type PostgreSQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewPostgreSQLService creates new PostgreSQL Management Service.
-func NewPostgreSQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *PostgreSQLService {
+func NewPostgreSQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *PostgreSQLService {
 	return &PostgreSQLService{
-		db:       db,
-		registry: registry,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		state: state,
+		cc:    cc,
 	}
 }
 

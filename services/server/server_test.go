@@ -73,7 +73,7 @@ func TestServer(t *testing.T) {
 			VMDB:                 mvmdb,
 			VMAlert:              mvmalert,
 			Alertmanager:         malertmanager,
-			AgentsState:          mState,
+			AgentsStateUpdater:   mState,
 			Supervisord:          r,
 			VMAlertExternalRules: par,
 			TelemetryService:     ts,

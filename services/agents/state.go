@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
@@ -41,13 +43,17 @@ const (
 
 // StateUpdater handles updating status of agents.
 type StateUpdater struct {
-	r *Registry
+	db   *reform.DB
+	r    *Registry
+	vmdb prometheusService
 }
 
 // NewStateUpdater creates new agent state updater.
-func NewStateUpdater(r *Registry) *StateUpdater {
+func NewStateUpdater(db *reform.DB, r *Registry, vmdb prometheusService) *StateUpdater {
 	return &StateUpdater{
-		r: r,
+		db:   db,
+		r:    r,
+		vmdb: vmdb,
 	}
 }
 
@@ -70,7 +76,7 @@ func (u *StateUpdater) RequestStateUpdate(ctx context.Context, pmmAgentID string
 
 // UpdateAgentsState sends SetStateRequest to all pmm-agents with push metrics agents.
 func (u *StateUpdater) UpdateAgentsState(ctx context.Context) error {
-	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(u.r.db.Querier)
+	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(u.db.Querier)
 	if err != nil {
 		return errors.Wrap(err, "cannot find pmmAgentsIDs for AgentsState update")
 	}
@@ -141,7 +147,7 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 			l.Warnf("sendSetStateRequest took %s.", dur)
 		}
 	}()
-	pmmAgent, err := models.FindAgentByID(u.r.db.Querier, agent.id)
+	pmmAgent, err := models.FindAgentByID(u.db.Querier, agent.id)
 	if err != nil {
 		return errors.Wrap(err, "failed to get PMM Agent")
 	}
@@ -150,7 +156,7 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 		return errors.Wrapf(err, "failed to parse PMM agent version %q", *pmmAgent.Version)
 	}
 
-	agents, err := models.FindAgents(u.r.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
+	agents, err := models.FindAgents(u.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
 	if err != nil {
 		return errors.Wrap(err, "failed to collect agents")
 	}
@@ -173,21 +179,21 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 		case models.PMMAgentType:
 			continue
 		case models.VMAgentType:
-			scrapeCfg, err := u.r.vmdb.BuildScrapeConfigForVMAgent(agent.id)
+			scrapeCfg, err := u.vmdb.BuildScrapeConfigForVMAgent(agent.id)
 			if err != nil {
 				return errors.Wrapf(err, "cannot get agent scrape config for agent: %s", agent.id)
 			}
 			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
-			node, err := models.FindNodeByID(u.r.db.Querier, pointer.GetString(row.NodeID))
+			node, err := models.FindNodeByID(u.db.Querier, pointer.GetString(row.NodeID))
 			if err != nil {
 				return err
 			}
 			agentProcesses[row.AgentID] = nodeExporterConfig(node, row)
 
 		case models.RDSExporterType:
-			node, err := models.FindNodeByID(u.r.db.Querier, pointer.GetString(row.NodeID))
+			node, err := models.FindNodeByID(u.db.Querier, pointer.GetString(row.NodeID))
 			if err != nil {
 				return err
 			}
@@ -196,7 +202,7 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 			// ignore
 
 		case models.AzureDatabaseExporterType:
-			service, err := models.FindServiceByID(u.r.db.Querier, pointer.GetString(row.ServiceID))
+			service, err := models.FindServiceByID(u.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
 				return err
 			}
@@ -211,7 +217,7 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
 			models.QANPostgreSQLPgStatMonitorAgentType:
 
-			service, err := models.FindServiceByID(u.r.db.Querier, pointer.GetString(row.ServiceID))
+			service, err := models.FindServiceByID(u.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
 				return err
 			}

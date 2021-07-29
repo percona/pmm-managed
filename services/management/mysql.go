@@ -35,19 +35,17 @@ const (
 
 // MySQLService MySQL Management Service.
 type MySQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *MySQLService {
+func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *MySQLService {
 	return &MySQLService{
-		db:       db,
-		registry: registry,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		state: state,
+		cc:    cc,
 	}
 }
 

@@ -32,21 +32,19 @@ import (
 // ExternalService External Management Service.
 //nolint:unused
 type ExternalService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	vmdb     prometheusService
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	vmdb  prometheusService
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *ExternalService {
+func NewExternalService(db *reform.DB, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *ExternalService {
 	return &ExternalService{
-		db:       db,
-		registry: registry,
-		vmdb:     vmdb,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		vmdb:  vmdb,
+		state: state,
+		cc:    cc,
 	}
 }
 

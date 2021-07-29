@@ -31,21 +31,19 @@ import (
 
 // HAProxyService HAProxy Management Service.
 type HAProxyService struct {
-	db       *reform.DB
-	registry agentsRegistry
-	vmdb     prometheusService
-	state    agentsStateUpdater
-	cc       connectionChecker
+	db    *reform.DB
+	vmdb  prometheusService
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewHAProxyService creates new HAProxy Management Service.
-func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *HAProxyService {
+func NewHAProxyService(db *reform.DB, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *HAProxyService {
 	return &HAProxyService{
-		db:       db,
-		registry: registry,
-		vmdb:     vmdb,
-		state:    state,
-		cc:       cc,
+		db:    db,
+		vmdb:  vmdb,
+		state: state,
+		cc:    cc,
 	}
 }
 
