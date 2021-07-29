@@ -646,12 +646,13 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
 	if err == reform.ErrNoRows {
-		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
-
 		switch status {
 		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
+			// Agent already was removed from the server.
 			return nil
 		}
+
+		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
@@ -685,6 +686,13 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	r.vmdb.RequestConfigurationUpdate()
 	agent, err := models.FindAgentByID(r.db.Querier, req.AgentId)
 	if err != nil {
+		if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+			switch req.Status {
+			case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
+				// Agent already was removed from the server.
+				return nil
+			}
+		}
 		return err
 	}
 	if agent.PMMAgentID == nil {
@@ -1013,10 +1021,18 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			TlsSkipVerify: agent.TLSSkipVerify,
 		}
 	case models.PostgreSQLServiceType:
+		dsn := agent.DSN(service, 2*time.Second, "postgres", nil)
+		tdp := agent.TemplateDelimiters(service)
+		l.Infof("\n\n\n DSN: %+v \n\n\n tdp: %+v \n\n\n", dsn, tdp)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
 			Timeout: durationpb.New(3 * time.Second),
+			TextFiles: &agentpb.TextFiles{
+				Files:              agent.Files(),
+				TemplateLeftDelim:  tdp.Left,
+				TemplateRightDelim: tdp.Right,
+			},
 		}
 	case models.MongoDBServiceType:
 		tdp := agent.TemplateDelimiters(service)
