@@ -451,15 +451,17 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 			errors.Errorf("%q is not supported operator", req.OperatorType)
 	}
 
-	// Default version of database could be unsupported be a new operator version.
-	supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, req.OperatorType, req.Version, component.DefaultVersion)
-	if err != nil {
-		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
-			status.Errorf(codes.Internal, "failed to check if default database version is supported: %v", err)
-	}
-	if !supported {
-		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
-			status.Errorf(codes.Internal, "default database version %s is unsupported by the operator version %s, please change default version.", component.DefaultVersion, req.Version)
+	if component != nil {
+		// Default version of database could be unsupported be a new operator version.
+		supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, req.OperatorType, req.Version, component.DefaultVersion)
+		if err != nil {
+			return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
+				status.Errorf(codes.Internal, "failed to check if default database version is supported: %v", err)
+		}
+		if !supported {
+			return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
+				status.Errorf(codes.Internal, "default database version %s is unsupported by the operator version %s, please change default version.", component.DefaultVersion, req.Version)
+		}
 	}
 
 	// Install operator.
