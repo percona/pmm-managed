@@ -87,6 +87,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			ServiceID:         service.ServiceID,
 			Username:          req.Username,
 			Password:          req.Password,
+			AgentPassword:     req.AgentPassword,
 			TLS:               req.Tls,
 			TLSSkipVerify:     req.TlsSkipVerify,
 			MongoDBOptions:    mongoDBOptions,
