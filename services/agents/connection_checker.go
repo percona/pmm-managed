@@ -45,7 +45,7 @@ type ConnectionChecker struct {
 	r *Registry
 }
 
-// NewConnectionChecker creates new connection check.
+// NewConnectionChecker creates new connection checker.
 func NewConnectionChecker(r *Registry) *ConnectionChecker {
 	return &ConnectionChecker{
 		r: r,
@@ -69,7 +69,7 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 
 	// Skip check connection to external exporter with old pmm-agent.
 	if service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType {
-		isCheckConnSupported, err := c.isExternalExporterConnectionCheckSupported(q, pmmAgentID)
+		isCheckConnSupported, err := isExternalExporterConnectionCheckSupported(q, pmmAgentID)
 		if err != nil {
 			return err
 		}
@@ -84,6 +84,51 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 		return err
 	}
 
+	request, err := connectionRequest(q, service, agent)
+	if err != nil {
+		return err
+	}
+
+	var sanitizedDSN string
+	for _, word := range redactWords(agent) {
+		sanitizedDSN = strings.ReplaceAll(request.Dsn, word, "****")
+	}
+	l.Infof("CheckConnectionRequest: type: %s, DSN: %s timeout: %s.", request.Type, sanitizedDSN, request.Timeout)
+	resp, err := pmmAgent.channel.SendAndWaitResponse(request)
+	if err != nil {
+		return err
+	}
+	l.Infof("CheckConnection response: %+v.", resp)
+
+	switch service.ServiceType {
+	case models.MySQLServiceType:
+		tableCount := resp.(*agentpb.CheckConnectionResponse).GetStats().GetTableCount()
+		agent.TableCount = &tableCount
+		l.Debugf("Updating table count: %d.", tableCount)
+		if err = q.Update(agent); err != nil {
+			return errors.Wrap(err, "failed to update table count")
+		}
+	case models.ExternalServiceType, models.HAProxyServiceType:
+	case models.PostgreSQLServiceType:
+	case models.MongoDBServiceType:
+	case models.ProxySQLServiceType:
+		// nothing yet
+
+	default:
+		return errors.Errorf("unhandled Service type %s", service.ServiceType)
+	}
+
+	msg := resp.(*agentpb.CheckConnectionResponse).Error
+	switch msg {
+	case "":
+		return nil
+	case context.Canceled.Error(), context.DeadlineExceeded.Error():
+		msg = fmt.Sprintf("timeout (%s)", msg)
+	}
+	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
+}
+
+func connectionRequest(q *reform.Querier, service *models.Service, agent *models.Agent) (*agentpb.CheckConnectionRequest, error) {
 	var request *agentpb.CheckConnectionRequest
 	switch service.ServiceType {
 	case models.MySQLServiceType:
@@ -132,7 +177,7 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 	case models.ExternalServiceType:
 		exporterURL, err := agent.ExporterURL(q)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		request = &agentpb.CheckConnectionRequest{
@@ -143,7 +188,7 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 	case models.HAProxyServiceType:
 		exporterURL, err := agent.ExporterURL(q)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		request = &agentpb.CheckConnectionRequest{
@@ -152,49 +197,12 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 			Timeout: durationpb.New(3 * time.Second),
 		}
 	default:
-		return errors.Errorf("unhandled Service type %s", service.ServiceType)
+		return nil, errors.Errorf("unhandled Service type %s", service.ServiceType)
 	}
-
-	var sanitizedDSN string
-	for _, word := range redactWords(agent) {
-		sanitizedDSN = strings.ReplaceAll(request.Dsn, word, "****")
-	}
-	l.Infof("CheckConnectionRequest: type: %s, DSN: %s timeout: %s.", request.Type, sanitizedDSN, request.Timeout)
-	resp, err := pmmAgent.channel.SendAndWaitResponse(request)
-	if err != nil {
-		return err
-	}
-	l.Infof("CheckConnection response: %+v.", resp)
-
-	switch service.ServiceType {
-	case models.MySQLServiceType:
-		tableCount := resp.(*agentpb.CheckConnectionResponse).GetStats().GetTableCount()
-		agent.TableCount = &tableCount
-		l.Debugf("Updating table count: %d.", tableCount)
-		if err = q.Update(agent); err != nil {
-			return errors.Wrap(err, "failed to update table count")
-		}
-	case models.ExternalServiceType, models.HAProxyServiceType:
-	case models.PostgreSQLServiceType:
-	case models.MongoDBServiceType:
-	case models.ProxySQLServiceType:
-		// nothing yet
-
-	default:
-		return errors.Errorf("unhandled Service type %s", service.ServiceType)
-	}
-
-	msg := resp.(*agentpb.CheckConnectionResponse).Error
-	switch msg {
-	case "":
-		return nil
-	case context.Canceled.Error(), context.DeadlineExceeded.Error():
-		msg = fmt.Sprintf("timeout (%s)", msg)
-	}
-	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
+	return request, nil
 }
 
-func (c *ConnectionChecker) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
+func isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
 	pmmAgent, err := models.FindAgentByID(q, pmmAgentID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)
