@@ -35,7 +35,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
 // Note: Even though the IA services check for alerting enabled or disabled before returning results

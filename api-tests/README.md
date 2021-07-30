@@ -6,12 +6,11 @@ API tests for PMM 2.x
 
 # Setup Instructions
 
-Make sure you have Go 1.15.x installed on your systems, execute the following steps
+Make sure you have Go 1.16.x installed on your systems, execute the following steps
 to setup API-tests in your local systems.
 
 1. Run PMM Server.
-2. Fetch the Repo: `go get -u -v github.com/Percona-Lab/pmm-api-tests`
-3. Navigate to the tests root folder: `cd ~/go/src/github.com/Percona-Lab/pmm-api-tests`
+2. Navigate to the tests root folder: `cd ~/go/src/github.com/percona/pmm-managed/api-tests`
 
 # Usage
 

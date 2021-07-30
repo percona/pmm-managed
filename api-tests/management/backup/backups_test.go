@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
-	"github.com/Percona-Lab/pmm-api-tests/management"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
+	"github.com/percona/pmm-managed/api-tests/management"
 )
 
 func TestScheduleBackup(t *testing.T) {

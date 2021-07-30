@@ -25,7 +25,7 @@ import (
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
 func TestPanics(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 	"github.com/percona/pmm/api/managementpb/json/client/actions"
 	"github.com/stretchr/testify/require"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
 func TestPTSummary(t *testing.T) {
