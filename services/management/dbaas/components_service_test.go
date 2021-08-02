@@ -724,7 +724,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		clusterName := "update-available-pmm-update"
 		_, cs, dbaasClient := setup(t, clusterName, response, "5863", defaultPXCVersion, defaultPSMDBVersion)
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-			Operators: &controllerv1b1.Operators{
+			Operators: &controllerv1beta1.Operators{
 				PsmdbOperatorVersion:  onePointNine,
 				XtradbOperatorVersion: onePointNine,
 			},

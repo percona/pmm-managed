@@ -20,7 +20,6 @@ package dbaas
 import (
 	"context"
 
-	goversion "github.com/hashicorp/go-version"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc"
 )
@@ -79,7 +78,9 @@ type versionService interface {
 	// version service does not have any matching versions.
 	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
 	// GetLatestOperatorVersion returns latest operators versions available based on given params.
-	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
+	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPXCOperatorVersion, latestPSMDBOperatorVersion string, err error)
+	// GetNextOperatorVersion returns operator versions that are direct successors of currently installed ones.
+	GetNextOperatorVersion(ctx context.Context, installedPXCVersion, installedPSMDBVersion, pmmVersion string) (nextPXCOperatorVersion string, nextPSMDBOperatorVersion string, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

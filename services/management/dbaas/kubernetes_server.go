@@ -45,7 +45,7 @@ type kubernetesServer struct {
 	db             *reform.DB
 	dbaasClient    dbaasClient
 	versionService versionService
-  grafanaClient  grafanaClient
+	grafanaClient  grafanaClient
 }
 
 // NewKubernetesServer creates Kubernetes Server.
@@ -56,7 +56,7 @@ func NewKubernetesServer(db *reform.DB, dbaasClient dbaasClient, grafanaClient g
 		db:             db,
 		dbaasClient:    dbaasClient,
 		grafanaClient:  grafanaClient,
-    versionService: versionService,
+		versionService: versionService,
 	}
 }
 
@@ -130,8 +130,6 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 			if err != nil {
 				k.l.Errorf("failed to convert dbaas-controller operator status to PMM status: %v", err)
 			}
-			clusters[i].Operators.Xtradb.Version = resp.Operators.XtradbOperatorVersion
-			clusters[i].Operators.Psmdb.Version = resp.Operators.PsmdbOperatorVersion
 		}()
 	}
 	wg.Wait()
@@ -166,29 +164,29 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, err
 	}
 
-	if pxcOperatorVersion != nil {
+	if pxcOperatorVersion != "" {
 		_, err = k.dbaasClient.InstallXtraDBOperator(ctx, &dbaascontrollerv1beta1.InstallXtraDBOperatorRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: req.KubeAuth.Kubeconfig,
 			},
-			Version: pxcOperatorVersion.String(),
+			Version: pxcOperatorVersion,
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
-	if psmdbOperatorVersion != nil {
+	if psmdbOperatorVersion != "" {
 		_, err = k.dbaasClient.InstallPSMDBOperator(ctx, &dbaascontrollerv1beta1.InstallPSMDBOperatorRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: req.KubeAuth.Kubeconfig,
 			},
-			Version: psmdbOperatorVersion.String(),
+			Version: psmdbOperatorVersion,
 		})
 		if err != nil {
 			return nil, err
-    }
-  }
-  
+		}
+	}
+
 	settings, err := models.GetSettings(k.db.Querier)
 	if err != nil {
 		return nil, err
