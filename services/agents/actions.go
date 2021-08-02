@@ -488,6 +488,33 @@ func (s *ActionsService) StartPTMySQLSummaryAction(ctx context.Context, id, pmmA
 	return err
 }
 
+// StartPBMSwitchPITRActions starts pbm-switch-pitr action on the pmm-agent.
+// The function returns nil if ok, otherwise an error code
+func (r *Registry) StartPBMSwitchPITRActions(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_PbmSwitchPitrParams{
+			PbmSwitchPitrParams: &agentpb.StartActionRequest_PBMSwitchPITRParams{
+				Dsn: dsn,
+				TextFiles: &agentpb.TextFiles{
+					Files:              files,
+					TemplateLeftDelim:  tdp.Left,
+					TemplateRightDelim: tdp.Right,
+				},
+				Enabled: enabled,
+			},
+		},
+		Timeout: defaultQueryActionTimeout,
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
+}
+
 // StopAction stops action with given given id.
 func (s *ActionsService) StopAction(ctx context.Context, actionID string) error {
 	// TODO Seems that we have a bug here, we passing actionID to the method that expects pmmAgentID
