@@ -257,21 +257,6 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 	return row, nil
 }
 
-func deleteAssociatedSoftwareVersions(q *reform.Querier, serviceID string) error {
-	v, err := FindServiceSoftwareVersions(q, serviceID)
-	switch {
-	case err == nil:
-		if deleteErr := DeleteServiceSoftwareVersions(q, v.ServiceID); deleteErr != nil {
-			return deleteErr
-		}
-	case errors.Is(err, ErrNotFound):
-	default:
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
 // RemoveService removes single Service.
 func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	s, err := FindServiceByID(q, id)
@@ -341,10 +326,6 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		}
 	default:
 		panic(fmt.Errorf("unhandled RemoveMode %v", mode))
-	}
-
-	if err := deleteAssociatedSoftwareVersions(q, id); err != nil {
-		return err
 	}
 
 	return errors.Wrap(q.Delete(s), "failed to delete Service")

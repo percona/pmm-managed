@@ -563,7 +563,7 @@ var databaseSchema = [][]string{
 			updated_at TIMESTAMP NOT NULL,
 
 			PRIMARY KEY (service_id),
-			FOREIGN KEY (service_id) REFERENCES services (service_id)
+			FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE
 		);`,
 	},
 }
