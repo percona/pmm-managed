@@ -28,7 +28,7 @@ import (
 type CreateServiceSoftwareVersionsParams struct {
 	ServiceID        string
 	SoftwareVersions []SoftwareVersion
-	CheckAt          time.Time
+	NextCheckAt      time.Time
 }
 
 // Validate validates params used for creating a service software versions entry.
@@ -60,7 +60,7 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 	row := &ServiceSoftwareVersions{
 		ServiceID:        params.ServiceID,
 		SoftwareVersions: params.SoftwareVersions,
-		CheckAt:          params.CheckAt,
+		NextCheckAt:      params.NextCheckAt,
 	}
 
 	if err := q.Insert(row); err != nil {
@@ -72,7 +72,7 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 
 // UpdateServiceSoftwareVersionsParams represents params for updating service software versions entity.
 type UpdateServiceSoftwareVersionsParams struct {
-	CheckAt          *time.Time
+	NextCheckAt      *time.Time
 	SoftwareVersions *[]SoftwareVersion
 }
 
@@ -110,8 +110,8 @@ func UpdateServiceSoftwareVersions(
 	if err != nil {
 		return nil, err
 	}
-	if params.CheckAt != nil {
-		row.CheckAt = *params.CheckAt
+	if params.NextCheckAt != nil {
+		row.NextCheckAt = *params.NextCheckAt
 	}
 	if params.SoftwareVersions != nil {
 		row.SoftwareVersions = *params.SoftwareVersions

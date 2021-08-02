@@ -68,7 +68,7 @@ func (sv *SoftwareVersions) Scan(src interface{}) error {
 type ServiceSoftwareVersions struct {
 	ServiceID        string           `reform:"service_id,pk"`
 	SoftwareVersions SoftwareVersions `reform:"software_versions"`
-	CheckAt          time.Time        `reform:"check_at"`
+	NextCheckAt      time.Time        `reform:"next_check_at"`
 	CreatedAt        time.Time        `reform:"created_at"`
 	UpdatedAt        time.Time        `reform:"updated_at"`
 }
@@ -81,7 +81,7 @@ func (s *ServiceSoftwareVersions) BeforeInsert() error {
 
 // AfterFind implements reform.AfterFinder interface.
 func (s *ServiceSoftwareVersions) AfterFind() error {
-	s.CheckAt = s.CheckAt.UTC()
+	s.NextCheckAt = s.NextCheckAt.UTC()
 	s.CreatedAt = s.CreatedAt.UTC()
 	s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil

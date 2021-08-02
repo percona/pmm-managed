@@ -557,7 +557,7 @@ var databaseSchema = [][]string{
 		`CREATE TABLE service_software_versions (
 			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
 			software_versions software_version ARRAY,
-			check_at TIMESTAMP,
+			next_check_at TIMESTAMP,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

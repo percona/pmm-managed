@@ -142,7 +142,8 @@ type gRPCServerDeps struct {
 	versionServiceClient *managementdbaas.VersionServiceClient
 	schedulerService     *scheduler.Service
 	backupService        *backup.Service
-	minio                *minio.Service
+	backupRemovalService *backup.RemovalService
+	minioService         *minio.Service
 	versionCache         *versioncache.Service
 }
 
@@ -207,8 +208,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	backupv1beta1.RegisterBackupsServer(gRPCServer, managementbackup.NewBackupsService(deps.db, deps.backupService, deps.schedulerService))
-	backupv1beta1.RegisterLocationsServer(gRPCServer, managementbackup.NewLocationsService(deps.db, deps.minio))
-	backupv1beta1.RegisterArtifactsServer(gRPCServer, managementbackup.NewArtifactsService(deps.db, deps.minio))
+	backupv1beta1.RegisterLocationsServer(gRPCServer, managementbackup.NewLocationsService(deps.db, deps.minioService))
+	backupv1beta1.RegisterArtifactsServer(gRPCServer, managementbackup.NewArtifactsService(deps.db, deps.backupRemovalService))
 	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, managementbackup.NewRestoreHistoryService(deps.db))
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasClient, deps.grafanaClient))
@@ -598,9 +599,12 @@ func main() {
 	}
 	prom.MustRegister(vmalert)
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	minioService := minio.New()
 
-	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb)
+	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	backupRemovalService := backup.NewRemovalService(db, minioService)
+	backupRetentionService := backup.NewRetentionService(db, backupRemovalService)
+	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb, backupRetentionService)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -841,7 +845,8 @@ func main() {
 			versionServiceClient: versionService,
 			schedulerService:     schedulerService,
 			backupService:        backupService,
-			minio:                minio.New(),
+			backupRemovalService: backupRemovalService,
+			minioService:         minioService,
 		})
 	}()
 

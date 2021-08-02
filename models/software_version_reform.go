@@ -30,7 +30,7 @@ func (v *serviceSoftwareVersionsTableType) Columns() []string {
 	return []string{
 		"service_id",
 		"software_versions",
-		"check_at",
+		"next_check_at",
 		"created_at",
 		"updated_at",
 	}
@@ -59,7 +59,7 @@ var ServiceSoftwareVersionsTable = &serviceSoftwareVersionsTableType{
 		Fields: []parse.FieldInfo{
 			{Name: "ServiceID", Type: "string", Column: "service_id"},
 			{Name: "SoftwareVersions", Type: "SoftwareVersions", Column: "software_versions"},
-			{Name: "CheckAt", Type: "time.Time", Column: "check_at"},
+			{Name: "NextCheckAt", Type: "time.Time", Column: "next_check_at"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
@@ -73,7 +73,7 @@ func (s ServiceSoftwareVersions) String() string {
 	res := make([]string, 5)
 	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
 	res[1] = "SoftwareVersions: " + reform.Inspect(s.SoftwareVersions, true)
-	res[2] = "CheckAt: " + reform.Inspect(s.CheckAt, true)
+	res[2] = "NextCheckAt: " + reform.Inspect(s.NextCheckAt, true)
 	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
@@ -85,7 +85,7 @@ func (s *ServiceSoftwareVersions) Values() []interface{} {
 	return []interface{}{
 		s.ServiceID,
 		s.SoftwareVersions,
-		s.CheckAt,
+		s.NextCheckAt,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -97,7 +97,7 @@ func (s *ServiceSoftwareVersions) Pointers() []interface{} {
 	return []interface{}{
 		&s.ServiceID,
 		&s.SoftwareVersions,
-		&s.CheckAt,
+		&s.NextCheckAt,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}

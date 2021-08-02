@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	serviceCheckInterval = time.Hour
-	relaxDuration        = 5 * time.Second
+	serviceCheckInterval = 24 * time.Hour
+	minCheckInterval     = 5 * time.Second
 )
 
 //go:generate mockery -name=Versioner -case=snake -inpkg -testonly
@@ -96,7 +96,7 @@ func (s *Service) syncServices() error {
 				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
 					ServiceID:        s.ServiceID,
 					SoftwareVersions: []models.SoftwareVersion{},
-					CheckAt:          time.Now().UTC(),
+					NextCheckAt:      time.Now().UTC(),
 				}); err != nil {
 					return err
 				}
@@ -116,8 +116,10 @@ type prepareResults struct {
 	AgentID     string
 }
 
+// prepareUpdateVersions checks if there is any service that needs software versions update in the cache and
+// shifts the next check time for this service.
 func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
-	results := &prepareResults{CheckAfter: relaxDuration}
+	results := &prepareResults{CheckAfter: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		limit := 1
@@ -130,10 +132,10 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 
 			return nil
 		}
-		if servicesVersions[0].CheckAt.After(time.Now().UTC()) {
-			results.CheckAfter = servicesVersions[0].CheckAt.Sub(time.Now().UTC())
-			if results.CheckAfter < relaxDuration {
-				results.CheckAfter = relaxDuration
+		if servicesVersions[0].NextCheckAt.After(time.Now().UTC()) {
+			results.CheckAfter = servicesVersions[0].NextCheckAt.Sub(time.Now().UTC())
+			if results.CheckAfter < minCheckInterval {
+				results.CheckAfter = minCheckInterval
 			}
 
 			return nil
@@ -159,9 +161,11 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 		}
 		results.AgentID = pmmAgents[0].AgentID
 
-		checkAt := time.Now().UTC().Add(serviceCheckInterval) // TODO
+		// shift the next check time for this service, so, in case of versions fetch error,
+		// it will not loop in trying, but will continue with other services.
+		nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
 		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ServiceID,
-			models.UpdateServiceSoftwareVersionsParams{CheckAt: &checkAt},
+			models.UpdateServiceSoftwareVersionsParams{NextCheckAt: &nextCheckAt},
 		); err != nil {
 			return err
 		}
@@ -177,7 +181,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 func (s *Service) updateVersions() (time.Duration, error) {
 	r, err := s.prepareUpdateVersions()
 	if err != nil {
-		return relaxDuration, err
+		return minCheckInterval, err
 	}
 
 	if !r.NeedsUpdate {
@@ -187,10 +191,10 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
 	versions, err := s.v.GetVersions(r.AgentID, softwares)
 	if err != nil {
-		return relaxDuration, err
+		return minCheckInterval, err
 	}
 	if len(versions) != len(softwares) {
-		return relaxDuration, errors.Errorf("slices length mismatch: versions len %d != softwares len %d",
+		return minCheckInterval, errors.Errorf("slices length mismatch: versions len %d != softwares len %d",
 			len(versions), len(softwares))
 	}
 
@@ -207,7 +211,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		case *agents.Qpress:
 			softwareName = models.QpressSoftwareName
 		default:
-			return relaxDuration, errors.Errorf("invalid software type %T", software)
+			return minCheckInterval, errors.Errorf("invalid software type %T", software)
 		}
 
 		if versions[i].Error != "" {
@@ -227,10 +231,10 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
 		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: &svs},
 	); err != nil {
-		return relaxDuration, err
+		return minCheckInterval, err
 	}
 
-	return relaxDuration, err
+	return minCheckInterval, err
 }
 
 // SyncAndUpdate triggers sync and update service software versions.
@@ -249,9 +253,6 @@ func (s *Service) Run(ctx context.Context) {
 		s.l.Warn(err)
 	}
 
-	syncTicker := time.NewTicker(serviceCheckInterval)
-	defer syncTicker.Stop()
-
 	var checkAfter time.Duration
 	for {
 		select {
@@ -262,10 +263,6 @@ func (s *Service) Run(ctx context.Context) {
 			}
 
 			checkAfter = ca
-		case <-syncTicker.C:
-			if err := s.syncServices(); err != nil {
-				s.l.Warn(err)
-			}
 		case <-s.updateCh:
 			if err := s.syncServices(); err != nil {
 				s.l.Warn(err)
