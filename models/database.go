@@ -551,20 +551,18 @@ var databaseSchema = [][]string{
 	},
 	43: {
 		`CREATE TYPE software_version AS (
-  			name VARCHAR NOT NULL CHECK (name <> ''),
-  			version VARCHAR NOT NULL CHECK (version <> '')
+  			name VARCHAR,
+  			version VARCHAR
 		);`,
 		`CREATE TABLE service_software_versions (
-			id VARCHAR NOT NULL,
 			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
-			software_versions ARRAY software_version,
+			software_versions software_version ARRAY,
 			check_at TIMESTAMP,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
 
-			PRIMARY KEY (id),
-			UNIQUE (service_id),
+			PRIMARY KEY (service_id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id)
 		);`,
 	},

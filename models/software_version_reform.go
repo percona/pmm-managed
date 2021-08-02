@@ -28,7 +28,6 @@ func (v *serviceSoftwareVersionsTableType) Name() string {
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *serviceSoftwareVersionsTableType) Columns() []string {
 	return []string{
-		"id",
 		"service_id",
 		"software_versions",
 		"check_at",
@@ -58,9 +57,8 @@ var ServiceSoftwareVersionsTable = &serviceSoftwareVersionsTableType{
 		Type:    "ServiceSoftwareVersions",
 		SQLName: "service_software_versions",
 		Fields: []parse.FieldInfo{
-			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "ServiceID", Type: "string", Column: "service_id"},
-			{Name: "SoftwareVersions", Type: "[]SoftwareVersion", Column: "software_versions"},
+			{Name: "SoftwareVersions", Type: "SoftwareVersions", Column: "software_versions"},
 			{Name: "CheckAt", Type: "time.Time", Column: "check_at"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
@@ -72,13 +70,12 @@ var ServiceSoftwareVersionsTable = &serviceSoftwareVersionsTableType{
 
 // String returns a string representation of this struct or record.
 func (s ServiceSoftwareVersions) String() string {
-	res := make([]string, 6)
-	res[0] = "ID: " + reform.Inspect(s.ID, true)
-	res[1] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
-	res[2] = "SoftwareVersions: " + reform.Inspect(s.SoftwareVersions, true)
-	res[3] = "CheckAt: " + reform.Inspect(s.CheckAt, true)
-	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[5] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res := make([]string, 5)
+	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
+	res[1] = "SoftwareVersions: " + reform.Inspect(s.SoftwareVersions, true)
+	res[2] = "CheckAt: " + reform.Inspect(s.CheckAt, true)
+	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -86,7 +83,6 @@ func (s ServiceSoftwareVersions) String() string {
 // Returned interface{} values are never untyped nils.
 func (s *ServiceSoftwareVersions) Values() []interface{} {
 	return []interface{}{
-		s.ID,
 		s.ServiceID,
 		s.SoftwareVersions,
 		s.CheckAt,
@@ -99,7 +95,6 @@ func (s *ServiceSoftwareVersions) Values() []interface{} {
 // Returned interface{} values are never untyped nils.
 func (s *ServiceSoftwareVersions) Pointers() []interface{} {
 	return []interface{}{
-		&s.ID,
 		&s.ServiceID,
 		&s.SoftwareVersions,
 		&s.CheckAt,
@@ -121,23 +116,23 @@ func (s *ServiceSoftwareVersions) Table() reform.Table {
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
 func (s *ServiceSoftwareVersions) PKValue() interface{} {
-	return s.ID
+	return s.ServiceID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
 func (s *ServiceSoftwareVersions) PKPointer() interface{} {
-	return &s.ID
+	return &s.ServiceID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
 func (s *ServiceSoftwareVersions) HasPK() bool {
-	return s.ID != ServiceSoftwareVersionsTable.z[ServiceSoftwareVersionsTable.s.PKFieldIndex]
+	return s.ServiceID != ServiceSoftwareVersionsTable.z[ServiceSoftwareVersionsTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key, if possible.
 //
-// Deprecated: prefer direct field assignment where possible: s.ID = pk.
+// Deprecated: prefer direct field assignment where possible: s.ServiceID = pk.
 func (s *ServiceSoftwareVersions) SetPK(pk interface{}) {
 	reform.SetPK(s, pk)
 }

@@ -80,7 +80,7 @@ func (s *Service) syncServices() error {
 		// remove services software versions from the cache which are no longer exist
 		for _, sv := range serviceVersions {
 			if _, ok := serviceIDs[sv.ServiceID]; !ok {
-				if err := models.DeleteServiceSoftwareVersions(tx.Querier, sv.ID); err != nil {
+				if err := models.DeleteServiceSoftwareVersions(tx.Querier, sv.ServiceID); err != nil {
 					return err
 				}
 			}
@@ -94,9 +94,9 @@ func (s *Service) syncServices() error {
 		for _, s := range services {
 			if _, ok := cacheServiceIDs[s.ServiceID]; !ok {
 				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
-					ServiceID: s.ServiceID,
-					Versions:  []models.SoftwareVersion{},
-					CheckAt:   time.Now().UTC(),
+					ServiceID:        s.ServiceID,
+					SoftwareVersions: []models.SoftwareVersion{},
+					CheckAt:          time.Now().UTC(),
 				}); err != nil {
 					return err
 				}
@@ -110,7 +110,7 @@ func (s *Service) syncServices() error {
 }
 
 type prepareResults struct {
-	ID          string
+	ServiceID   string
 	CheckAfter  time.Duration
 	NeedsUpdate bool
 	AgentID     string
@@ -140,7 +140,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 		}
 
 		results.NeedsUpdate = true
-		results.ID = servicesVersions[0].ID
+		results.ServiceID = servicesVersions[0].ServiceID
 
 		service, err := models.FindServiceByID(tx.Querier, servicesVersions[0].ServiceID)
 		if err != nil {
@@ -160,7 +160,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 		results.AgentID = pmmAgents[0].AgentID
 
 		checkAt := time.Now().UTC().Add(serviceCheckInterval) // TODO
-		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ID,
+		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ServiceID,
 			models.UpdateServiceSoftwareVersionsParams{CheckAt: &checkAt},
 		); err != nil {
 			return err
@@ -224,8 +224,8 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		})
 	}
 
-	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ID,
-		models.UpdateServiceSoftwareVersionsParams{Versions: &svs},
+	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
+		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: &svs},
 	); err != nil {
 		return relaxDuration, err
 	}

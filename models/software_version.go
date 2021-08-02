@@ -19,6 +19,9 @@ package models
 import (
 	"time"
 
+	"database/sql/driver"
+
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -41,15 +44,33 @@ type SoftwareVersion struct {
 	Version string       `reform:"version"`
 }
 
+type SoftwareVersions []SoftwareVersion
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (sv SoftwareVersions) Value() (driver.Value, error) {
+	return sv, nil
+}
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (sv *SoftwareVersions) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case SoftwareVersions:
+		*sv = s
+	default:
+		return errors.Errorf("error")
+	}
+
+	return nil
+}
+
 // ServiceSoftwareVersions represents service software versions.
 //reform:service_software_versions
 type ServiceSoftwareVersions struct {
-	ID               string            `reform:"id,pk"`
-	ServiceID        string            `reform:"service_id"`
-	SoftwareVersions []SoftwareVersion `reform:"software_versions"`
-	CheckAt          time.Time         `reform:"check_at"`
-	CreatedAt        time.Time         `reform:"created_at"`
-	UpdatedAt        time.Time         `reform:"updated_at"`
+	ServiceID        string           `reform:"service_id,pk"`
+	SoftwareVersions SoftwareVersions `reform:"software_versions"`
+	CheckAt          time.Time        `reform:"check_at"`
+	CreatedAt        time.Time        `reform:"created_at"`
+	UpdatedAt        time.Time        `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

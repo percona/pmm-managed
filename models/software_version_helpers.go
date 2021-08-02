@@ -20,22 +20,32 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
 // CreateServiceSoftwareVersionsParams are params for creating a new service software versions entry.
 type CreateServiceSoftwareVersionsParams struct {
-	ServiceID string
-	Versions  []SoftwareVersion
-	CheckAt   time.Time
+	ServiceID        string
+	SoftwareVersions []SoftwareVersion
+	CheckAt          time.Time
 }
 
-// Validate validates params used for creating an service software versions entry.
+// Validate validates params used for creating a service software versions entry.
 func (p *CreateServiceSoftwareVersionsParams) Validate() error {
 	if p.ServiceID == "" {
 		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+	}
+
+	for _, sv := range p.SoftwareVersions {
+		switch sv.Name {
+		case MysqldSoftwareName:
+		case XtrabackupSoftwareName:
+		case XbcloudSoftwareName:
+		case QpressSoftwareName:
+		default:
+			return errors.Wrapf(ErrInvalidArgument, "invalid software name %q", sv.Name)
+		}
 	}
 
 	return nil
@@ -47,20 +57,9 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 		return nil, err
 	}
 
-	id := "/service_software_versions_id/" + uuid.New().String()
-	_, err := FindServiceSoftwareVersions(q, id)
-	switch {
-	case err == nil:
-		return nil, errors.Errorf("service software versions with id '%s' already exists", id)
-	case errors.Is(err, ErrNotFound):
-	default:
-		return nil, errors.WithStack(err)
-	}
-
 	row := &ServiceSoftwareVersions{
-		ID:               id,
 		ServiceID:        params.ServiceID,
-		SoftwareVersions: params.Versions,
+		SoftwareVersions: params.SoftwareVersions,
 		CheckAt:          params.CheckAt,
 	}
 
@@ -73,25 +72,49 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 
 // UpdateServiceSoftwareVersionsParams represents params for updating service software versions entity.
 type UpdateServiceSoftwareVersionsParams struct {
-	CheckAt  *time.Time
-	Versions *[]SoftwareVersion
+	CheckAt          *time.Time
+	SoftwareVersions *[]SoftwareVersion
+}
+
+// Validate validates params used for updating a service software versions entry.
+func (u *UpdateServiceSoftwareVersionsParams) Validate() error {
+	if u.SoftwareVersions == nil {
+		return nil
+	}
+
+	for _, sv := range *u.SoftwareVersions {
+		switch sv.Name {
+		case MysqldSoftwareName:
+		case XtrabackupSoftwareName:
+		case XbcloudSoftwareName:
+		case QpressSoftwareName:
+		default:
+			return errors.Wrapf(ErrInvalidArgument, "invalid software name %q", sv.Name)
+		}
+	}
+
+	return nil
 }
 
 // UpdateServiceSoftwareVersions updates existing service software versions.
 func UpdateServiceSoftwareVersions(
 	q *reform.Querier,
-	id string,
+	serviceID string,
 	params UpdateServiceSoftwareVersionsParams,
 ) (*ServiceSoftwareVersions, error) {
-	row, err := FindServiceSoftwareVersions(q, id)
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
+
+	row, err := FindServiceSoftwareVersions(q, serviceID)
 	if err != nil {
 		return nil, err
 	}
 	if params.CheckAt != nil {
 		row.CheckAt = *params.CheckAt
 	}
-	if params.Versions != nil {
-		row.SoftwareVersions = *params.Versions
+	if params.SoftwareVersions != nil {
+		row.SoftwareVersions = *params.SoftwareVersions
 	}
 
 	if err := q.Update(row); err != nil {
@@ -101,34 +124,16 @@ func UpdateServiceSoftwareVersions(
 	return row, nil
 }
 
-// FindServiceSoftwareVersions returns service software versions entry by given ID if found, ErrNotFound if not.
-func FindServiceSoftwareVersions(q *reform.Querier, id string) (*ServiceSoftwareVersions, error) {
-	if id == "" {
-		return nil, errors.New("service software versions id is empty")
-	}
-
-	versions := &ServiceSoftwareVersions{ID: id}
-	switch err := q.Reload(versions); err {
-	case nil:
-		return versions, nil
-	case reform.ErrNoRows:
-		return nil, errors.Wrapf(ErrNotFound, "service software versions by id '%s'", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
-}
-
-// FindServiceSoftwareVersionsByServiceID returns service software versions entry
-// by given service ID if found, ErrNotFound if not.
-func FindServiceSoftwareVersionsByServiceID(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
+// FindServiceSoftwareVersions returns service software versions entry by given service ID if found, ErrNotFound if not.
+func FindServiceSoftwareVersions(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
 	if serviceID == "" {
 		return nil, errors.New("service id is empty")
 	}
 
-	s, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
-	switch err {
+	versions := &ServiceSoftwareVersions{ServiceID: serviceID}
+	switch err := q.Reload(versions); err {
 	case nil:
-		return s.(*ServiceSoftwareVersions), nil
+		return versions, nil
 	case reform.ErrNoRows:
 		return nil, errors.Wrapf(ErrNotFound, "service software versions by service id '%s'", serviceID)
 	default:
@@ -136,7 +141,7 @@ func FindServiceSoftwareVersionsByServiceID(q *reform.Querier, serviceID string)
 	}
 }
 
-// FindServicesSoftwareVersions returns services software versions.
+// FindServicesSoftwareVersions returns all services software versions.
 func FindServicesSoftwareVersions(q *reform.Querier, limit *int) ([]*ServiceSoftwareVersions, error) {
 	var args []interface{}
 	var limitStatement string
@@ -145,10 +150,9 @@ func FindServicesSoftwareVersions(q *reform.Querier, limit *int) ([]*ServiceSoft
 		args = append(args, *limit)
 	}
 
-	const orderByField = "check_at"
 	structs, err := q.SelectAllFrom(
 		ServiceSoftwareVersionsTable,
-		fmt.Sprintf("ORDER BY %s %s", orderByField, limitStatement),
+		fmt.Sprintf("ORDER BY check_at %s", limitStatement),
 		args...,
 	)
 	if err != nil {
@@ -163,14 +167,14 @@ func FindServicesSoftwareVersions(q *reform.Querier, limit *int) ([]*ServiceSoft
 	return versions, nil
 }
 
-// DeleteServiceSoftwareVersions removes entry from the DB by ID.
-func DeleteServiceSoftwareVersions(q *reform.Querier, id string) error {
-	if _, err := FindServiceSoftwareVersions(q, id); err != nil {
+// DeleteServiceSoftwareVersions removes entry from the DB by service ID.
+func DeleteServiceSoftwareVersions(q *reform.Querier, serviceID string) error {
+	if _, err := FindServiceSoftwareVersions(q, serviceID); err != nil {
 		return err
 	}
 
-	if err := q.Delete(&ServiceSoftwareVersions{ID: id}); err != nil {
-		return errors.Wrapf(err, "failed to delete services software versions by id '%s'", id)
+	if err := q.Delete(&ServiceSoftwareVersions{ServiceID: serviceID}); err != nil {
+		return errors.Wrapf(err, "failed to delete services software versions by service id '%s'", serviceID)
 	}
 	return nil
 }

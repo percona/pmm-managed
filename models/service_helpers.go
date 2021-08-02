@@ -258,10 +258,10 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 }
 
 func deleteAssociatedSoftwareVersions(q *reform.Querier, serviceID string) error {
-	v, err := FindServiceSoftwareVersionsByServiceID(q, serviceID)
+	v, err := FindServiceSoftwareVersions(q, serviceID)
 	switch {
 	case err == nil:
-		if deleteErr := DeleteServiceSoftwareVersions(q, v.ID); deleteErr != nil {
+		if deleteErr := DeleteServiceSoftwareVersions(q, v.ServiceID); deleteErr != nil {
 			return deleteErr
 		}
 	case errors.Is(err, ErrNotFound):
