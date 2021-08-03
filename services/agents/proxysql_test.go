@@ -132,7 +132,7 @@ func TestProxySQLExporterConfig(t *testing.T) {
 
 	t.Run("StatsRunTime", func(t *testing.T) {
 		t.Parallel()
-		pmmAgentVersion := version.MustParse("2.20.0")
+		pmmAgentVersion := version.MustParse("2.21.0")
 
 		proxysql := &models.Service{
 			Address: pointer.ToString("1.2.3.4"),
