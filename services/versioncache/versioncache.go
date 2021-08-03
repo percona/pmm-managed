@@ -178,6 +178,24 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 	return results, nil
 }
 
+func softwareName(s agents.Software) (models.SoftwareName, error) {
+	var softwareName models.SoftwareName
+	switch software := s.(type) {
+	case *agents.Mysqld:
+		softwareName = models.MysqldSoftwareName
+	case *agents.Xtrabackup:
+		softwareName = models.XtrabackupSoftwareName
+	case *agents.Xbcloud:
+		softwareName = models.XbcloudSoftwareName
+	case *agents.Qpress:
+		softwareName = models.QpressSoftwareName
+	default:
+		return "", errors.Errorf("invalid software type %T", software)
+	}
+
+	return softwareName, nil
+}
+
 func (s *Service) updateVersions() (time.Duration, error) {
 	r, err := s.prepareUpdateVersions()
 	if err != nil {
@@ -200,18 +218,9 @@ func (s *Service) updateVersions() (time.Duration, error) {
 
 	svs := make([]models.SoftwareVersion, 0, len(softwares))
 	for i, software := range softwares {
-		var softwareName models.SoftwareName
-		switch software := software.(type) {
-		case *agents.Mysqld:
-			softwareName = models.MysqldSoftwareName
-		case *agents.Xtrabackup:
-			softwareName = models.XtrabackupSoftwareName
-		case *agents.Xbcloud:
-			softwareName = models.XbcloudSoftwareName
-		case *agents.Qpress:
-			softwareName = models.QpressSoftwareName
-		default:
-			return minCheckInterval, errors.Errorf("invalid software type %T", software)
+		name, err := softwareName(software)
+		if err != nil {
+			return minCheckInterval, err
 		}
 
 		if versions[i].Error != "" {
@@ -223,7 +232,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		}
 
 		svs = append(svs, models.SoftwareVersion{
-			Name:    softwareName,
+			Name:    name,
 			Version: versions[i].Version,
 		})
 	}

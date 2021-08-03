@@ -65,13 +65,7 @@ type Qpress struct{}
 
 func (*Qpress) isSoftware() {}
 
-// GetVersions retrieves software versions.
-func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) ([]Version, error) {
-	agent, err := s.r.get(pmmAgentID)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
+func convertSoftwares(softwares []Software) ([]*agentpb.GetVersionsRequest_Software, error) {
 	softwaresRequest := make([]*agentpb.GetVersionsRequest_Software, 0, len(softwares))
 	for _, software := range softwares {
 		switch s := software.(type) {
@@ -104,9 +98,22 @@ func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) 
 		}
 	}
 
-	request := &agentpb.GetVersionsRequest{
-		Softwares: softwaresRequest,
+	return softwaresRequest, nil
+}
+
+// GetVersions retrieves software versions.
+func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) ([]Version, error) {
+	agent, err := s.r.get(pmmAgentID)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
+
+	softwaresRequest, err := convertSoftwares(softwares)
+	if err != nil {
+		return nil, err
+	}
+
+	request := &agentpb.GetVersionsRequest{Softwares: softwaresRequest}
 	response, err := agent.channel.SendAndWaitResponse(request)
 	if err != nil {
 		return nil, errors.WithStack(err)

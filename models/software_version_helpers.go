@@ -17,7 +17,7 @@
 package models
 
 import (
-	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -141,20 +141,22 @@ func FindServiceSoftwareVersions(q *reform.Querier, serviceID string) (*ServiceS
 	}
 }
 
+// FindServicesSoftwareVersionsFilter represents a filter for finding service software versions.
+type FindServicesSoftwareVersionsFilter struct {
+	Limit *int
+}
+
 // FindServicesSoftwareVersions returns all services software versions.
-func FindServicesSoftwareVersions(q *reform.Querier, limit *int) ([]*ServiceSoftwareVersions, error) {
+func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftwareVersionsFilter) ([]*ServiceSoftwareVersions, error) {
 	var args []interface{}
-	var limitStatement string
-	if limit != nil {
-		limitStatement = " LIMIT $1"
-		args = append(args, *limit)
+	var tail strings.Builder
+	tail.WriteString("ORDER BY check_at ")
+	if filter.Limit != nil {
+		tail.WriteString("LIMIT $1")
+		args = append(args, *filter.Limit)
 	}
 
-	structs, err := q.SelectAllFrom(
-		ServiceSoftwareVersionsTable,
-		fmt.Sprintf("ORDER BY check_at %s", limitStatement),
-		args...,
-	)
+	structs, err := q.SelectAllFrom(ServiceSoftwareVersionsTable, tail.String(), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

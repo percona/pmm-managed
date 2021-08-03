@@ -44,6 +44,7 @@ type SoftwareVersion struct {
 	Version string       `reform:"version"`
 }
 
+// SoftwareVersions represents slice of SoftwareVersion.
 type SoftwareVersions []SoftwareVersion
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
