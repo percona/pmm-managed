@@ -58,7 +58,7 @@ func (sv *SoftwareVersions) Scan(src interface{}) error {
 	case SoftwareVersions:
 		*sv = s
 	default:
-		return errors.Errorf("error")
+		return errors.Errorf("unexpected type for scanning software versions: %T", s)
 	}
 
 	return nil

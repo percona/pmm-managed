@@ -19,6 +19,7 @@ package versioncache
 
 import (
 	"context"
+	"github.com/AlekSi/pointer"
 	"time"
 
 	"github.com/pkg/errors"
@@ -72,7 +73,8 @@ func (s *Service) syncServices() error {
 			serviceIDs[s.ServiceID] = struct{}{}
 		}
 
-		serviceVersions, err := models.FindServicesSoftwareVersions(tx.Querier, nil)
+		serviceVersions, err := models.FindServicesSoftwareVersions(tx.Querier,
+			models.FindServicesSoftwareVersionsFilter{})
 		if err != nil {
 			return err
 		}
@@ -122,8 +124,8 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 	results := &prepareResults{CheckAfter: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		limit := 1
-		servicesVersions, err := models.FindServicesSoftwareVersions(tx.Querier, &limit)
+		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
+		servicesVersions, err := models.FindServicesSoftwareVersions(tx.Querier, filter)
 		if err != nil {
 			return err
 		}
@@ -132,8 +134,8 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 
 			return nil
 		}
-		if servicesVersions[0].NextCheckAt.After(time.Now().UTC()) {
-			results.CheckAfter = servicesVersions[0].NextCheckAt.Sub(time.Now().UTC())
+		if servicesVersions[0].NextCheckAt.After(time.Now()) {
+			results.CheckAfter = servicesVersions[0].NextCheckAt.Sub(time.Now())
 			if results.CheckAfter < minCheckInterval {
 				results.CheckAfter = minCheckInterval
 			}
