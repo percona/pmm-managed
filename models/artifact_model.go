@@ -91,6 +91,15 @@ const (
 	ScheduledArtifactType ArtifactType = "scheduled"
 )
 
+// BackupMode represents artifact mode.
+type BackupMode string
+
+// Backup modes.
+const (
+	Snapshot    BackupMode = "snapshot"
+	Incremental BackupMode = "incremental"
+)
+
 // Artifact represents result of a backup.
 //reform:artifacts
 type Artifact struct {
@@ -100,6 +109,7 @@ type Artifact struct {
 	LocationID string       `reform:"location_id"`
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
+	Mode       BackupMode   `reform:"mode"`
 	Status     BackupStatus `reform:"status"`
 	Type       ArtifactType `reform:"type"`
 	ScheduleID string       `reform:"schedule_id"`
