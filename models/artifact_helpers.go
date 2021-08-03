@@ -42,33 +42,39 @@ type ArtifactFilters struct {
 	LocationID string
 	// Return only artifacts that was created by specified scheduled task.
 	ScheduleID string
+	// Return only artifacts by specified status.
+	Status BackupStatus
 }
 
 // FindArtifacts returns artifacts list.
-func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, error) {
+func FindArtifacts(q *reform.Querier, filters ArtifactFilters) ([]*Artifact, error) {
 	var conditions []string
 	var args []interface{}
 	idx := 1
-	if filters != nil {
-		if filters.ServiceID != "" {
-			conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.ServiceID)
-			idx++
-		}
+	if filters.ServiceID != "" {
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceID)
+		idx++
+	}
 
-		if filters.LocationID != "" {
-			if _, err := FindBackupLocationByID(q, filters.LocationID); err != nil {
-				return nil, err
-			}
-			conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.LocationID)
-			idx++
+	if filters.LocationID != "" {
+		if _, err := FindBackupLocationByID(q, filters.LocationID); err != nil {
+			return nil, err
 		}
+		conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.LocationID)
+		idx++
+	}
 
-		if filters.ScheduleID != "" {
-			conditions = append(conditions, fmt.Sprintf("schedule_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.ScheduleID)
-		}
+	if filters.ScheduleID != "" {
+		conditions = append(conditions, fmt.Sprintf("schedule_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ScheduleID)
+		idx++
+	}
+
+	if filters.Status != "" {
+		conditions = append(conditions, fmt.Sprintf("status = %s", q.Placeholder(idx)))
+		args = append(args, filters.Status)
 	}
 
 	var whereClause string
@@ -223,15 +229,15 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	return row, nil
 }
 
-// ChangeArtifactParams are params for changing existing artifact.
-type ChangeArtifactParams struct {
+// UpdateArtifactParams are params for changing existing artifact.
+type UpdateArtifactParams struct {
 	ServiceID  *string
 	Status     *BackupStatus
 	ScheduleID *string
 }
 
-// ChangeArtifact updates existing artifact.
-func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactParams) (*Artifact, error) {
+// UpdateArtifact updates existing artifact.
+func UpdateArtifact(q *reform.Querier, artifactID string, params UpdateArtifactParams) (*Artifact, error) {
 	row, err := FindArtifactByID(q, artifactID)
 	if err != nil {
 		return nil, err
@@ -253,8 +259,8 @@ func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactP
 	return row, nil
 }
 
-// RemoveArtifact removes artifact by ID.
-func RemoveArtifact(q *reform.Querier, id string) error {
+// DeleteArtifact removes artifact by ID.
+func DeleteArtifact(q *reform.Querier, id string) error {
 	if _, err := FindArtifactByID(q, id); err != nil {
 		return err
 	}

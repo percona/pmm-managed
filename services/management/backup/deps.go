@@ -19,18 +19,19 @@ package backup
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/services/scheduler"
-
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/scheduler"
 )
 
 //go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
 //go:generate mockery -name=backupService -case=snake -inpkg -testonly
 //go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
+//go:generate mockery -name=removalService -case=snake -inpkg -testonly
 
 type awsS3 interface {
 	GetBucketLocation(ctx context.Context, host string, accessKey, secretKey, name string) (string, error)
 	BucketExists(ctx context.Context, host string, accessKey, secretKey, name string) (bool, error)
+	RemoveRecursive(ctx context.Context, endpoint, accessKey, secretKey, bucketName, prefix string) error
 }
 
 type backupService interface {
@@ -45,4 +46,8 @@ type scheduleService interface {
 	Add(task scheduler.Task, params scheduler.AddParams) (*models.ScheduledTask, error)
 	Remove(id string) error
 	Update(id string, params models.ChangeScheduledTaskParams) error
+}
+
+type removalService interface {
+	DeleteArtifact(ctx context.Context, artifactID string, removeFiles bool) error
 }

@@ -33,9 +33,9 @@ require (
 	github.com/hashicorp/go-version v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
-	github.com/percona-platform/dbaas-api v0.0.0-20210630090346-f95d2ec8b7c1
+	github.com/percona-platform/dbaas-api v0.0.0-20210726192627-670b3725d0ac
 	github.com/percona-platform/saas v0.0.0-20210628125953-5bf84e6eefa0
-	github.com/percona/pmm v0.0.0-20210713130436-c29d5c0ef17c
+	github.com/percona/pmm v0.0.0-20210730110700-154612d18048
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -48,8 +48,9 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.starlark.net v0.0.0-20201210151846-e81fc95f7bd5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0

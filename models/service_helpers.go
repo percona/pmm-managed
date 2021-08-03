@@ -269,12 +269,12 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		return errors.Wrap(err, "failed to select Agent IDs")
 	}
 
-	artifacts, err := FindArtifacts(q, &ArtifactFilters{ServiceID: id})
+	artifacts, err := FindArtifacts(q, ArtifactFilters{ServiceID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to select artifacts")
 	}
 
-	restoreItems, err := FindRestoreHistoryItems(q, &RestoreHistoryItemFilters{ServiceID: id})
+	restoreItems, err := FindRestoreHistoryItems(q, RestoreHistoryItemFilters{ServiceID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to select restore history items")
 	}
@@ -308,7 +308,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 			}
 		}
 		for _, a := range artifacts {
-			if _, err := ChangeArtifact(q, a.ID, ChangeArtifactParams{
+			if _, err := UpdateArtifact(q, a.ID, UpdateArtifactParams{
 				ServiceID: pointer.ToString(""),
 			}); err != nil {
 				return err

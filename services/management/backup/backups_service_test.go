@@ -176,12 +176,11 @@ func TestScheduledBackups(t *testing.T) {
 		assert.Nil(t, task)
 		tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, id), err)
 
-		artifacts, err := models.FindArtifacts(db.Querier, &models.ArtifactFilters{
+		artifacts, err := models.FindArtifacts(db.Querier, models.ArtifactFilters{
 			ScheduleID: id,
 		})
 
 		assert.NoError(t, err)
 		assert.Len(t, artifacts, 0)
 	})
-
 }
