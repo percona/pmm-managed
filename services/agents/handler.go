@@ -174,7 +174,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *agentpb.JobResult) {
 	var scheduleID string
 	if e := h.db.InTransaction(func(t *reform.TX) error {
-		res, err := models.FindJobResultByID(t.Querier, result.JobId)
+		res, err := models.FindJobByID(t.Querier, result.JobId)
 		if err != nil {
 			return err
 		}
@@ -189,8 +189,8 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 			if res.Type != models.Echo {
 				return errors.Errorf("result type echo doesn't match job type %s", res.Type)
 			}
-			res.Result = &models.JobResultData{
-				Echo: &models.EchoJobResult{
+			res.Data = &models.JobData{
+				Echo: &models.EchoJobData{
 					Message: result.Echo.Message,
 				},
 			}
@@ -199,7 +199,7 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
 			}
 
-			artifact, err := models.UpdateArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+			artifact, err := models.UpdateArtifact(t.Querier, res.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
 				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
@@ -214,7 +214,7 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
 			}
 
-			artifact, err := models.UpdateArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+			artifact, err := models.UpdateArtifact(t.Querier, res.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
 				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
@@ -231,7 +231,7 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 
 			_, err := models.ChangeRestoreHistoryItem(
 				t.Querier,
-				res.Result.MySQLRestoreBackup.RestoreID,
+				res.Data.MySQLRestoreBackup.RestoreID,
 				models.ChangeRestoreHistoryItemParams{
 					Status: models.SuccessRestoreStatus,
 				})
@@ -246,7 +246,7 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 
 			_, err := models.ChangeRestoreHistoryItem(
 				t.Querier,
-				res.Result.MongoDBRestoreBackup.RestoreID,
+				res.Data.MongoDBRestoreBackup.RestoreID,
 				models.ChangeRestoreHistoryItemParams{
 					Status: models.SuccessRestoreStatus,
 				})
@@ -271,30 +271,30 @@ func (h *Handler) handleJobResult(ctx context.Context, l *logrus.Entry, result *
 	}
 }
 
-func (h *Handler) handleJobError(jobResult *models.JobResult) error {
+func (h *Handler) handleJobError(jobResult *models.Job) error {
 	var err error
 	switch jobResult.Type {
 	case models.Echo:
 		// nothing
 	case models.MySQLBackupJob:
-		_, err = models.UpdateArtifact(h.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+		_, err = models.UpdateArtifact(h.db.Querier, jobResult.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MongoDBBackupJob:
-		_, err = models.UpdateArtifact(h.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+		_, err = models.UpdateArtifact(h.db.Querier, jobResult.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MySQLRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(
 			h.db.Querier,
-			jobResult.Result.MySQLRestoreBackup.RestoreID,
+			jobResult.Data.MySQLRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
 	case models.MongoDBRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(
 			h.db.Querier,
-			jobResult.Result.MongoDBRestoreBackup.RestoreID,
+			jobResult.Data.MongoDBRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})

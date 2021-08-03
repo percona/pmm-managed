@@ -261,7 +261,7 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 
 // StopJob stops job with given given id.
 func (s *JobsService) StopJob(jobID string) error {
-	jobResult, err := models.FindJobResultByID(s.db.Querier, jobID)
+	jobResult, err := models.FindJobByID(s.db.Querier, jobID)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -549,6 +549,16 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
+	43: {
+		`ALTER TABLE job_results RENAME TO jobs`,
+		`ALTER TABLE jobs
+			ADD COLUMN data JSONB,
+			ADD COLUMN retries INTEGER,
+			ADD COLUMN retries_remaining INTEGER,
+			ADD COLUMN interval BIGINT,
+			ADD COLUMN timeout BIGINT
+		`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

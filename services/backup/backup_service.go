@@ -51,7 +51,7 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 	var artifact *models.Artifact
 	var location *models.BackupLocation
 	var svc *models.Service
-	var job *models.JobResult
+	var job *models.Job
 	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
@@ -169,18 +169,18 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 		}
 
 		var jobType models.JobType
-		var jobResultData *models.JobResultData
+		var jobData *models.JobData
 		switch service.ServiceType {
 		case models.MySQLServiceType:
 			jobType = models.MySQLRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
+			jobData = &models.JobData{
+				MySQLRestoreBackup: &models.MySQLRestoreBackupJobData{
 					RestoreID: restoreID,
 				}}
 		case models.MongoDBServiceType:
 			jobType = models.MongoDBRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobResult{
+			jobData = &models.JobData{
+				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobData{
 					RestoreID: restoreID,
 				}}
 		case models.PostgreSQLServiceType,
@@ -192,7 +192,7 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 			return errors.Errorf("unsupported service type: %s", service.ServiceType)
 		}
 
-		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)
+		job, err := models.CreateJob(tx.Querier, params.AgentID, jobType, jobData)
 		if err != nil {
 			return err
 		}
@@ -304,7 +304,7 @@ func (s *Service) prepareBackupJob(
 	service *models.Service,
 	artifactID string,
 	jobType models.JobType,
-) (*models.JobResult, *models.DBConfig, error) {
+) (*models.Job, *models.DBConfig, error) {
 	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
 	if err != nil {
 		return nil, nil, err
@@ -319,17 +319,17 @@ func (s *Service) prepareBackupJob(
 		return nil, nil, errors.Errorf("pmmAgent not found for service")
 	}
 
-	var jobResultData *models.JobResultData
+	var jobData *models.JobData
 	switch jobType {
 	case models.MySQLBackupJob:
-		jobResultData = &models.JobResultData{
-			MySQLBackup: &models.MySQLBackupJobResult{
+		jobData = &models.JobData{
+			MySQLBackup: &models.MySQLBackupJobData{
 				ArtifactID: artifactID,
 			},
 		}
 	case models.MongoDBBackupJob:
-		jobResultData = &models.JobResultData{
-			MongoDBBackup: &models.MongoDBBackupJobResult{
+		jobData = &models.JobData{
+			MongoDBBackup: &models.MongoDBBackupJobData{
 				ArtifactID: artifactID,
 			},
 		}
@@ -341,7 +341,7 @@ func (s *Service) prepareBackupJob(
 		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)
 	}
 
-	res, err := models.CreateJobResult(q, pmmAgents[0].AgentID, jobType, jobResultData)
+	res, err := models.CreateJob(q, pmmAgents[0].AgentID, jobType, jobData)
 	if err != nil {
 		return nil, nil, err
 	}
