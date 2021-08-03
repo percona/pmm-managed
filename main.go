@@ -657,7 +657,7 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	backupService := backup.NewService(db, jobsService)
+	backupService := backup.NewService(db, jobsService, agentsRegistry)
 	schedulerService := scheduler.New(db, backupService)
 
 	serverParams := &server.Params{

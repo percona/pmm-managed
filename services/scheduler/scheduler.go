@@ -18,6 +18,7 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -214,6 +215,10 @@ func (s *Service) addDBTask(dbTask *models.ScheduledTask) error {
 	s.jobs[dbTask.ID] = scheduleJob
 	s.jobsMx.Unlock()
 
+	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!1")
+	fmt.Println(dbTask.ID)
+	fmt.Println(s.scheduler.Jobs())
+
 	return nil
 }
 func (s *Service) wrapTask(task Task, id string) func() {
@@ -301,7 +306,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 		task = NewMySQLBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description, data.Retention)
 	case models.ScheduledMongoDBBackupTask:
 		data := dbTask.Data.MongoDBBackupTask
-		task = NewMongoBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description, data.Retention)
+		task = NewMongoBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description, data.Retention, data.Mode)
 	default:
 		return task, errors.Errorf("unknown task type: %s", dbTask.Type)
 	}

@@ -67,7 +67,9 @@ func TestStartBackup(t *testing.T) {
 	mockedJobsService := &mockJobsService{}
 	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	backupService := NewService(db, mockedJobsService)
+	mockedAgentsRegistry := &mockAgentsRegistry{}
+	mockedAgentsRegistry.On("StartPBMSwitchPITRActions").Return(nil)
+	backupService := NewService(db, mockedJobsService, mockedAgentsRegistry)
 
 	t.Cleanup(func() {
 		_ = sqlDB.Close()
@@ -89,7 +91,7 @@ func TestStartBackup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	artifactID, err := backupService.PerformBackup(ctx, pointer.GetString(agent.ServiceID), locationRes.ID, "test_backup", "")
+	artifactID, err := backupService.PerformBackup(ctx, pointer.GetString(agent.ServiceID), locationRes.ID, "test_backup", models.Snapshot, "")
 	assert.NoError(t, err)
 
 	assert.NoError(t, err)

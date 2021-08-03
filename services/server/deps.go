@@ -132,5 +132,5 @@ type rulesService interface {
 }
 
 type backupService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
+	PerformBackup(ctx context.Context, serviceID, locationID, name string, mode models.BackupMode, scheduleID string) (string, error)
 }

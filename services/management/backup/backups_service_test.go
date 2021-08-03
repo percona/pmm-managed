@@ -24,6 +24,7 @@ import (
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -72,6 +73,7 @@ func TestScheduledBackups(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	backupService := &mockBackupService{}
+	backupService.On("SwitchMongoPITR", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	schedulerService := scheduler.New(db, backupService)
 	backupSvc := NewBackupsService(db, backupService, schedulerService)
 	t.Cleanup(func() {
@@ -103,6 +105,7 @@ func TestScheduledBackups(t *testing.T) {
 			Name:           t.Name(),
 			Description:    t.Name(),
 			Enabled:        true,
+			Mode:           backupv1beta1.BackupMode_SNAPSHOT,
 		}
 		res, err := backupSvc.ScheduleBackup(ctx, req)
 

@@ -122,15 +122,17 @@ func (s *JobsService) StartMongoDBBackupJob(
 	timeout time.Duration,
 	name string,
 	dbConfig *models.DBConfig,
+	mode models.BackupMode,
 	locationConfig *models.BackupLocationConfig,
 ) error {
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
-		Name:     name,
-		User:     dbConfig.User,
-		Password: dbConfig.Password,
-		Address:  dbConfig.Address,
-		Port:     int32(dbConfig.Port),
-		Socket:   dbConfig.Socket,
+		Name:       name,
+		User:       dbConfig.User,
+		Password:   dbConfig.Password,
+		Address:    dbConfig.Address,
+		Port:       int32(dbConfig.Port),
+		Socket:     dbConfig.Socket,
+		EnablePitr: mode == models.Incremental,
 	}
 
 	switch {

@@ -35,8 +35,9 @@ type awsS3 interface {
 }
 
 type backupService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
+	PerformBackup(ctx context.Context, serviceID, locationID, name string, mode models.BackupMode, scheduleID string) (string, error)
 	RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error)
+	SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error
 }
 
 // schedulerService is a subset of method of scheduler.Service used by this package.

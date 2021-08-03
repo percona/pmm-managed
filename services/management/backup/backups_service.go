@@ -18,7 +18,6 @@ package backup
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -54,7 +53,7 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	artifactID, err := s.backupService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, "")
+	artifactID, err := s.backupService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, models.Snapshot, "")
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +96,16 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
+			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT {
+				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mySQL: %s", req.Mode.String())
+			}
 			task = scheduler.NewMySQLBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description, req.Retention)
 		case models.MongoDBServiceType:
-			task = scheduler.NewMongoBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description, req.Retention)
+			mode, err := convertBackupMode(req.Mode)
+			if err != nil {
+				return err
+			}
+			task = scheduler.NewMongoBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description, req.Retention, mode)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -194,9 +200,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	if err != nil {
 		return nil, err
 	}
+
+	var serviceID string
 	switch scheduledTask.Type {
 	case models.ScheduledMySQLBackupTask:
 		data := scheduledTask.Data.MySQLBackupTask
+		serviceID = data.ServiceID
 		if req.Name != nil {
 			data.Name = req.Name.Value
 		}
@@ -208,6 +217,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		}
 	case models.ScheduledMongoDBBackupTask:
 		data := scheduledTask.Data.MongoDBBackupTask
+		serviceID = data.ServiceID
 		if req.Name != nil {
 			data.Name = req.Name.Value
 		}
@@ -226,6 +236,9 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	if req.Enabled != nil {
+		if err = s.backupService.SwitchMongoPITR(ctx, serviceID, req.Enabled.Value); err != nil {
+			return nil, err // TODO
+		}
 		params.Disable = pointer.ToBool(!req.Enabled.Value)
 	}
 
@@ -246,11 +259,19 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	if err != nil {
 		return nil, err
 	}
+
+	var serviceID string
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
+		serviceID = task.Data.MySQLBackupTask.ServiceID
 	case models.ScheduledMongoDBBackupTask:
+		serviceID = task.Data.MongoDBBackupTask.ServiceID
 	default:
 		return nil, errors.Errorf("non-backup task: %s", task.Type)
+	}
+
+	if err = s.backupService.SwitchMongoPITR(ctx, serviceID, false); err != nil {
+		return nil, err // TODO
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
@@ -319,7 +340,7 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		backup.DataModel = backupv1beta1.DataModel_LOGICAL
 		backup.Retention = data.Retention
 	default:
-		return nil, fmt.Errorf("unknown task type: %s", task.Type)
+		return nil, errors.Errorf("unknown task type: %s", task.Type)
 	}
 
 	backup.ServiceName = services[backup.ServiceId].ServiceName
@@ -327,6 +348,17 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	backup.LocationName = locations[backup.LocationId].Name
 
 	return backup, nil
+}
+
+func convertBackupMode(mode backupv1beta1.BackupMode) (models.BackupMode, error) {
+	switch mode {
+	case backupv1beta1.BackupMode_SNAPSHOT:
+		return models.Snapshot, nil
+	case backupv1beta1.BackupMode_INCREMENTAL:
+		return models.Incremental, nil
+	default:
+		return "", status.Errorf(codes.InvalidArgument, "Unknown backup mode: %s", mode.String())
+	}
 }
 
 // Check interfaces.

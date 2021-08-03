@@ -18,7 +18,7 @@ package scheduler
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -69,8 +69,7 @@ func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name
 }
 
 func (t *mySQLBackupTask) Run(ctx context.Context) error {
-	name := t.Name + "_" + time.Now().Format(time.RFC3339)
-	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
+	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, models.Snapshot, t.ID())
 	return err
 }
 
@@ -98,10 +97,11 @@ type mongoBackupTask struct {
 	Name          string
 	Description   string
 	Retention     uint32
+	Mode          models.BackupMode
 }
 
 // NewMongoBackupTask create new task for mongo backup.
-func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string, retention uint32) Task {
+func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string, retention uint32, mode models.BackupMode) Task {
 	return &mongoBackupTask{
 		common:        &common{},
 		backupService: backupService,
@@ -110,12 +110,15 @@ func NewMongoBackupTask(backupService backupService, serviceID, locationID, name
 		Name:          name,
 		Description:   description,
 		Retention:     retention,
+		Mode:          mode,
 	}
 }
 
 func (t *mongoBackupTask) Run(ctx context.Context) error {
-	name := t.Name + "_" + time.Now().Format(time.RFC3339)
-	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
+
+	fmt.Println("TriggggggggggggggeeerRRR!!!!!!!!!!!!!!!!!!!!!!!!")
+	fmt.Println(t.id)
+	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, t.Mode, t.ID())
 	return err
 }
 
@@ -131,6 +134,7 @@ func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 			Name:        t.Name,
 			Description: t.Description,
 			Retention:   t.Retention,
+			Mode:        t.Mode,
 		},
 	}
 }

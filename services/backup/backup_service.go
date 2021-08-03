@@ -18,6 +18,7 @@ package backup
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -30,23 +31,32 @@ import (
 
 // Service represents core logic for db backup.
 type Service struct {
-	db          *reform.DB
-	jobsService jobsService
-	l           *logrus.Entry
+	db             *reform.DB
+	jobsService    jobsService
+	agentsRegistry agentsRegistry
+
+	l *logrus.Entry
 }
 
 // NewService creates new backups logic service.
-func NewService(db *reform.DB, jobsService jobsService) *Service {
+func NewService(db *reform.DB, jobsService jobsService, agentsRegistry agentsRegistry) *Service {
 	return &Service{
-		l:           logrus.WithField("component", "management/backup/backup"),
-		db:          db,
-		jobsService: jobsService,
+		l:              logrus.WithField("component", "management/backup/backup"),
+		db:             db,
+		jobsService:    jobsService,
+		agentsRegistry: agentsRegistry,
 	}
 }
 
 // PerformBackup starts on-demand backup.
-func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name,
-	scheduleID string) (string, error) {
+func (s *Service) PerformBackup(
+	ctx context.Context,
+	serviceID string,
+	locationID string,
+	name string,
+	mode models.BackupMode,
+	scheduleID string,
+) (string, error) {
 	var err error
 	var artifact *models.Artifact
 	var location *models.BackupLocation
@@ -74,6 +84,13 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 		case models.MongoDBServiceType:
 			dataModel = models.LogicalDataModel
 			jobType = models.MongoDBBackupJob
+
+			// For incremental backups we can reuse same artifact entity, at least for MongoDB.
+			artifact, err = models.FindArtifactByName(tx.Querier, name)
+			if err != nil && status.Code(err) != codes.NotFound {
+				return err
+			}
+
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -83,17 +100,29 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
 		}
 
-		artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
-			Name:       name,
-			Vendor:     string(svc.ServiceType),
-			LocationID: location.ID,
-			ServiceID:  svc.ServiceID,
-			DataModel:  dataModel,
-			Status:     models.PendingBackupStatus,
-			ScheduleID: scheduleID,
-		})
-		if err != nil {
-			return err
+		if mode == models.Snapshot {
+			name = name + "_" + time.Now().Format(time.RFC3339)
+		}
+
+		if artifact == nil {
+			if artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
+				Name:       name,
+				Vendor:     string(svc.ServiceType),
+				LocationID: location.ID,
+				ServiceID:  svc.ServiceID,
+				DataModel:  dataModel,
+				Mode:       mode,
+				Status:     models.PendingBackupStatus,
+				ScheduleID: scheduleID,
+			}); err != nil {
+				return err
+			}
+		} else {
+			if artifact, err = models.UpdateArtifact(tx.Querier, artifact.ID, models.UpdateArtifactParams{
+				Status: models.BackupStatusPointer(models.PendingBackupStatus),
+			}); err != nil {
+				return err
+			}
 		}
 
 		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType)
@@ -114,9 +143,9 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig) // TODO mode
 	case models.MongoDBServiceType:
-		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig)
+		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, name, config, mode, locationConfig)
 	case models.PostgreSQLServiceType,
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,
@@ -210,6 +239,40 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 	}
 
 	return restoreID, nil
+}
+
+func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error {
+	service, err := models.FindServiceByID(s.db.Querier, serviceID)
+	if err != nil {
+		return err
+	}
+
+	agents, err := models.FindPMMAgentsForService(s.db.Querier, serviceID)
+	if err != nil {
+		return err
+	}
+	if len(agents) == 0 {
+		return errors.Errorf("cannot find pmm agent for service %s", serviceID)
+	}
+	pmmAgentID := agents[0].AgentID
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	DSN, agent, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, serviceID, pmmAgentID, "")
+	if err != nil {
+		return err
+	}
+
+	return s.agentsRegistry.StartPBMSwitchPITRActions(
+		ctx,
+		res.ID,
+		pmmAgentID,
+		DSN,
+		agent.Files(),
+		agent.TemplateDelimiters(service),
+		enabled)
 }
 
 func (s *Service) prepareRestoreJob(
