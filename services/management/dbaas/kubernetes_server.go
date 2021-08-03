@@ -164,23 +164,23 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, err
 	}
 
-	if pxcOperatorVersion != "" {
+	if pxcOperatorVersion != nil {
 		_, err = k.dbaasClient.InstallXtraDBOperator(ctx, &dbaascontrollerv1beta1.InstallXtraDBOperatorRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: req.KubeAuth.Kubeconfig,
 			},
-			Version: pxcOperatorVersion,
+			Version: pxcOperatorVersion.String(),
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
-	if psmdbOperatorVersion != "" {
+	if psmdbOperatorVersion != nil {
 		_, err = k.dbaasClient.InstallPSMDBOperator(ctx, &dbaascontrollerv1beta1.InstallPSMDBOperatorRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: req.KubeAuth.Kubeconfig,
 			},
-			Version: psmdbOperatorVersion,
+			Version: psmdbOperatorVersion.String(),
 		})
 		if err != nil {
 			return nil, err

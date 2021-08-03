@@ -205,27 +205,27 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 	return false, nil
 }
 
-func getLatest(m map[string]componentVersion) (string, error) {
+func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
-		return "", errNoVersionsFound
+		return nil, errNoVersionsFound
 	}
-	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
 	for version := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if parsedVersion.GreaterThan(latest) {
 			latest = parsedVersion
 		}
 	}
-	return latest.String(), nil
+	return latest, nil
 }
 
 // GetLatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
-func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (string, string, error) {
+func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
 	if pmmVersion == "" {
-		return "", "", errors.New("given PMM version is empty")
+		return nil, nil, errors.New("given PMM version is empty")
 	}
 	params := componentsParams{
 		product:        "pmm-server",
@@ -233,67 +233,68 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 	}
 	resp, err := c.Matrix(ctx, params)
 	if err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
 	if len(resp.Versions) != 1 {
-		return "", "", nil // no deps for the PMM version passed to c.Matrix
+		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
 	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)
 	if err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
 	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
 	return latestPXCOperator, latestPSMDBOperator, err
 }
 
-// GetNextOperatorVersion returns operator versions that are direct successors of currently installed ones.
-// It returns empty string if update is not available or error occured.
-func (c *VersionServiceClient) GetNextOperatorVersion(ctx context.Context, installedPXCVersion, installedPSMDBVersion, pmmVersion string) (nextPXCOperatorVersion string, nextPSMDBOperatorVersion string, err error) {
-	if pmmVersion == "" {
-		return "", "", errors.New("given PMM version is empty")
+// GetNextOperatorVersion returns operator version that is direct successor of currently installed one.
+// It returns nil if update is not available or error occured. It does not take PMM version into consideration.
+// We need to upgrade to current + 1 version for upgrade to be successful. So even if dbaas-controller does not support the
+// operator, we need to upgrade to it on our way to supported one.
+func (c *VersionServiceClient) GetNextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
+	if installedVersion == "" {
+		return
 	}
-
-	// Get dependencies of operator type at given version.
+	// Get all operator versions
 	params := componentsParams{
-		product:        "pmm-server",
-		productVersion: pmmVersion,
+		product: operatorType,
 	}
 	matrix, err := c.Matrix(ctx, params)
 	if err != nil {
 		return
 	}
-	if len(matrix.Versions) != 1 {
+	if len(matrix.Versions) == 0 {
 		return
 	}
 
 	// Find next versions if installed.
-	if installedPSMDBVersion != "" {
-		nextPSMDBOperatorVersion, err = getNext(matrix.Versions[0].Matrix.PSMDBOperator, installedPSMDBVersion)
+	if installedVersion != "" {
+		nextOperatorVersion, err = getNext(matrix.Versions, installedVersion)
 		if err != nil {
 			return
 		}
 	}
-	if installedPXCVersion != "" {
-		nextPXCOperatorVersion, err = getNext(matrix.Versions[0].Matrix.PXCOperator, installedPXCVersion)
-	}
 	return
 }
 
-func getNext(versions map[string]componentVersion, installedVersion string) (string, error) {
+func getNext(versions []struct {
+	Product        string `json:"product"`
+	ProductVersion string `json:"operator"`
+	Matrix         matrix `json:"matrix"`
+}, installedVersion string) (*goversion.Version, error) {
 	if len(versions) == 0 {
-		return "", errNoVersionsFound
+		return nil, errNoVersionsFound
 	}
 	// Get versions greater than currently installed one.
 	var greaterThanCurrent []*goversion.Version
 	installed, err := goversion.NewVersion(installedVersion)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	for version := range versions {
-		v, err := goversion.NewVersion(version)
+	for _, version := range versions {
+		v, err := goversion.NewVersion(version.ProductVersion)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if v.GreaterThan(installed) {
 			greaterThanCurrent = append(greaterThanCurrent, v)
@@ -302,7 +303,7 @@ func getNext(versions map[string]componentVersion, installedVersion string) (str
 
 	if len(greaterThanCurrent) == 0 {
 		// No update available.
-		return "", nil
+		return nil, nil
 	}
 
 	// Find lowest version.
@@ -312,5 +313,5 @@ func getNext(versions map[string]componentVersion, installedVersion string) (str
 			lowestVersion = greaterThanCurrent[i]
 		}
 	}
-	return lowestVersion.String(), nil
+	return lowestVersion, nil
 }

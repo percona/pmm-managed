@@ -245,10 +245,21 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	resp := &dbaasv1beta1.CheckForOperatorUpdateResponse{
 		ClusterToComponents: make(map[string]*dbaasv1beta1.ComponentsUpdateInformation),
 	}
+
+	latestPXCOperatorVersion, latestPSMDBOperatorVersion, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pmmVersion.Core().String())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	// Some of the requests to kuberenetes clusters for getting operators versions should be done.
 	// Go through them and decide what operator needs update.
 	for operatorsVersion := range responseCh {
-		nextPXCOperatorVersion, nextPSMDBOperatorVersion, err := c.versionServiceClient.GetNextOperatorVersion(ctx, operatorsVersion.pxcOperatorVersion, operatorsVersion.psmdbOperatorVersion, pmmVersion.Core().String())
+		// Get next operators version, don't take compatiblity into account, we need to go through all versions.
+		nextPXCOperatorVersion, err := c.versionServiceClient.GetNextOperatorVersion(ctx, pxcOperator, operatorsVersion.pxcOperatorVersion)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		nextPSMDBOperatorVersion, err := c.versionServiceClient.GetNextOperatorVersion(ctx, psmdbOperator, operatorsVersion.psmdbOperatorVersion)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -256,11 +267,17 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.ComponentsUpdateInformation{
 			ComponentToUpdateInformation: make(map[string]*dbaasv1beta1.ComponentUpdateInformation),
 		}
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
-			AvailableVersion: nextPXCOperatorVersion,
+
+		// Don't offer upgrade for the version that is not compatible and is not on the way to the latest version!
+		if latestPXCOperatorVersion != nil && nextPXCOperatorVersion != nil && nextPXCOperatorVersion.LessThanOrEqual(latestPXCOperatorVersion) {
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: nextPXCOperatorVersion.String(),
+			}
 		}
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
-			AvailableVersion: nextPSMDBOperatorVersion,
+		if latestPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion.LessThanOrEqual(latestPSMDBOperatorVersion) {
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: nextPSMDBOperatorVersion.String(),
+			}
 		}
 	}
 	return resp, nil
