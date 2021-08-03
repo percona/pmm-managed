@@ -37,6 +37,7 @@ type JobsService struct {
 	r                *Registry
 	db               *reform.DB
 	retentionService retentionService
+	l                *logrus.Entry
 }
 
 // NewJobsService returns new jobs service.
@@ -45,6 +46,7 @@ func NewJobsService(db *reform.DB, registry *Registry, retention retentionServic
 		db:               db,
 		r:                registry,
 		retentionService: retention,
+		l:                logrus.WithField("component", "agents/jobsService"),
 	}
 }
 
@@ -52,6 +54,7 @@ func (s *JobsService) RestartJob(jobID string) error {
 	var job *models.Job
 	var artifact *models.Artifact
 	var location *models.BackupLocation
+	var locationConfig *models.BackupLocationConfig
 	var dbConfig *models.DBConfig
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -86,8 +89,22 @@ func (s *JobsService) RestartJob(jobID string) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-
 		case models.MongoDBBackupJob:
+			artifact, err = models.FindArtifactByID(tx.Querier, job.Data.MongoDBBackup.ArtifactID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			location, err = models.FindBackupLocationByID(tx.Querier, artifact.LocationID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			dbConfig, err = models.FindDBConfigForService(tx.Querier, job.Data.MongoDBBackup.ServiceID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
 		case models.MySQLRestoreBackupJob:
 		case models.MongoDBRestoreBackupJob:
 		}
@@ -98,18 +115,28 @@ func (s *JobsService) RestartJob(jobID string) error {
 		return errTx
 	}
 
-	switch job.Type {
-	case models.Echo:
-	case models.MySQLBackupJob:
-		locationConfig := &models.BackupLocationConfig{
+	if location != nil {
+		locationConfig = &models.BackupLocationConfig{
 			PMMServerConfig: location.PMMServerConfig,
 			PMMClientConfig: location.PMMClientConfig,
 			S3Config:        location.S3Config,
 		}
+	}
+
+	if job.Interval > 0 {
+		time.Sleep(job.Interval)
+	}
+
+	switch job.Type {
+	case models.Echo:
+	case models.MySQLBackupJob:
 		if err := s.StartMySQLBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig, locationConfig); err != nil {
 			return errors.WithStack(err)
 		}
 	case models.MongoDBBackupJob:
+		if err := s.StartMongoDBBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig, locationConfig); err != nil {
+			return errors.WithStack(err)
+		}
 	case models.MySQLRestoreBackupJob:
 	case models.MongoDBRestoreBackupJob:
 	}
@@ -217,36 +244,44 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 	}
 }
 
-func (s *JobsService) handleJobError(jobResult *models.Job) error {
+func (s *JobsService) handleJobError(job *models.Job) error {
 	var err error
-	switch jobResult.Type {
+	switch job.Type {
 	case models.Echo:
 		// nothing
 	case models.MySQLBackupJob:
-		_, err = models.UpdateArtifact(s.db.Querier, jobResult.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+		_, err = models.UpdateArtifact(s.db.Querier, job.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MongoDBBackupJob:
-		_, err = models.UpdateArtifact(s.db.Querier, jobResult.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+		_, err = models.UpdateArtifact(s.db.Querier, job.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MySQLRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(
 			s.db.Querier,
-			jobResult.Data.MySQLRestoreBackup.RestoreID,
+			job.Data.MySQLRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
 	case models.MongoDBRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(
 			s.db.Querier,
-			jobResult.Data.MongoDBRestoreBackup.RestoreID,
+			job.Data.MongoDBRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
 	default:
 		// Don't do anything without explicit handling
 	}
+
+	go func() {
+		restartErr := s.RestartJob(job.ID)
+		if restartErr != nil && restartErr != ErrRetriesExhausted {
+			s.l.Errorf("restart job %s: %v", job.ID, restartErr)
+		}
+	}()
+
 	return err
 }
 
