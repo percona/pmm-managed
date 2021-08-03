@@ -401,28 +401,10 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	parsedPMMVersion, err := goversion.NewVersion(pmmversion.PMMVersion)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	pmmVersion := parsedPMMVersion.Core().String()
-
-	// Just check the version we are asked to update to is present in version service.
-	resp, err := c.versionServiceClient.Matrix(ctx, componentsParams{product: "pmm-server", productVersion: pmmVersion})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if len(resp.Versions) == 0 {
-		return nil, errors.Errorf("failed to get operators compatible with PMM version")
-	}
-
 	var component *models.Component
 	var installFunc func() error
 	switch req.OperatorType {
 	case pxcOperator:
-		if _, ok := resp.Versions[0].Matrix.PXCOperator[req.Version]; !ok {
-			return nil, errors.Errorf("requested update to operator version %s is not supported", req.Version)
-		}
 		installFunc = func() error {
 			_, err := c.dbaasClient.InstallXtraDBOperator(ctx, &controllerv1beta1.InstallXtraDBOperatorRequest{
 				KubeAuth: &controllerv1beta1.KubeAuth{
@@ -434,9 +416,6 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		}
 		component = kubernetesCluster.PXC
 	case psmdbOperator:
-		if _, ok := resp.Versions[0].Matrix.PSMDBOperator[req.Version]; !ok {
-			return nil, errors.Errorf("requested update to operator version %s is not supported", req.Version)
-		}
 		installFunc = func() error {
 			_, err := c.dbaasClient.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
 				KubeAuth: &controllerv1beta1.KubeAuth{
