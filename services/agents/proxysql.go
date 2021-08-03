@@ -32,7 +32,7 @@ import (
 
 var (
 	proxysqlExporterStatsCommandVersion = version.MustParse("2.18.99")
-	proxysqlExporterRuntimeVersion      = version.MustParse("2.19.99")
+	proxysqlExporterRuntimeVersion      = version.MustParse("2.20.99")
 )
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
