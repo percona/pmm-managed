@@ -48,22 +48,23 @@ func TestServiceService(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-		r := new(mockAgentsRegistry)
-		r.Test(t)
-
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
 		vc := new(mockVersionCache)
 		vc.Test(t)
 
+		state := new(mockAgentsStateUpdater)
+		state.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			require.NoError(t, sqlDB.Close())
-			r.AssertExpectations(t)
+			vmdb.AssertExpectations(t)
+			state.AssertExpectations(t)
 		}
-		s = NewServiceService(db, r, vmdb, vc)
+		s = NewServiceService(db, state, vmdb, vc)
 
 		return
 	}
@@ -137,7 +138,7 @@ func TestServiceService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			s.registry.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
+			s.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
 			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 			assert.NotNil(t, response)
 			assert.NoError(t, err)
@@ -188,8 +189,7 @@ func TestServiceService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			s.registry.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
-			s.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate")
+			s.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
 			_, err = s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 			assert.NoError(t, err)
 
@@ -243,8 +243,7 @@ func TestServiceService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			s.registry.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
-			s.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate")
+			s.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
 			_, err = s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 			assert.NoError(t, err)
 
