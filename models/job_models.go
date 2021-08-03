@@ -75,7 +75,8 @@ type JobResult struct {
 
 // EchoJobData stores echo job specific result data.
 type EchoJobData struct {
-	Message string `json:"message"`
+	Message string        `json:"message"`
+	Delay   time.Duration `json:"delay"`
 }
 
 // MySQLBackupJobData stores MySQL job specific result data.

@@ -631,9 +631,9 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	jobsService := agents.NewJobsService(db, agentsRegistry)
+	jobsService := agents.NewJobsService(db, agentsRegistry, backupRetentionService)
 	agentsStateUpdater := agents.NewStateUpdater(db, agentsRegistry, vmdb)
-	agentsHandler := agents.NewHandler(db, qanClient, vmdb, agentsRegistry, agentsStateUpdater, backupRetentionService)
+	agentsHandler := agents.NewHandler(db, qanClient, vmdb, agentsRegistry, agentsStateUpdater, jobsService)
 
 	actionsService := agents.NewActionsService(agentsRegistry)
 

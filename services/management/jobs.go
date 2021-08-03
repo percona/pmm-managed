@@ -88,7 +88,12 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 
 // StartEchoJob starts echo job. Its purpose is testing.
 func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
-	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo)
+	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo, &models.JobData{
+		Echo: &models.EchoJobData{
+			Message: req.Message,
+			Delay:   req.Delay.AsDuration(),
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +134,7 @@ func (s *JobsAPIService) saveJobError(resultID string, message string) {
 	}
 }
 
-func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType) (*models.Job, error) {
+func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType, jobData *models.JobData) (*models.Job, error) {
 	var res *models.Job
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		_, err := models.FindAgentByID(tx.Querier, pmmAgentID)
@@ -137,7 +142,7 @@ func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobTy
 			return err
 		}
 
-		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, nil)
+		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, jobData)
 		return err
 	})
 	if e != nil {
