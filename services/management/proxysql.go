@@ -30,13 +30,18 @@ import (
 
 // ProxySQLService ProxySQL Management Service.
 type ProxySQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewProxySQLService creates new ProxySQL Management Service.
-func NewProxySQLService(db *reform.DB, registry agentsRegistry) *ProxySQLService {
-	return &ProxySQLService{db, registry}
+func NewProxySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *ProxySQLService {
+	return &ProxySQLService{
+		db:    db,
+		state: state,
+		cc:    cc,
+	}
 }
 
 // Add adds "ProxySQL Service", "ProxySQL Exporter Agent" and "QAN ProxySQL PerfSchema Agent".
@@ -79,6 +84,7 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 			ServiceID:         service.ServiceID,
 			Username:          req.Username,
 			Password:          req.Password,
+			AgentPassword:     req.AgentPassword,
 			TLS:               req.Tls,
 			TLSSkipVerify:     req.TlsSkipVerify,
 			PushMetrics:       isPushMode(req.MetricsMode),
@@ -89,7 +95,7 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -105,6 +111,6 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

@@ -56,7 +56,7 @@ const platformAPITimeout = 10 * time.Second
 type Server struct {
 	db                   *reform.DB
 	vmdb                 prometheusService
-	r                    agentsRegistry
+	agentsState          agentsStateUpdater
 	vmalert              vmAlertService
 	vmalertExternalRules vmAlertExternalRules
 	alertmanager         alertmanagerService
@@ -68,7 +68,9 @@ type Server struct {
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
-	l                    *logrus.Entry
+	backupService        backupService
+
+	l *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -91,7 +93,7 @@ type pmmUpdateAuth struct {
 // Params holds the parameters needed to create a new service.
 type Params struct {
 	DB                   *reform.DB
-	AgentsRegistry       agentsRegistry
+	AgentsStateUpdater   agentsStateUpdater
 	VMDB                 prometheusService
 	VMAlert              prometheusService
 	Alertmanager         alertmanagerService
@@ -104,6 +106,7 @@ type Params struct {
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
+	BackupService        backupService
 }
 
 // NewServer returns new server for Server service.
@@ -117,7 +120,7 @@ func NewServer(params *Params) (*Server, error) {
 	s := &Server{
 		db:                   params.DB,
 		vmdb:                 params.VMDB,
-		r:                    params.AgentsRegistry,
+		agentsState:          params.AgentsStateUpdater,
 		vmalert:              params.VMAlert,
 		alertmanager:         params.Alertmanager,
 		checksService:        params.ChecksService,
@@ -239,11 +242,34 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	return &serverpb.ReadinessResponse{}, nil
 }
 
+func (s *Server) onlyInstalledVersionResponse(ctx context.Context) *serverpb.CheckUpdatesResponse {
+	v := s.supervisord.InstalledPMMVersion(ctx)
+	r := &serverpb.CheckUpdatesResponse{
+		Installed: &serverpb.VersionInfo{
+			Version:     v.Version,
+			FullVersion: v.FullVersion,
+		},
+	}
+
+	if v.BuildTime != nil {
+		t := v.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+		r.Installed.Timestamp = timestamppb.New(t)
+	}
+
+	r.LastCheck = timestamppb.New(time.Now())
+
+	return r
+}
+
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	s.envRW.RLock()
 	updatesDisabled := s.envSettings.DisableUpdates
 	s.envRW.RUnlock()
+
+	if req.OnlyInstalledVersion {
+		return s.onlyInstalledVersionResponse(ctx), nil
+	}
 
 	if req.Force {
 		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
@@ -696,7 +722,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
-		if err := s.r.UpdateAgentsState(ctx); err != nil {
+		if err := s.agentsState.UpdateAgentsState(ctx); err != nil {
 			return nil, err
 		}
 	}

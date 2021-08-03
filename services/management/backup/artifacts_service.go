@@ -31,15 +31,17 @@ import (
 
 // ArtifactsService represents artifacts API.
 type ArtifactsService struct {
-	l  *logrus.Entry
-	db *reform.DB
+	l          *logrus.Entry
+	db         *reform.DB
+	removalSVC removalService
 }
 
 // NewArtifactsService creates new artifacts API service.
-func NewArtifactsService(db *reform.DB) *ArtifactsService {
+func NewArtifactsService(db *reform.DB, removalSVC removalService) *ArtifactsService {
 	return &ArtifactsService{
-		l:  logrus.WithField("component", "management/backup/artifacts"),
-		db: db,
+		l:          logrus.WithField("component", "management/backup/artifacts"),
+		db:         db,
+		removalSVC: removalSVC,
 	}
 }
 
@@ -57,7 +59,7 @@ func (s *ArtifactsService) Enabled() bool {
 func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArtifactsRequest) (*backupv1beta1.ListArtifactsResponse, error) {
 	q := s.db.Querier
 
-	artifacts, err := models.FindArtifacts(q, nil)
+	artifacts, err := models.FindArtifacts(q, models.ArtifactFilters{})
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +98,19 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
+// DeleteArtifact deletes specified artifact.
+func (s *ArtifactsService) DeleteArtifact(
+	ctx context.Context,
+	req *backupv1beta1.DeleteArtifactRequest,
+) (*backupv1beta1.DeleteArtifactResponse, error) {
+
+	if err := s.removalSVC.DeleteArtifact(ctx, req.ArtifactId, req.RemoveFiles); err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.DeleteArtifactResponse{}, nil
+}
+
 func convertDataModel(dataModel models.DataModel) (*backupv1beta1.DataModel, error) {
 	var dm backupv1beta1.DataModel
 	switch dataModel {
@@ -123,6 +138,10 @@ func convertBackupStatus(status models.BackupStatus) (*backupv1beta1.BackupStatu
 		s = backupv1beta1.BackupStatus_BACKUP_STATUS_SUCCESS
 	case models.ErrorBackupStatus:
 		s = backupv1beta1.BackupStatus_BACKUP_STATUS_ERROR
+	case models.DeletingBackupStatus:
+		s = backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING
+	case models.FailedToDeleteBackupStatus:
+		s = backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE
 	default:
 		return nil, errors.Errorf("invalid status '%s'", status)
 	}
@@ -156,7 +175,7 @@ func convertArtifact(
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
 
-	status, err := convertBackupStatus(a.Status)
+	backupStatus, err := convertBackupStatus(a.Status)
 	if err != nil {
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
@@ -170,7 +189,7 @@ func convertArtifact(
 		ServiceId:    a.ServiceID,
 		ServiceName:  serviceName,
 		DataModel:    *dm,
-		Status:       *status,
+		Status:       *backupStatus,
 		CreatedAt:    createdAt,
 	}, nil
 }

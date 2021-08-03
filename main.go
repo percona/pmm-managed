@@ -66,13 +66,14 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
-	"github.com/percona/pmm-managed/services/management/backup"
+	managementbackup "github.com/percona/pmm-managed/services/management/backup"
 	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/management/ia"
@@ -127,6 +128,10 @@ type gRPCServerDeps struct {
 	vmdb                 *victoriametrics.Service
 	server               *server.Server
 	agentsRegistry       *agents.Registry
+	handler              *agents.Handler
+	actions              *agents.ActionsService
+	agentsStateUpdater   *agents.StateUpdater
+	connectionCheck      *agents.ConnectionChecker
 	grafanaClient        *grafana.Client
 	checksService        *checks.Service
 	dbaasClient          *dbaas.Client
@@ -138,7 +143,10 @@ type gRPCServerDeps struct {
 	rulesService         *ia.RulesService
 	jobsService          *agents.JobsService
 	versionServiceClient *managementdbaas.VersionServiceClient
-	minio                *minio.Service
+	schedulerService     *scheduler.Service
+	backupService        *backup.Service
+	backupRemovalService *backup.RemovalService
+	minioService         *minio.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -163,22 +171,22 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	serverpb.RegisterServerServer(gRPCServer, deps.server)
 
-	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
+	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.handler))
 
-	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.vmdb)
-	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.vmdb)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.vmdb)
+	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb)
+	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.vmdb, deps.connectionCheck)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
-	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.vmdb)
-	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
-	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
-	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
-	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsRegistry)
+	nodeSvc := management.NewNodeService(deps.db)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsStateUpdater, deps.vmdb)
+	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -186,11 +194,11 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
-	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
-	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry))
-	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.agentsRegistry, deps.vmdb))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.agentsRegistry, deps.vmdb))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.actions, deps.db))
+	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsStateUpdater, deps.connectionCheck))
+	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry, deps.agentsStateUpdater, deps.connectionCheck))
+	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.vmdb, deps.agentsStateUpdater, deps.connectionCheck))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.vmdb, deps.agentsStateUpdater, deps.connectionCheck))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, management.NewChecksAPIService(deps.checksService))
 	jobs1beta1.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.jobsService))
@@ -201,12 +209,12 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
-	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.jobsService))
-	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db, deps.minio))
-	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
-	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, backup.NewRestoreHistoryService(deps.db))
+	backupv1beta1.RegisterBackupsServer(gRPCServer, managementbackup.NewBackupsService(deps.db, deps.backupService, deps.schedulerService))
+	backupv1beta1.RegisterLocationsServer(gRPCServer, managementbackup.NewLocationsService(deps.db, deps.minioService))
+	backupv1beta1.RegisterArtifactsServer(gRPCServer, managementbackup.NewArtifactsService(deps.db, deps.backupRemovalService))
+	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, managementbackup.NewRestoreHistoryService(deps.db))
 
-	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasClient))
+	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasClient, deps.grafanaClient))
 	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient))
 	dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient))
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
@@ -593,10 +601,16 @@ func main() {
 	}
 	prom.MustRegister(vmalert)
 
+	minioService := minio.New()
+
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb)
+	agentsRegistry := agents.NewRegistry(db)
+	backupRemovalService := backup.NewRemovalService(db, minioService)
+	backupRetentionService := backup.NewRetentionService(db, backupRemovalService)
 	prom.MustRegister(agentsRegistry)
+
+	connectionCheck := agents.NewConnectionChecker(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
@@ -617,7 +631,13 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService, err := checks.New(agentsRegistry, alertmanager, db)
+	jobsService := agents.NewJobsService(db, agentsRegistry)
+	agentsStateUpdater := agents.NewStateUpdater(db, agentsRegistry, vmdb)
+	agentsHandler := agents.NewHandler(db, qanClient, vmdb, agentsRegistry, agentsStateUpdater, backupRetentionService)
+
+	actionsService := agents.NewActionsService(agentsRegistry)
+
+	checksService, err := checks.New(actionsService, alertmanager, db)
 	if err != nil {
 		l.Fatalf("Could not create checks service: %s", err)
 	}
@@ -629,8 +649,6 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
-	jobsService := agents.NewJobsService(db, agentsRegistry)
-
 	// Integrated alerts services
 	templatesService := ia.NewTemplatesService(db)
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
@@ -639,13 +657,14 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	schedulerService := scheduler.New(db)
+	backupService := backup.NewService(db, jobsService)
+	schedulerService := scheduler.New(db, backupService)
 
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
 		VMAlert:              vmalert,
-		AgentsRegistry:       agentsRegistry,
+		AgentsStateUpdater:   agentsStateUpdater,
 		Alertmanager:         alertmanager,
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
@@ -656,6 +675,7 @@ func main() {
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
+		BackupService:        backupService,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -722,7 +742,7 @@ func main() {
 
 	// Set all agents status to unknown at startup. The ones that are alive
 	// will get their status updated after they connect to the pmm-managed.
-	err = agentsRegistry.SetAllAgentsStatusUnknown(ctx)
+	err = agentsHandler.SetAllAgentsStatusUnknown(ctx)
 	if err != nil {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
@@ -813,6 +833,10 @@ func main() {
 			vmdb:                 vmdb,
 			server:               server,
 			agentsRegistry:       agentsRegistry,
+			handler:              agentsHandler,
+			actions:              actionsService,
+			agentsStateUpdater:   agentsStateUpdater,
+			connectionCheck:      connectionCheck,
 			grafanaClient:        grafanaClient,
 			checksService:        checksService,
 			dbaasClient:          dbaasClient,
@@ -824,7 +848,10 @@ func main() {
 			rulesService:         rulesService,
 			jobsService:          jobsService,
 			versionServiceClient: versionService,
-			minio:                &minio.Service{},
+			schedulerService:     schedulerService,
+			backupService:        backupService,
+			backupRemovalService: backupRemovalService,
+			minioService:         minioService,
 		})
 	}()
 
