@@ -35,13 +35,18 @@ const (
 
 // MySQLService MySQL Management Service.
 type MySQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, registry agentsRegistry) *MySQLService {
-	return &MySQLService{db, registry}
+func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *MySQLService {
+	return &MySQLService{
+		db:    db,
+		state: state,
+		cc:    cc,
+	}
 }
 
 // Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
@@ -102,6 +107,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			ServiceID:                      service.ServiceID,
 			Username:                       req.Username,
 			Password:                       req.Password,
+			AgentPassword:                  req.AgentPassword,
 			TLS:                            req.Tls,
 			TLSSkipVerify:                  req.TlsSkipVerify,
 			MySQLOptions:                   models.MySQLOptionsFromRequest(req),
@@ -113,7 +119,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			return err
 		}
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 			// CheckConnectionToService updates the table count in row so, let's also update the response
@@ -176,6 +182,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
