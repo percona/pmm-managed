@@ -19,9 +19,9 @@ package versioncache
 
 import (
 	"context"
-	"github.com/AlekSi/pointer"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -226,7 +226,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		}
 
 		if versions[i].Error != "" {
-			s.l.Warnf("failed to get version of %q software: %s", softwareName, versions[i].Error)
+			s.l.Warnf("failed to get version of %q software: %s", name, versions[i].Error)
 			continue
 		}
 		if versions[i].Version == "" {

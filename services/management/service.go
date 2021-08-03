@@ -40,10 +40,10 @@ var serviceTypes = map[inventorypb.ServiceType]models.ServiceType{
 
 // ServiceService represents service for working with services.
 type ServiceService struct {
-	db       *reform.DB
-	state    agentsStateUpdater
-	vmdb     prometheusService
-	vc       versionCache
+	db    *reform.DB
+	state agentsStateUpdater
+	vmdb  prometheusService
+	vc    versionCache
 }
 
 // NewServiceService creates ServiceService instance.

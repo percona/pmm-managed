@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"gopkg.in/reform.v1"
 	"github.com/percona-platform/saas/pkg/check"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
@@ -81,7 +81,6 @@ type jobsService interface {
 	StopJob(jobID string) error
 	StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error
 }
-
 
 // versionCache is a subset of methods of versioncache.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
