@@ -70,6 +70,10 @@ func (s *Service) PerformBackup(
 			return err
 		}
 
+		if mode == models.Snapshot {
+			name = name + "_" + time.Now().Format(time.RFC3339)
+		}
+
 		location, err = models.FindBackupLocationByID(tx.Querier, locationID)
 		if err != nil {
 			return err
@@ -98,10 +102,6 @@ func (s *Service) PerformBackup(
 			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
 		default:
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
-		}
-
-		if mode == models.Snapshot {
-			name = name + "_" + time.Now().Format(time.RFC3339)
 		}
 
 		if artifact == nil {
