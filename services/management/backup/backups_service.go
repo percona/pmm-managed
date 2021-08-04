@@ -236,9 +236,13 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	if req.Enabled != nil {
-		if err = s.backupService.SwitchMongoPITR(ctx, serviceID, req.Enabled.Value); err != nil {
-			return nil, err // TODO
+		// for MongoDB disable PITR
+		if scheduledTask.Type == models.ScheduledMongoDBBackupTask {
+			if err = s.backupService.SwitchMongoPITR(ctx, serviceID, req.Enabled.Value); err != nil {
+				return nil, err
+			}
 		}
+
 		params.Disable = pointer.ToBool(!req.Enabled.Value)
 	}
 
@@ -266,12 +270,13 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 		serviceID = task.Data.MySQLBackupTask.ServiceID
 	case models.ScheduledMongoDBBackupTask:
 		serviceID = task.Data.MongoDBBackupTask.ServiceID
+		// disable PITR for MongoDB
+		if err = s.backupService.SwitchMongoPITR(ctx, serviceID, false); err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, errors.Errorf("non-backup task: %s", task.Type)
-	}
-
-	if err = s.backupService.SwitchMongoPITR(ctx, serviceID, false); err != nil {
-		return nil, err // TODO
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
