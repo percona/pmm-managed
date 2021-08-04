@@ -273,10 +273,18 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: nextPXCOperatorVersion.String(),
 			}
+		} else {
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: "",
+			}
 		}
 		if latestPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion.LessThanOrEqual(latestPSMDBOperatorVersion) {
 			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: nextPSMDBOperatorVersion.String(),
+			}
+		} else {
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: "",
 			}
 		}
 	}

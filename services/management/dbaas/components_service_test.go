@@ -666,6 +666,32 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 			Matrix         matrix `json:"matrix"`
 		}{
 			{
+				ProductVersion: onePointSix,
+				Product:        pxcOperator,
+			},
+			{
+				ProductVersion: onePointSeven,
+				Product:        pxcOperator,
+			},
+			{
+				ProductVersion: onePointEight,
+				Product:        pxcOperator,
+			},
+
+			{
+				ProductVersion: onePointSix,
+				Product:        psmdbOperator,
+			},
+			{
+				ProductVersion: onePointSeven,
+				Product:        psmdbOperator,
+			},
+			{
+				ProductVersion: onePointEight,
+				Product:        psmdbOperator,
+			},
+
+			{
 				ProductVersion: twoPointEighteen,
 				Product:        "pmm-server",
 				Matrix: matrix{
@@ -699,6 +725,8 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
+		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
 		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
 		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
@@ -717,6 +745,8 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
+		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
 		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
 		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
@@ -736,7 +766,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
 		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
-
+		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
 		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
 		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})

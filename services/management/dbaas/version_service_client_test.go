@@ -170,8 +170,8 @@ func TestOperatorVersionGetting(t *testing.T) {
 		defer cancel()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, "2.19")
 		assert.Error(t, err, "err is expected")
-		assert.Equal(t, "", pxcOperatorVersion)
-		assert.Equal(t, "", psmdbOperatorVersion)
+		assert.Nil(t, pxcOperatorVersion)
+		assert.Nil(t, psmdbOperatorVersion)
 	})
 	response := &VersionServiceResponse{
 		Versions: []struct {
@@ -179,6 +179,33 @@ func TestOperatorVersionGetting(t *testing.T) {
 			ProductVersion string `json:"operator"`
 			Matrix         matrix `json:"matrix"`
 		}{
+
+			{
+				ProductVersion: onePointSix,
+				Product:        pxcOperator,
+			},
+			{
+				ProductVersion: onePointSeven,
+				Product:        pxcOperator,
+			},
+			{
+				ProductVersion: onePointEight,
+				Product:        pxcOperator,
+			},
+
+			{
+				ProductVersion: onePointSix,
+				Product:        psmdbOperator,
+			},
+			{
+				ProductVersion: onePointSeven,
+				Product:        psmdbOperator,
+			},
+			{
+				ProductVersion: onePointEight,
+				Product:        psmdbOperator,
+			},
+
 			{
 				ProductVersion: twoPointEighteen,
 				Product:        "pmm-server",
@@ -196,38 +223,40 @@ func TestOperatorVersionGetting(t *testing.T) {
 			},
 		},
 	}
-	c, cleanup := newFakeVersionService(response, "5897", "pmm-server")
+	c, cleanup := newFakeVersionService(response, "5897", "pmm-server", psmdbOperator, pxcOperator)
 	t.Cleanup(func() { cleanup(t) })
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, onePointEight, pxcOperatorVersion)
-		assert.Equal(t, onePointNine, psmdbOperatorVersion)
+		assert.Equal(t, onePointEight, pxcOperatorVersion.String())
+		assert.Equal(t, onePointNine, psmdbOperatorVersion.String())
 	})
 	t.Run("Get latest, PMM version unknown by version service", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, "2.2200.0")
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "", pxcOperatorVersion)
-		assert.Equal(t, "", psmdbOperatorVersion)
+		assert.Nil(t, pxcOperatorVersion)
+		assert.Nil(t, psmdbOperatorVersion)
 	})
 	t.Run("Get next, update not available", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetNextOperatorVersion(ctx, onePointEight, onePointNine, twoPointEighteen)
+		pxcOperatorVersion, err := c.GetNextOperatorVersion(ctx, pxcOperator, onePointEight)
+		psmdbOperatorVersion, err := c.GetNextOperatorVersion(ctx, psmdbOperator, onePointEight)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "", pxcOperatorVersion)
-		assert.Equal(t, "", psmdbOperatorVersion)
+		assert.Nil(t, pxcOperatorVersion)
+		assert.Nil(t, psmdbOperatorVersion)
 	})
 	t.Run("Get next, update available", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetNextOperatorVersion(ctx, onePointSix, onePointSeven, twoPointEighteen)
+		pxcOperatorVersion, err := c.GetNextOperatorVersion(ctx, pxcOperator, onePointSix)
+		psmdbOperatorVersion, err := c.GetNextOperatorVersion(ctx, psmdbOperator, onePointSeven)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, onePointSeven, pxcOperatorVersion)
-		assert.Equal(t, onePointEight, psmdbOperatorVersion)
+		assert.Equal(t, onePointSeven, pxcOperatorVersion.String())
+		assert.Equal(t, onePointEight, psmdbOperatorVersion.String())
 	})
 }
