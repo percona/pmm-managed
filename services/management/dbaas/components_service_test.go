@@ -546,11 +546,7 @@ func TestInstallOperator(t *testing.T) {
 	pmmversion.PMMVersion = "2.19.0"
 
 	response := &VersionServiceResponse{
-		Versions: []struct {
-			Product        string `json:"product"`
-			ProductVersion string `json:"operator"`
-			Matrix         matrix `json:"matrix"`
-		}{
+		Versions: []Version{
 			{
 				Product:        pxcOperator,
 				ProductVersion: onePointSeven,
@@ -618,7 +614,7 @@ func TestInstallOperator(t *testing.T) {
 			Version:               onePointEight,
 		})
 		require.Error(t, err)
-		assert.Equal(t, resp.Status, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED)
+		assert.Nil(t, resp)
 
 		resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
 			KubernetesClusterName: clusterName,
@@ -626,7 +622,7 @@ func TestInstallOperator(t *testing.T) {
 			Version:               onePointEight,
 		})
 		require.Error(t, err)
-		assert.Equal(t, resp.Status, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED)
+		assert.Nil(t, resp)
 	})
 
 	t.Run("Defaults supported", func(t *testing.T) {
@@ -660,11 +656,7 @@ func TestInstallOperator(t *testing.T) {
 func TestCheckForOperatorUpdate(t *testing.T) {
 	t.Parallel()
 	response := &VersionServiceResponse{
-		Versions: []struct {
-			Product        string `json:"product"`
-			ProductVersion string `json:"operator"`
-			Matrix         matrix `json:"matrix"`
-		}{
+		Versions: []Version{
 			{
 				ProductVersion: onePointSix,
 				Product:        pxcOperator,

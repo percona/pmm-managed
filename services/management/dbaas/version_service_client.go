@@ -61,13 +61,15 @@ type matrix struct {
 	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
 }
 
+type Version struct {
+	Product        string `json:"product"`
+	ProductVersion string `json:"operator"`
+	Matrix         matrix `json:"matrix"`
+}
+
 // VersionServiceResponse represents response from version service API.
 type VersionServiceResponse struct {
-	Versions []struct {
-		Product        string `json:"product"`
-		ProductVersion string `json:"operator"`
-		Matrix         matrix `json:"matrix"`
-	} `json:"versions"`
+	Versions []Version `json:"versions"`
 }
 
 // componentsParams contains params to filter components in version service API.
@@ -277,11 +279,7 @@ func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operator
 	return
 }
 
-func next(versions []struct {
-	Product        string `json:"product"`
-	ProductVersion string `json:"operator"`
-	Matrix         matrix `json:"matrix"`
-}, installedVersion string) (*goversion.Version, error) {
+func next(versions []Version, installedVersion string) (*goversion.Version, error) {
 	if len(versions) == 0 {
 		return nil, errNoVersionsFound
 	}

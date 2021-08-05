@@ -107,11 +107,7 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 					}
 				}
 				response = &VersionServiceResponse{
-					Versions: []struct {
-						Product        string `json:"product"`
-						ProductVersion string `json:"operator"`
-						Matrix         matrix `json:"matrix"`
-					}{v},
+					Versions: []Version{v},
 				}
 				break
 			}
@@ -174,11 +170,7 @@ func TestOperatorVersionGetting(t *testing.T) {
 		assert.Nil(t, psmdbOperatorVersion)
 	})
 	response := &VersionServiceResponse{
-		Versions: []struct {
-			Product        string `json:"product"`
-			ProductVersion string `json:"operator"`
-			Matrix         matrix `json:"matrix"`
-		}{
+		Versions: []Version{
 
 			{
 				ProductVersion: onePointSix,
