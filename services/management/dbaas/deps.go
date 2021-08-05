@@ -78,11 +78,11 @@ type versionService interface {
 	// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
 	// version service does not have any matching versions.
 	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
-	// GetLatestOperatorVersion returns latest operators versions available based on given params.
-	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPXCOperatorVersion, latestPSMDBOperatorVersion *goversion.Version, err error)
-	// GetNextOperatorVersion returns operator versions that is a direct successor of currently installed one.
+	// LatestOperatorVersion returns latest operators versions available based on given params.
+	LatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPXCOperatorVersion, latestPSMDBOperatorVersion *goversion.Version, err error)
+	// NextOperatorVersion returns operator versions that is a direct successor of currently installed one.
 	// Compatibility with PMM is not taken into account.
-	GetNextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error)
+	NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

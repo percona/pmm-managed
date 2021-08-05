@@ -159,7 +159,7 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	pxcOperatorVersion, psmdbOperatorVersion, err := k.versionService.GetLatestOperatorVersion(ctx, pmmVersion.Core().String())
+	pxcOperatorVersion, psmdbOperatorVersion, err := k.versionService.LatestOperatorVersion(ctx, pmmVersion.Core().String())
 	if err != nil {
 		return nil, err
 	}

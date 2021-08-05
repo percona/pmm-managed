@@ -14,61 +14,6 @@ type mockVersionService struct {
 	mock.Mock
 }
 
-// GetLatestOperatorVersion provides a mock function with given fields: ctx, pmmVersion
-func (_m *mockVersionService) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*version.Version, *version.Version, error) {
-	ret := _m.Called(ctx, pmmVersion)
-
-	var r0 *version.Version
-	if rf, ok := ret.Get(0).(func(context.Context, string) *version.Version); ok {
-		r0 = rf(ctx, pmmVersion)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*version.Version)
-		}
-	}
-
-	var r1 *version.Version
-	if rf, ok := ret.Get(1).(func(context.Context, string) *version.Version); ok {
-		r1 = rf(ctx, pmmVersion)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*version.Version)
-		}
-	}
-
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
-		r2 = rf(ctx, pmmVersion)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// GetNextOperatorVersion provides a mock function with given fields: ctx, operatorType, installedVersion
-func (_m *mockVersionService) GetNextOperatorVersion(ctx context.Context, operatorType string, installedVersion string) (*version.Version, error) {
-	ret := _m.Called(ctx, operatorType, installedVersion)
-
-	var r0 *version.Version
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *version.Version); ok {
-		r0 = rf(ctx, operatorType, installedVersion)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*version.Version)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, operatorType, installedVersion)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // IsDatabaseVersionSupportedByOperator provides a mock function with given fields: ctx, operatorType, operatorVersion, databaseVersion
 func (_m *mockVersionService) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType string, operatorVersion string, databaseVersion string) (bool, error) {
 	ret := _m.Called(ctx, operatorType, operatorVersion, databaseVersion)
@@ -111,6 +56,38 @@ func (_m *mockVersionService) IsOperatorVersionSupported(ctx context.Context, op
 	return r0, r1
 }
 
+// LatestOperatorVersion provides a mock function with given fields: ctx, pmmVersion
+func (_m *mockVersionService) LatestOperatorVersion(ctx context.Context, pmmVersion string) (*version.Version, *version.Version, error) {
+	ret := _m.Called(ctx, pmmVersion)
+
+	var r0 *version.Version
+	if rf, ok := ret.Get(0).(func(context.Context, string) *version.Version); ok {
+		r0 = rf(ctx, pmmVersion)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*version.Version)
+		}
+	}
+
+	var r1 *version.Version
+	if rf, ok := ret.Get(1).(func(context.Context, string) *version.Version); ok {
+		r1 = rf(ctx, pmmVersion)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*version.Version)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = rf(ctx, pmmVersion)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // Matrix provides a mock function with given fields: ctx, params
 func (_m *mockVersionService) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
 	ret := _m.Called(ctx, params)
@@ -127,6 +104,29 @@ func (_m *mockVersionService) Matrix(ctx context.Context, params componentsParam
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, componentsParams) error); ok {
 		r1 = rf(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// NextOperatorVersion provides a mock function with given fields: ctx, operatorType, installedVersion
+func (_m *mockVersionService) NextOperatorVersion(ctx context.Context, operatorType string, installedVersion string) (*version.Version, error) {
+	ret := _m.Called(ctx, operatorType, installedVersion)
+
+	var r0 *version.Version
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *version.Version); ok {
+		r0 = rf(ctx, operatorType, installedVersion)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*version.Version)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, operatorType, installedVersion)
 	} else {
 		r1 = ret.Error(1)
 	}

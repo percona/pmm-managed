@@ -205,7 +205,7 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 	return false, nil
 }
 
-func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
+func latest(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
@@ -222,8 +222,8 @@ func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
 	return latest, nil
 }
 
-// GetLatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
-func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+// LatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
 	if pmmVersion == "" {
 		return nil, nil, errors.New("given PMM version is empty")
 	}
@@ -239,19 +239,19 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
-	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)
+	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
+	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
 	return latestPXCOperator, latestPSMDBOperator, err
 }
 
-// GetNextOperatorVersion returns operator version that is direct successor of currently installed one.
+// NextOperatorVersion returns operator version that is direct successor of currently installed one.
 // It returns nil if update is not available or error occurred. It does not take PMM version into consideration.
 // We need to upgrade to current + 1 version for upgrade to be successful. So even if dbaas-controller does not support the
 // operator, we need to upgrade to it on our way to supported one.
-func (c *VersionServiceClient) GetNextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
+func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
 	if installedVersion == "" {
 		return
 	}
@@ -269,7 +269,7 @@ func (c *VersionServiceClient) GetNextOperatorVersion(ctx context.Context, opera
 
 	// Find next versions if installed.
 	if installedVersion != "" {
-		nextOperatorVersion, err = getNext(matrix.Versions, installedVersion)
+		nextOperatorVersion, err = next(matrix.Versions, installedVersion)
 		if err != nil {
 			return
 		}
@@ -277,7 +277,7 @@ func (c *VersionServiceClient) GetNextOperatorVersion(ctx context.Context, opera
 	return
 }
 
-func getNext(versions []struct {
+func next(versions []struct {
 	Product        string `json:"product"`
 	ProductVersion string `json:"operator"`
 	Matrix         matrix `json:"matrix"`
