@@ -286,32 +286,21 @@ func getNext(versions []struct {
 		return nil, errNoVersionsFound
 	}
 	// Get versions greater than currently installed one.
-	var greaterThanCurrent []*goversion.Version
+	var nextVersion *goversion.Version
 	installed, err := goversion.NewVersion(installedVersion)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, version := range versions {
 		v, err := goversion.NewVersion(version.ProductVersion)
 		if err != nil {
 			return nil, err
 		}
-		if v.GreaterThan(installed) {
-			greaterThanCurrent = append(greaterThanCurrent, v)
+		if v.GreaterThan(installed) && (nextVersion == nil || nextVersion.GreaterThan(v)) {
+			nextVersion = v
 		}
 	}
 
-	if len(greaterThanCurrent) == 0 {
-		// No update available.
-		return nil, nil
-	}
-
-	// Find lowest version.
-	lowestVersion := greaterThanCurrent[0]
-	for i := 1; i < len(greaterThanCurrent); i++ {
-		if greaterThanCurrent[i].LessThan(lowestVersion) {
-			lowestVersion = greaterThanCurrent[i]
-		}
-	}
-	return lowestVersion, nil
+	return nextVersion, nil
 }
