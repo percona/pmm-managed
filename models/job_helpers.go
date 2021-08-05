@@ -43,13 +43,42 @@ func FindJobByID(q *reform.Querier, id string) (*Job, error) {
 	}
 }
 
+// CreateJobParams are params for creating a new job.
+type CreateJobParams struct {
+	PMMAgentID string
+	Type       JobType
+	Data       *JobData
+	Timeout    time.Duration
+	Interval   time.Duration
+	Retries    int
+}
+
+func (p CreateJobParams) Validate() error {
+	switch p.Type {
+	case Echo:
+	case MySQLBackupJob:
+	case MySQLRestoreBackupJob:
+	case MongoDBBackupJob:
+	case MongoDBRestoreBackupJob:
+	default:
+		return errors.Errorf("unknown job type: %v", p.Type)
+	}
+	return nil
+}
+
 // CreateJob stores a job result in the storage.
-func CreateJob(q *reform.Querier, pmmAgentID string, jobType JobType, data *JobData) (*Job, error) {
+func CreateJob(q *reform.Querier, params CreateJobParams) (*Job, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
 	result := &Job{
 		ID:         "/job_id/" + uuid.New().String(),
-		PMMAgentID: pmmAgentID,
-		Type:       jobType,
-		Data:       data,
+		PMMAgentID: params.PMMAgentID,
+		Type:       params.Type,
+		Data:       params.Data,
+		Timeout:    params.Timeout,
+		Interval:   params.Interval,
+		Retries:    params.Retries,
 	}
 	if err := q.Insert(result); err != nil {
 		return nil, errors.WithStack(err)

@@ -554,7 +554,6 @@ var databaseSchema = [][]string{
 		`ALTER TABLE jobs
 			ADD COLUMN data JSONB,
 			ADD COLUMN retries INTEGER,
-			ADD COLUMN retries_remaining INTEGER,
 			ADD COLUMN interval BIGINT,
 			ADD COLUMN timeout BIGINT
 		`,

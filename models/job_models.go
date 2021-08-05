@@ -120,19 +120,18 @@ func (c *JobData) Scan(src interface{}) error { return jsonScan(c, src) }
 // Job describes a job result which is storing in persistent storage.
 //reform:jobs
 type Job struct {
-	ID               string        `reform:"id,pk"`
-	PMMAgentID       string        `reform:"pmm_agent_id"`
-	Type             JobType       `reform:"type"`
-	Data             *JobData      `reform:"data"`
-	Timeout          time.Duration `reform:"timeout"`
-	Retries          int           `reform:"retries"`
-	RetriesRemaining int           `reform:"retries_remaining"`
-	Interval         time.Duration `reform:"interval"`
-	Done             bool          `reform:"done"`
-	Error            string        `reform:"error"`
-	Result           *JobResult    `reform:"result"`
-	CreatedAt        time.Time     `reform:"created_at"`
-	UpdatedAt        time.Time     `reform:"updated_at"`
+	ID         string        `reform:"id,pk"`
+	PMMAgentID string        `reform:"pmm_agent_id"`
+	Type       JobType       `reform:"type"`
+	Data       *JobData      `reform:"data"`
+	Timeout    time.Duration `reform:"timeout"`
+	Retries    int           `reform:"retries"`
+	Interval   time.Duration `reform:"interval"`
+	Done       bool          `reform:"done"`
+	Error      string        `reform:"error"`
+	Result     *JobResult    `reform:"result"`
+	CreatedAt  time.Time     `reform:"created_at"`
+	UpdatedAt  time.Time     `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

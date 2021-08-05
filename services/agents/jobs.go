@@ -34,8 +34,9 @@ var ErrRetriesExhausted = errors.New("Retries exhausted")
 
 // JobsService provides methods for managing jobs.
 type JobsService struct {
-	r                *Registry
-	db               *reform.DB
+	r  *Registry
+	db *reform.DB
+
 	retentionService retentionService
 	l                *logrus.Entry
 }
@@ -63,11 +64,11 @@ func (s *JobsService) RestartJob(jobID string) error {
 			return errors.WithStack(err)
 		}
 
-		if job.RetriesRemaining == 0 {
+		if job.Retries == 0 {
 			return ErrRetriesExhausted
 		}
 
-		job.RetriesRemaining--
+		job.Retries--
 		if err = tx.Update(job); err != nil {
 			return err
 		}
@@ -123,12 +124,17 @@ func (s *JobsService) RestartJob(jobID string) error {
 		}
 	}
 
+	s.l.Debugf("restarting job: %s, delay: %v", jobID, job.Interval)
+
 	if job.Interval > 0 {
 		time.Sleep(job.Interval)
 	}
 
 	switch job.Type {
 	case models.Echo:
+		if err := s.StartEchoJob(job.ID, job.PMMAgentID, job.Timeout, job.Data.Echo.Message, job.Data.Echo.Delay); err != nil {
+			return errors.WithStack(err)
+		}
 	case models.MySQLBackupJob:
 		if err := s.StartMySQLBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig, locationConfig); err != nil {
 			return errors.WithStack(err)

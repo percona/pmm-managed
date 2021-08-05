@@ -34,7 +34,6 @@ func (v *jobTableType) Columns() []string {
 		"data",
 		"timeout",
 		"retries",
-		"retries_remaining",
 		"interval",
 		"done",
 		"error",
@@ -71,7 +70,6 @@ var JobTable = &jobTableType{
 			{Name: "Data", Type: "*JobData", Column: "data"},
 			{Name: "Timeout", Type: "time.Duration", Column: "timeout"},
 			{Name: "Retries", Type: "int", Column: "retries"},
-			{Name: "RetriesRemaining", Type: "int", Column: "retries_remaining"},
 			{Name: "Interval", Type: "time.Duration", Column: "interval"},
 			{Name: "Done", Type: "bool", Column: "done"},
 			{Name: "Error", Type: "string", Column: "error"},
@@ -86,20 +84,19 @@ var JobTable = &jobTableType{
 
 // String returns a string representation of this struct or record.
 func (s Job) String() string {
-	res := make([]string, 13)
+	res := make([]string, 12)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "PMMAgentID: " + reform.Inspect(s.PMMAgentID, true)
 	res[2] = "Type: " + reform.Inspect(s.Type, true)
 	res[3] = "Data: " + reform.Inspect(s.Data, true)
 	res[4] = "Timeout: " + reform.Inspect(s.Timeout, true)
 	res[5] = "Retries: " + reform.Inspect(s.Retries, true)
-	res[6] = "RetriesRemaining: " + reform.Inspect(s.RetriesRemaining, true)
-	res[7] = "Interval: " + reform.Inspect(s.Interval, true)
-	res[8] = "Done: " + reform.Inspect(s.Done, true)
-	res[9] = "Error: " + reform.Inspect(s.Error, true)
-	res[10] = "Result: " + reform.Inspect(s.Result, true)
-	res[11] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[12] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[6] = "Interval: " + reform.Inspect(s.Interval, true)
+	res[7] = "Done: " + reform.Inspect(s.Done, true)
+	res[8] = "Error: " + reform.Inspect(s.Error, true)
+	res[9] = "Result: " + reform.Inspect(s.Result, true)
+	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -113,7 +110,6 @@ func (s *Job) Values() []interface{} {
 		s.Data,
 		s.Timeout,
 		s.Retries,
-		s.RetriesRemaining,
 		s.Interval,
 		s.Done,
 		s.Error,
@@ -133,7 +129,6 @@ func (s *Job) Pointers() []interface{} {
 		&s.Data,
 		&s.Timeout,
 		&s.Retries,
-		&s.RetriesRemaining,
 		&s.Interval,
 		&s.Done,
 		&s.Error,

@@ -192,7 +192,11 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 			return errors.Errorf("unsupported service type: %s", service.ServiceType)
 		}
 
-		job, err := models.CreateJob(tx.Querier, params.AgentID, jobType, jobData)
+		job, err := models.CreateJob(tx.Querier, models.CreateJobParams{
+			PMMAgentID: params.AgentID,
+			Type:       jobType,
+			Data:       jobData,
+		})
 		if err != nil {
 			return err
 		}
@@ -341,7 +345,11 @@ func (s *Service) prepareBackupJob(
 		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)
 	}
 
-	res, err := models.CreateJob(q, pmmAgents[0].AgentID, jobType, jobData)
+	res, err := models.CreateJob(q, models.CreateJobParams{
+		PMMAgentID: pmmAgents[0].AgentID,
+		Type:       jobType,
+		Data:       jobData,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

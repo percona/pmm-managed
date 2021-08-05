@@ -142,7 +142,11 @@ func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobTy
 			return err
 		}
 
-		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, jobData)
+		res, err = models.CreateJob(tx.Querier, models.CreateJobParams{
+			PMMAgentID: pmmAgentID,
+			Type:       jobType,
+			Data:       jobData,
+		})
 		return err
 	})
 	if e != nil {
@@ -168,7 +172,10 @@ func (s *JobsAPIService) prepareServiceJob(serviceID, pmmAgentID, database strin
 			return err
 		}
 
-		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, nil)
+		res, err = models.CreateJob(tx.Querier, models.CreateJobParams{
+			PMMAgentID: pmmAgentID,
+			Type:       jobType,
+		})
 		return err
 	})
 	if e != nil {
