@@ -72,7 +72,7 @@ func (k *kubernetesServer) Enabled() bool {
 
 // getOperatorStatus exists mainly to assign appropriate status when installed operator is unsupported.
 // dbaas-controller does not have a clue what's supported, so we have to do it here.
-func (k kubernetesServer) getOperatorStatus(ctx context.Context, operatorType string, operatorVersion string) (dbaasv1beta1.OperatorsStatus, error) {
+func (k kubernetesServer) convertToOperatorStatus(ctx context.Context, operatorType string, operatorVersion string) (dbaasv1beta1.OperatorsStatus, error) {
 	if operatorVersion == "" {
 		return dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED, nil
 	}
@@ -122,11 +122,11 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 				return
 			}
 
-			clusters[i].Operators.Xtradb.Status, err = k.getOperatorStatus(ctx, pxcOperator, resp.Operators.XtradbOperatorVersion)
+			clusters[i].Operators.Xtradb.Status, err = k.convertToOperatorStatus(ctx, pxcOperator, resp.Operators.XtradbOperatorVersion)
 			if err != nil {
 				k.l.Errorf("failed to convert dbaas-controller operator status to PMM status: %v", err)
 			}
-			clusters[i].Operators.Psmdb.Status, err = k.getOperatorStatus(ctx, psmdbOperator, resp.Operators.PsmdbOperatorVersion)
+			clusters[i].Operators.Psmdb.Status, err = k.convertToOperatorStatus(ctx, psmdbOperator, resp.Operators.PsmdbOperatorVersion)
 			if err != nil {
 				k.l.Errorf("failed to convert dbaas-controller operator status to PMM status: %v", err)
 			}

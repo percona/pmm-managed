@@ -443,7 +443,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		// Default version of database could be unsupported be a new operator version.
 		supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, req.OperatorType, req.Version, component.DefaultVersion)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to check if default database version is supported: %v", err)
+			return nil, status.Errorf(codes.Internal, "failed to check if default database version is supported by the operator version: %v", err)
 		}
 		if !supported {
 			return nil, status.Errorf(codes.Internal, "default database version %s is unsupported by the operator version %s, please change default version.", component.DefaultVersion, req.Version)
