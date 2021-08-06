@@ -18,6 +18,7 @@ package backup
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -44,9 +45,18 @@ func NewService(db *reform.DB, jobsService jobsService) *Service {
 	}
 }
 
+// PerformBackupParams are params for performing backup.
+type PerformBackupParams struct {
+	ServiceID     string
+	LocationID    string
+	Name          string
+	ScheduleID    string
+	Retries       uint32
+	RetryInterval time.Duration
+}
+
 // PerformBackup starts on-demand backup.
-func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name,
-	scheduleID string) (string, error) {
+func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams) (string, error) {
 	var err error
 	var artifact *models.Artifact
 	var location *models.BackupLocation
@@ -55,12 +65,12 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		svc, err = models.FindServiceByID(tx.Querier, serviceID)
+		svc, err = models.FindServiceByID(tx.Querier, params.ServiceID)
 		if err != nil {
 			return err
 		}
 
-		location, err = models.FindBackupLocationByID(tx.Querier, locationID)
+		location, err = models.FindBackupLocationByID(tx.Querier, params.LocationID)
 		if err != nil {
 			return err
 		}
@@ -84,13 +94,13 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 		}
 
 		artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
-			Name:       name,
+			Name:       params.Name,
 			Vendor:     string(svc.ServiceType),
 			LocationID: location.ID,
 			ServiceID:  svc.ServiceID,
 			DataModel:  dataModel,
 			Status:     models.PendingBackupStatus,
-			ScheduleID: scheduleID,
+			ScheduleID: params.ScheduleID,
 		})
 		if err != nil {
 			return err
@@ -114,9 +124,9 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig)
 	case models.MongoDBServiceType:
-		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig)
+		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig)
 	case models.PostgreSQLServiceType,
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,

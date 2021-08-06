@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/percona/pmm-managed/services/backup"
+
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
@@ -54,7 +56,13 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	artifactID, err := s.backupService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, "")
+	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
+		ServiceID:     req.ServiceId,
+		LocationID:    req.LocationId,
+		Name:          req.Name,
+		Retries:       req.Retries,
+		RetryInterval: req.RetryInterval.AsDuration(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +102,22 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			return err
 		}
 
+		backupParams := scheduler.BackupTaskParams{
+			ServiceID:     req.ServiceId,
+			LocationID:    req.LocationId,
+			Name:          req.Name,
+			Description:   req.Description,
+			Retention:     req.Retention,
+			Retries:       req.Retries,
+			RetryInterval: req.RetryInterval.AsDuration(),
+		}
+
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			task = scheduler.NewMySQLBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description, req.Retention)
+			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
 		case models.MongoDBServiceType:
-			task = scheduler.NewMongoBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description, req.Retention)
+			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -174,12 +192,12 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 
 	scheduledBackups := make([]*backupv1beta1.ScheduledBackup, 0, len(tasks))
 	for _, task := range tasks {
-		backup, err := convertTaskToScheduledBackup(task, services, locations)
+		scheduledBackup, err := convertTaskToScheduledBackup(task, services, locations)
 		if err != nil {
-			s.l.WithError(err).Warnf("convert task to scheduled backup")
+			s.l.WithError(err).Warnf("convert task to scheduledBackup")
 			continue
 		}
-		scheduledBackups = append(scheduledBackups, backup)
+		scheduledBackups = append(scheduledBackups, scheduledBackup)
 	}
 
 	return &backupv1beta1.ListScheduledBackupsResponse{
@@ -283,50 +301,50 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	services map[string]*models.Service,
 	locations map[string]*models.BackupLocation) (*backupv1beta1.ScheduledBackup, error) {
-	backup := &backupv1beta1.ScheduledBackup{
+	scheduledBackup := &backupv1beta1.ScheduledBackup{
 		ScheduledBackupId: task.ID,
 		CronExpression:    task.CronExpression,
 		Enabled:           !task.Disabled,
 	}
 
 	if !task.LastRun.IsZero() {
-		backup.LastRun = timestamppb.New(task.LastRun)
+		scheduledBackup.LastRun = timestamppb.New(task.LastRun)
 	}
 
 	if !task.NextRun.IsZero() {
-		backup.NextRun = timestamppb.New(task.NextRun)
+		scheduledBackup.NextRun = timestamppb.New(task.NextRun)
 	}
 
 	if !task.StartAt.IsZero() {
-		backup.StartTime = timestamppb.New(task.StartAt)
+		scheduledBackup.StartTime = timestamppb.New(task.StartAt)
 	}
 
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
 		data := task.Data.MySQLBackupTask
-		backup.ServiceId = data.ServiceID
-		backup.LocationId = data.LocationID
-		backup.Name = data.Name
-		backup.Description = data.Description
-		backup.DataModel = backupv1beta1.DataModel_PHYSICAL
-		backup.Retention = data.Retention
+		scheduledBackup.ServiceId = data.ServiceID
+		scheduledBackup.LocationId = data.LocationID
+		scheduledBackup.Name = data.Name
+		scheduledBackup.Description = data.Description
+		scheduledBackup.DataModel = backupv1beta1.DataModel_PHYSICAL
+		scheduledBackup.Retention = data.Retention
 	case models.ScheduledMongoDBBackupTask:
 		data := task.Data.MongoDBBackupTask
-		backup.ServiceId = data.ServiceID
-		backup.LocationId = data.LocationID
-		backup.Name = data.Name
-		backup.Description = data.Description
-		backup.DataModel = backupv1beta1.DataModel_LOGICAL
-		backup.Retention = data.Retention
+		scheduledBackup.ServiceId = data.ServiceID
+		scheduledBackup.LocationId = data.LocationID
+		scheduledBackup.Name = data.Name
+		scheduledBackup.Description = data.Description
+		scheduledBackup.DataModel = backupv1beta1.DataModel_LOGICAL
+		scheduledBackup.Retention = data.Retention
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", task.Type)
 	}
 
-	backup.ServiceName = services[backup.ServiceId].ServiceName
-	backup.Vendor = string(services[backup.ServiceId].ServiceType)
-	backup.LocationName = locations[backup.LocationId].Name
+	scheduledBackup.ServiceName = services[scheduledBackup.ServiceId].ServiceName
+	scheduledBackup.Vendor = string(services[scheduledBackup.ServiceId].ServiceType)
+	scheduledBackup.LocationName = locations[scheduledBackup.LocationId].Name
 
-	return backup, nil
+	return scheduledBackup, nil
 }
 
 // Check interfaces.
