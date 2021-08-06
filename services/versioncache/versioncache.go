@@ -99,7 +99,7 @@ func (s *Service) syncServices() error {
 					ServiceID:        s.ServiceID,
 					SoftwareVersions: []models.SoftwareVersion{},
 					// add a small duration ahead, so the next check will happen when agent established a connection.
-					NextCheckAt:      time.Now().Add(30 * time.Second),
+					NextCheckAt: time.Now().Add(30 * time.Second),
 				}); err != nil {
 					return err
 				}
