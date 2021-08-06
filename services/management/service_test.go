@@ -64,7 +64,7 @@ func TestServiceService(t *testing.T) {
 			vmdb.AssertExpectations(t)
 			state.AssertExpectations(t)
 		}
-		s = NewServiceService(db, state, vmdb, vc)
+		s = NewServiceService(db, state, vmdb)
 
 		return
 	}

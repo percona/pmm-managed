@@ -43,16 +43,14 @@ type ServiceService struct {
 	db    *reform.DB
 	state agentsStateUpdater
 	vmdb  prometheusService
-	vc    versionCache
 }
 
 // NewServiceService creates ServiceService instance.
-func NewServiceService(db *reform.DB, state agentsStateUpdater, vmdb prometheusService, vc versionCache) *ServiceService {
+func NewServiceService(db *reform.DB, state agentsStateUpdater, vmdb prometheusService) *ServiceService {
 	return &ServiceService{
 		db:    db,
 		state: state,
 		vmdb:  vmdb,
-		vc:    vc,
 	}
 }
 
