@@ -271,10 +271,7 @@ func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operator
 
 	// Find next versions if installed.
 	if installedVersion != "" {
-		nextOperatorVersion, err = next(matrix.Versions, installedVersion)
-		if err != nil {
-			return
-		}
+		return next(matrix.Versions, installedVersion)
 	}
 	return
 }
