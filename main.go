@@ -675,7 +675,6 @@ func main() {
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
-		BackupService:        backupService,
 	}
 
 	server, err := server.NewServer(serverParams)

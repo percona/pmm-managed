@@ -25,7 +25,6 @@ import (
 	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/backup"
 )
 
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
@@ -130,8 +129,4 @@ type agentsStateUpdater interface {
 type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
-}
-
-type backupService interface {
-	PerformBackup(ctx context.Context, params backup.PerformBackupParams) (string, error)
 }
