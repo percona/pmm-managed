@@ -552,6 +552,8 @@ var databaseSchema = [][]string{
 	43: {
 		`ALTER TABLE artifacts
 			ADD COLUMN updated_at TIMESTAMP`,
+		`UPDATE artifacts SET updated_at = created_at`,
+		`ALTER TABLE artifacts ALTER COLUMN updated_at SET NOT NULL`,
 		`ALTER TABLE job_results RENAME TO jobs`,
 		`ALTER TABLE jobs
 			ADD COLUMN data JSONB,
