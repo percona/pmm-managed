@@ -51,9 +51,6 @@ func TestServiceService(t *testing.T) {
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
-		vc := new(mockVersionCache)
-		vc.Test(t)
-
 		state := new(mockAgentsStateUpdater)
 		state.Test(t)
 

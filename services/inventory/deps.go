@@ -28,6 +28,7 @@ import (
 //go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=connectionChecker -case=snake -inpkg -testonly
+//go:generate mockery -name=versionCache -case=snake -inpkg -testonly
 
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
