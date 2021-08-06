@@ -51,7 +51,7 @@ func NewJobsService(db *reform.DB, registry *Registry, retention retentionServic
 	}
 }
 
-func (s *JobsService) RestartJob(jobID string) error {
+func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 	var job *models.Job
 	var artifact *models.Artifact
 	var location *models.BackupLocation
@@ -125,8 +125,12 @@ func (s *JobsService) RestartJob(jobID string) error {
 
 	s.l.Debugf("restarting job: %s, delay: %v", jobID, job.Interval)
 
-	if job.Interval > 0 {
-		time.Sleep(job.Interval)
+	t := time.NewTimer(job.Interval)
+
+	select {
+	case <-t.C:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
 	switch job.Type {
@@ -281,7 +285,7 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 	}
 
 	go func() {
-		restartErr := s.RestartJob(job.ID)
+		restartErr := s.RestartJob(context.Background(), job.ID)
 		if restartErr != nil && restartErr != ErrRetriesExhausted {
 			s.l.Errorf("restart job %s: %v", job.ID, restartErr)
 		}
