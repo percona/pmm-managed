@@ -98,7 +98,8 @@ func (s *Service) syncServices() error {
 				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
 					ServiceID:        s.ServiceID,
 					SoftwareVersions: []models.SoftwareVersion{},
-					NextCheckAt:      time.Now().UTC(),
+					// add a small duration ahead, so the next check will happen when agent established a connection.
+					NextCheckAt:      time.Now().Add(30 * time.Second),
 				}); err != nil {
 					return err
 				}
@@ -135,7 +136,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 			return nil
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
-			results.CheckAfter = servicesVersions[0].NextCheckAt.Sub(time.Now())
+			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
 			if results.CheckAfter < minCheckInterval {
 				results.CheckAfter = minCheckInterval
 			}

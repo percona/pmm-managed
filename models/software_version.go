@@ -17,11 +17,9 @@
 package models
 
 import (
+	"database/sql/driver"
 	"time"
 
-	"database/sql/driver"
-
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -40,29 +38,18 @@ const (
 
 // SoftwareVersion represents version of the given software.
 type SoftwareVersion struct {
-	Name    SoftwareName `reform:"name"`
-	Version string       `reform:"version"`
+	Name    SoftwareName `json:"name"`
+	Version string       `json:"version"`
 }
 
 // SoftwareVersions represents slice of SoftwareVersion.
 type SoftwareVersions []SoftwareVersion
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (sv SoftwareVersions) Value() (driver.Value, error) {
-	return sv, nil
-}
+func (sv SoftwareVersions) Value() (driver.Value, error) { return jsonValue(sv) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (sv *SoftwareVersions) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case SoftwareVersions:
-		*sv = s
-	default:
-		return errors.Errorf("unexpected type for scanning software versions: %T", s)
-	}
-
-	return nil
-}
+func (sv *SoftwareVersions) Scan(src interface{}) error { return jsonScan(sv, src) }
 
 // ServiceSoftwareVersions represents service software versions.
 //reform:service_software_versions
@@ -76,7 +63,9 @@ type ServiceSoftwareVersions struct {
 
 // BeforeInsert implements reform.BeforeInserter interface.
 func (s *ServiceSoftwareVersions) BeforeInsert() error {
-	s.CreatedAt = Now()
+	now := Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
 	return nil
 }
 

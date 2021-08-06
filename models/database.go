@@ -550,13 +550,9 @@ var databaseSchema = [][]string{
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
 	43: {
-		`CREATE TYPE software_version AS (
-  			name VARCHAR,
-  			version VARCHAR
-		);`,
 		`CREATE TABLE service_software_versions (
 			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
-			software_versions software_version ARRAY,
+			software_versions JSONB,
 			next_check_at TIMESTAMP,
 
 			created_at TIMESTAMP NOT NULL,
