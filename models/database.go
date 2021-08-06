@@ -550,6 +550,8 @@ var databaseSchema = [][]string{
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
 	43: {
+		`ALTER TABLE artifacts
+			ADD COLUMN updated_at TIMESTAMP`,
 		`ALTER TABLE job_results RENAME TO jobs`,
 		`ALTER TABLE jobs
 			ADD COLUMN data JSONB,

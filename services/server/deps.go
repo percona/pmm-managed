@@ -25,6 +25,7 @@ import (
 	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/backup"
 )
 
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
@@ -132,5 +133,5 @@ type rulesService interface {
 }
 
 type backupService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
+	PerformBackup(ctx context.Context, params backup.PerformBackupParams) (string, error)
 }

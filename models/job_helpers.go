@@ -50,7 +50,7 @@ type CreateJobParams struct {
 	Data       *JobData
 	Timeout    time.Duration
 	Interval   time.Duration
-	Retries    int
+	Retries    uint32
 }
 
 func (p CreateJobParams) Validate() error {

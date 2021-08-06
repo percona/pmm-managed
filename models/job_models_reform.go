@@ -69,7 +69,7 @@ var JobTable = &jobTableType{
 			{Name: "Type", Type: "JobType", Column: "type"},
 			{Name: "Data", Type: "*JobData", Column: "data"},
 			{Name: "Timeout", Type: "time.Duration", Column: "timeout"},
-			{Name: "Retries", Type: "int", Column: "retries"},
+			{Name: "Retries", Type: "uint32", Column: "retries"},
 			{Name: "Interval", Type: "time.Duration", Column: "interval"},
 			{Name: "Done", Type: "bool", Column: "done"},
 			{Name: "Error", Type: "string", Column: "error"},

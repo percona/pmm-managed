@@ -106,7 +106,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			return err
 		}
 
-		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType)
+		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType, params.Retries, params.RetryInterval)
 		if err != nil {
 			return err
 		}
@@ -318,6 +318,8 @@ func (s *Service) prepareBackupJob(
 	service *models.Service,
 	artifactID string,
 	jobType models.JobType,
+	retries uint32,
+	retryInterval time.Duration,
 ) (*models.Job, *models.DBConfig, error) {
 	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
 	if err != nil {
@@ -338,12 +340,14 @@ func (s *Service) prepareBackupJob(
 	case models.MySQLBackupJob:
 		jobData = &models.JobData{
 			MySQLBackup: &models.MySQLBackupJobData{
+				ServiceID:  service.ServiceID,
 				ArtifactID: artifactID,
 			},
 		}
 	case models.MongoDBBackupJob:
 		jobData = &models.JobData{
 			MongoDBBackup: &models.MongoDBBackupJobData{
+				ServiceID:  service.ServiceID,
 				ArtifactID: artifactID,
 			},
 		}
@@ -359,6 +363,8 @@ func (s *Service) prepareBackupJob(
 		PMMAgentID: pmmAgents[0].AgentID,
 		Type:       jobType,
 		Data:       jobData,
+		Retries:    retries,
+		Interval:   retryInterval,
 	})
 	if err != nil {
 		return nil, nil, err

@@ -125,7 +125,7 @@ type Job struct {
 	Type       JobType       `reform:"type"`
 	Data       *JobData      `reform:"data"`
 	Timeout    time.Duration `reform:"timeout"`
-	Retries    int           `reform:"retries"`
+	Retries    uint32        `reform:"retries"`
 	Interval   time.Duration `reform:"interval"`
 	Done       bool          `reform:"done"`
 	Error      string        `reform:"error"`

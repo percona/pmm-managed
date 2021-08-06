@@ -85,7 +85,6 @@ func (s *JobsService) RestartJob(jobID string) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-
 			dbConfig, err = models.FindDBConfigForService(tx.Querier, job.Data.MySQLBackup.ServiceID)
 			if err != nil {
 				return errors.WithStack(err)
