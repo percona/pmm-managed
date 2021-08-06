@@ -106,8 +106,11 @@ func TestMongodbExporterConfig(t *testing.T) {
 			AuthenticationDatabase:        "$external",
 		}
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
-		expected := "MONGODB_URI=mongodb://1.2.3.4:27017/$external?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&" +
-			"tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=passwordoftls"
+		expected := `MONGODB_URI=mongodb://1.2.3.4:27017/$external?authMechanism=MONGODB-X509` +
+			`&authSource=%24external&connectTimeoutMS=1000&ssl=true` +
+			`&tlsCaFile={{.TextFiles.caFilePlaceholder}}` +
+			`&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}` +
+			`&tlsCertificateKeyFilePassword=passwordoftls`
 		assert.Equal(t, expected, actual.Env[0])
 		expectedFiles := map[string]string{
 			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
