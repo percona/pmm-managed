@@ -30,6 +30,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// ErrRetriesExhausted is returned when remaining retries are 0.
 var ErrRetriesExhausted = errors.New("Retries exhausted")
 
 // JobsService provides methods for managing jobs.

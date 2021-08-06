@@ -103,6 +103,7 @@ type MongoDBRestoreBackupJobData struct {
 	RestoreID string `json:"restore_id,omitempty"`
 }
 
+// JobData contains data required for running a job.
 type JobData struct {
 	Echo                 *EchoJobData                 `json:"echo,omitempty"`
 	MySQLBackup          *MySQLBackupJobData          `json:"mySQLBackup,omitempty"`
