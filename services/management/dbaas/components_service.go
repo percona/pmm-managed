@@ -435,8 +435,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		}
 		component = kubernetesCluster.Mongod
 	default:
-		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_INVALID},
-			errors.Errorf("%q is not supported operator", req.OperatorType)
+		return nil, errors.Errorf("%q is not supported operator", req.OperatorType)
 	}
 
 	if component != nil {
