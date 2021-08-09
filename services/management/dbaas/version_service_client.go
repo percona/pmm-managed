@@ -33,9 +33,11 @@ import (
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
+type OperatorType string
+
 const (
-	psmdbOperator = "psmdb-operator"
-	pxcOperator   = "pxc-operator"
+	psmdbOperator OperatorType = "psmdb-operator"
+	pxcOperator   OperatorType = "pxc-operator"
 )
 
 var errNoVersionsFound = errors.New("no versions to compare current version with found")
@@ -74,7 +76,7 @@ type VersionServiceResponse struct {
 
 // componentsParams contains params to filter components in version service API.
 type componentsParams struct {
-	product        string
+	product        OperatorType
 	productVersion string
 	dbVersion      string
 }
@@ -126,7 +128,7 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 
 // Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
-	paths := []string{c.url, params.product}
+	paths := []string{c.url, string(params.product)}
 	if params.productVersion != "" {
 		paths = append(paths, params.productVersion)
 		if params.dbVersion != "" {
@@ -159,7 +161,7 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 
 // IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
 // if given database version is supported by given operator version, error is nil in that case.
-func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
+func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType OperatorType, operatorVersion, databaseVersion string) (bool, error) {
 	m, err := c.Matrix(ctx, componentsParams{
 		product:        operatorType,
 		productVersion: operatorVersion,
@@ -174,7 +176,7 @@ func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.
 // IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
 // It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
 // version service does not have any matching versions.
-func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType OperatorType, pmmVersion string, operatorVersion string) (bool, error) {
 	pmm, err := goversion.NewVersion(pmmVersion)
 	if err != nil {
 		return false, err
@@ -253,7 +255,7 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 // It returns nil if update is not available or error occurred. It does not take PMM version into consideration.
 // We need to upgrade to current + 1 version for upgrade to be successful. So even if dbaas-controller does not support the
 // operator, we need to upgrade to it on our way to supported one.
-func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
+func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operatorType OperatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
 	if installedVersion == "" {
 		return
 	}

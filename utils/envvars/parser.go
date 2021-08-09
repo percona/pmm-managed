@@ -79,8 +79,8 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "_", "HOME", "HOSTNAME", "LANG", "PATH", "PWD", "SHLVL", "TERM":
 			// skip default environment variables
 			continue
-		case "PMM_DEBUG", "PMM_TRACE":
-			// skip cross-component environment variables that are already handled by kingpin
+		case "PMM_DEBUG", "PMM_TRACE", "PMM_VERSION_SERVICE_API_URL":
+			// skip environment variables that are already handled by kingpin
 			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)

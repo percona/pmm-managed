@@ -72,7 +72,7 @@ func (k *kubernetesServer) Enabled() bool {
 
 // getOperatorStatus exists mainly to assign appropriate status when installed operator is unsupported.
 // dbaas-controller does not have a clue what's supported, so we have to do it here.
-func (k kubernetesServer) convertToOperatorStatus(ctx context.Context, operatorType string, operatorVersion string) (dbaasv1beta1.OperatorsStatus, error) {
+func (k kubernetesServer) convertToOperatorStatus(ctx context.Context, operatorType OperatorType, operatorVersion string) (dbaasv1beta1.OperatorsStatus, error) {
 	if operatorVersion == "" {
 		return dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED, nil
 	}

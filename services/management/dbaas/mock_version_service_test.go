@@ -15,18 +15,18 @@ type mockVersionService struct {
 }
 
 // IsDatabaseVersionSupportedByOperator provides a mock function with given fields: ctx, operatorType, operatorVersion, databaseVersion
-func (_m *mockVersionService) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType string, operatorVersion string, databaseVersion string) (bool, error) {
+func (_m *mockVersionService) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType OperatorType, operatorVersion string, databaseVersion string) (bool, error) {
 	ret := _m.Called(ctx, operatorType, operatorVersion, databaseVersion)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, OperatorType, string, string) bool); ok {
 		r0 = rf(ctx, operatorType, operatorVersion, databaseVersion)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, OperatorType, string, string) error); ok {
 		r1 = rf(ctx, operatorType, operatorVersion, databaseVersion)
 	} else {
 		r1 = ret.Error(1)
@@ -36,18 +36,18 @@ func (_m *mockVersionService) IsDatabaseVersionSupportedByOperator(ctx context.C
 }
 
 // IsOperatorVersionSupported provides a mock function with given fields: ctx, operatorType, pmmVersion, operatorVersion
-func (_m *mockVersionService) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+func (_m *mockVersionService) IsOperatorVersionSupported(ctx context.Context, operatorType OperatorType, pmmVersion string, operatorVersion string) (bool, error) {
 	ret := _m.Called(ctx, operatorType, pmmVersion, operatorVersion)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, OperatorType, string, string) bool); ok {
 		r0 = rf(ctx, operatorType, pmmVersion, operatorVersion)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, OperatorType, string, string) error); ok {
 		r1 = rf(ctx, operatorType, pmmVersion, operatorVersion)
 	} else {
 		r1 = ret.Error(1)
@@ -112,11 +112,11 @@ func (_m *mockVersionService) Matrix(ctx context.Context, params componentsParam
 }
 
 // NextOperatorVersion provides a mock function with given fields: ctx, operatorType, installedVersion
-func (_m *mockVersionService) NextOperatorVersion(ctx context.Context, operatorType string, installedVersion string) (*version.Version, error) {
+func (_m *mockVersionService) NextOperatorVersion(ctx context.Context, operatorType OperatorType, installedVersion string) (*version.Version, error) {
 	ret := _m.Called(ctx, operatorType, installedVersion)
 
 	var r0 *version.Version
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *version.Version); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, OperatorType, string) *version.Version); ok {
 		r0 = rf(ctx, operatorType, installedVersion)
 	} else {
 		if ret.Get(0) != nil {
@@ -125,7 +125,7 @@ func (_m *mockVersionService) NextOperatorVersion(ctx context.Context, operatorT
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, OperatorType, string) error); ok {
 		r1 = rf(ctx, operatorType, installedVersion)
 	} else {
 		r1 = ret.Error(1)

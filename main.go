@@ -544,7 +544,8 @@ func main() {
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
 	dbaasControllerAPIAddrF := kingpin.Flag("dbaas-controller-api-addr", "DBaaS Controller gRPC API address").Default("127.0.0.1:20201").String()
 
-	versionServiceAPIURLF := kingpin.Flag("version-service-api-url", "Version Service API URL").Default("https://check.percona.com/versions/v1").String()
+	versionServiceAPIURLF := kingpin.Flag("version-service-api-url", "Version Service API URL").Envar("PMM_VERSION_SERVICE_API_URL").
+		Default("https://check.percona.com/versions/v1").String()
 
 	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
 	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()

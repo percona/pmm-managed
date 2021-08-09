@@ -548,7 +548,7 @@ func TestInstallOperator(t *testing.T) {
 	response := &VersionServiceResponse{
 		Versions: []Version{
 			{
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 				ProductVersion: onePointSeven,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
@@ -557,7 +557,7 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 				ProductVersion: onePointEight,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
@@ -567,7 +567,7 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 				ProductVersion: onePointSeven,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
@@ -576,7 +576,7 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 				ProductVersion: onePointEight,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
@@ -610,7 +610,7 @@ func TestInstallOperator(t *testing.T) {
 	t.Run("Defaults not supported", func(t *testing.T) {
 		resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
 			KubernetesClusterName: clusterName,
-			OperatorType:          pxcOperator,
+			OperatorType:          dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC,
 			Version:               onePointEight,
 		})
 		require.Error(t, err)
@@ -618,7 +618,7 @@ func TestInstallOperator(t *testing.T) {
 
 		resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
 			KubernetesClusterName: clusterName,
-			OperatorType:          psmdbOperator,
+			OperatorType:          dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB,
 			Version:               onePointEight,
 		})
 		require.Error(t, err)
@@ -637,7 +637,7 @@ func TestInstallOperator(t *testing.T) {
 
 		resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
 			KubernetesClusterName: clusterName,
-			OperatorType:          pxcOperator,
+			OperatorType:          dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC,
 			Version:               onePointEight,
 		})
 		require.NoError(t, err)
@@ -645,7 +645,7 @@ func TestInstallOperator(t *testing.T) {
 
 		resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
 			KubernetesClusterName: clusterName,
-			OperatorType:          psmdbOperator,
+			OperatorType:          dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB,
 			Version:               onePointEight,
 		})
 		require.NoError(t, err)
@@ -659,28 +659,28 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		Versions: []Version{
 			{
 				ProductVersion: onePointSix,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 			{
 				ProductVersion: onePointSeven,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 			{
 				ProductVersion: onePointEight,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 
 			{
 				ProductVersion: onePointSix,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 			{
 				ProductVersion: onePointSeven,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 			{
 				ProductVersion: onePointEight,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 
 			{
@@ -717,10 +717,10 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
-		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
-		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
-		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
-		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(pxcOperator)])
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(psmdbOperator)])
+		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[string(psmdbOperator)].AvailableVersion)
+		assert.Equal(t, onePointEight, cluster.ComponentToUpdateInformation[string(pxcOperator)].AvailableVersion)
 	})
 	t.Run("Update NOT available", func(t *testing.T) {
 		clusterName := "update-not-available"
@@ -737,10 +737,10 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
-		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
-		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
-		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
-		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(psmdbOperator)])
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(pxcOperator)])
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[string(psmdbOperator)].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[string(pxcOperator)].AvailableVersion)
 	})
 	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
 		clusterName := "update-available-pmm-update"
@@ -757,9 +757,9 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
 		require.NotNil(t, cluster.ComponentToUpdateInformation)
-		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
-		require.NotNil(t, cluster.ComponentToUpdateInformation[pxcOperator])
-		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
-		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(psmdbOperator)])
+		require.NotNil(t, cluster.ComponentToUpdateInformation[string(pxcOperator)])
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[string(psmdbOperator)].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[string(pxcOperator)].AvailableVersion)
 	})
 }

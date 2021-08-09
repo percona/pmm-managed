@@ -270,20 +270,20 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 
 		// Don't offer upgrade for the version that is not compatible and is not on the way to the latest version!
 		if latestPXCOperatorVersion != nil && nextPXCOperatorVersion != nil && nextPXCOperatorVersion.LessThanOrEqual(latestPXCOperatorVersion) {
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC.String()] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: nextPXCOperatorVersion.String(),
 			}
 		} else {
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC.String()] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: "",
 			}
 		}
 		if latestPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion != nil && nextPSMDBOperatorVersion.LessThanOrEqual(latestPSMDBOperatorVersion) {
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB.String()] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: nextPSMDBOperatorVersion.String(),
 			}
 		} else {
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB.String()] = &dbaasv1beta1.ComponentUpdateInformation{
 				AvailableVersion: "",
 			}
 		}
@@ -412,7 +412,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 	var component *models.Component
 	var installFunc func() error
 	switch req.OperatorType {
-	case pxcOperator:
+	case dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC:
 		installFunc = func() error {
 			_, err := c.dbaasClient.InstallXtraDBOperator(ctx, &controllerv1beta1.InstallXtraDBOperatorRequest{
 				KubeAuth: &controllerv1beta1.KubeAuth{
@@ -423,7 +423,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 			return err
 		}
 		component = kubernetesCluster.PXC
-	case psmdbOperator:
+	case dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB:
 		installFunc = func() error {
 			_, err := c.dbaasClient.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
 				KubeAuth: &controllerv1beta1.KubeAuth{
@@ -440,7 +440,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 
 	if component != nil {
 		// Default version of database could be unsupported be a new operator version.
-		supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, req.OperatorType, req.Version, component.DefaultVersion)
+		supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, convertOperatorType(req.OperatorType), req.Version, component.DefaultVersion)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to check if default database version is supported by the operator version: %v", err)
 		}
@@ -455,4 +455,15 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 	}
 
 	return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK}, nil
+}
+
+func convertOperatorType(operatorType dbaasv1beta1.OperatorType) OperatorType {
+	switch operatorType {
+	case dbaasv1beta1.OperatorType_OPERATOR_TYPE_PXC:
+		return pxcOperator
+	case dbaasv1beta1.OperatorType_OPERATOR_TYPE_PSMDB:
+		return psmdbOperator
+	default:
+		panic("unexpected operator type")
+	}
 }

@@ -64,18 +64,18 @@ func TestVersionServiceClient(t *testing.T) {
 
 type fakeLatestVersionServer struct {
 	response   *VersionServiceResponse
-	components []string
+	components []OperatorType
 }
 
 func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	var response *VersionServiceResponse
 	var certainVersionRequested bool
-	var component string
+	var component OperatorType
 	for _, c := range f.components {
-		if strings.Contains(r.URL.Path, c) {
+		if strings.Contains(r.URL.Path, string(c)) {
 			component = c
-			certainVersionRequested = strings.Contains(r.URL.Path, component+"/")
+			certainVersionRequested = strings.Contains(r.URL.Path, string(component)+"/")
 			break
 		}
 	}
@@ -90,7 +90,7 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			version = segments[len(segments)-1]
 		}
 		for _, v := range f.response.Versions {
-			if v.ProductVersion == version && v.Product == component {
+			if v.ProductVersion == version && v.Product == string(component) {
 				if dbVersion != "" {
 					var database map[string]componentVersion
 					switch component {
@@ -115,7 +115,7 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	} else if component != "" {
 		response = &VersionServiceResponse{}
 		for _, v := range f.response.Versions {
-			if v.Product == component {
+			if v.Product == string(component) {
 				response.Versions = append(response.Versions, v)
 			}
 		}
@@ -130,7 +130,7 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 // newFakeVersionService creates new fake version service on given port.
 // It returns values based on given response but only for specified components.
-func newFakeVersionService(response *VersionServiceResponse, port string, components ...string) (versionService, func(*testing.T)) {
+func newFakeVersionService(response *VersionServiceResponse, port string, components ...OperatorType) (versionService, func(*testing.T)) {
 	if len(components) == 0 {
 		panic("failed to create fake version service, at least one component has to be given, none received")
 	}
@@ -174,28 +174,28 @@ func TestOperatorVersionGetting(t *testing.T) {
 
 			{
 				ProductVersion: onePointSix,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 			{
 				ProductVersion: onePointSeven,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 			{
 				ProductVersion: onePointEight,
-				Product:        pxcOperator,
+				Product:        string(pxcOperator),
 			},
 
 			{
 				ProductVersion: onePointSix,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 			{
 				ProductVersion: onePointSeven,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 			{
 				ProductVersion: onePointEight,
-				Product:        psmdbOperator,
+				Product:        string(psmdbOperator),
 			},
 
 			{
