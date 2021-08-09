@@ -259,6 +259,9 @@ func (s *Service) SyncAndUpdate() {
 
 // Run runs software version cache service.
 func (s *Service) Run(ctx context.Context) {
+	s.l.Info("Starting...")
+	defer s.l.Info("Done.")
+
 	defer close(s.updateCh)
 
 	if err := s.syncServices(); err != nil {
@@ -269,13 +272,16 @@ func (s *Service) Run(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(checkAfter):
+			s.l.Infof("Updating versions...")
 			ca, err := s.updateVersions()
 			if err != nil {
 				s.l.Warn(err)
 			}
 
 			checkAfter = ca
+			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-s.updateCh:
+			s.l.Infof("Syncing services and updating versions...")
 			if err := s.syncServices(); err != nil {
 				s.l.Warn(err)
 			}
@@ -286,6 +292,7 @@ func (s *Service) Run(ctx context.Context) {
 			}
 
 			checkAfter = ca
+			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-ctx.Done():
 			return
 		}

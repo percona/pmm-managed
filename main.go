@@ -185,7 +185,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodeSvc := management.NewNodeService(deps.db)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsStateUpdater, deps.vmdb)
-	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
+	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck, deps.versionCache)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
 	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsStateUpdater, deps.connectionCheck)
@@ -862,6 +862,7 @@ func main() {
 			backupService:        backupService,
 			backupRemovalService: backupRemovalService,
 			minioService:         minioService,
+			versionCache:         versionCache,
 		})
 	}()
 
