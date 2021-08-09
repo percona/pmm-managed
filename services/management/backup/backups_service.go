@@ -21,18 +21,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/percona/pmm-managed/services/backup"
-
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/scheduler"
 )
 
@@ -319,25 +319,28 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		scheduledBackup.StartTime = timestamppb.New(task.StartAt)
 	}
 
+	var commonBackupData models.BackupTaskData
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
-		data := task.Data.MySQLBackupTask
-		scheduledBackup.ServiceId = data.ServiceID
-		scheduledBackup.LocationId = data.LocationID
-		scheduledBackup.Name = data.Name
-		scheduledBackup.Description = data.Description
+		commonBackupData = task.Data.MySQLBackupTask.BackupTaskData
 		scheduledBackup.DataModel = backupv1beta1.DataModel_PHYSICAL
-		scheduledBackup.Retention = data.Retention
+
 	case models.ScheduledMongoDBBackupTask:
-		data := task.Data.MongoDBBackupTask
-		scheduledBackup.ServiceId = data.ServiceID
-		scheduledBackup.LocationId = data.LocationID
-		scheduledBackup.Name = data.Name
-		scheduledBackup.Description = data.Description
+		commonBackupData = task.Data.MongoDBBackupTask.BackupTaskData
 		scheduledBackup.DataModel = backupv1beta1.DataModel_LOGICAL
-		scheduledBackup.Retention = data.Retention
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", task.Type)
+	}
+
+	scheduledBackup.ServiceId = commonBackupData.ServiceID
+	scheduledBackup.LocationId = commonBackupData.LocationID
+	scheduledBackup.Name = commonBackupData.Name
+	scheduledBackup.Description = commonBackupData.Description
+	scheduledBackup.Retention = commonBackupData.Retention
+	scheduledBackup.Retries = commonBackupData.Retries
+
+	if commonBackupData.RetryInterval > 0 {
+		scheduledBackup.RetryInterval = durationpb.New(commonBackupData.RetryInterval)
 	}
 
 	scheduledBackup.ServiceName = services[scheduledBackup.ServiceId].ServiceName
