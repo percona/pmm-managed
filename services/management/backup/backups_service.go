@@ -212,31 +212,31 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	if err != nil {
 		return nil, err
 	}
+
+	var data models.BackupTaskData
 	switch scheduledTask.Type {
 	case models.ScheduledMySQLBackupTask:
-		data := scheduledTask.Data.MySQLBackupTask
-		if req.Name != nil {
-			data.Name = req.Name.Value
-		}
-		if req.Description != nil {
-			data.Description = req.Description.Value
-		}
-		if req.Retention != nil {
-			data.Retention = req.Retention.Value
-		}
+		data = scheduledTask.Data.MySQLBackupTask.BackupTaskData
 	case models.ScheduledMongoDBBackupTask:
-		data := scheduledTask.Data.MongoDBBackupTask
-		if req.Name != nil {
-			data.Name = req.Name.Value
-		}
-		if req.Description != nil {
-			data.Description = req.Description.Value
-		}
-		if req.Retention != nil {
-			data.Retention = req.Retention.Value
-		}
+		data = scheduledTask.Data.MongoDBBackupTask.BackupTaskData
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
+	}
+
+	if req.Name != nil {
+		data.Name = req.Name.Value
+	}
+	if req.Description != nil {
+		data.Description = req.Description.Value
+	}
+	if req.Retention != nil {
+		data.Retention = req.Retention.Value
+	}
+	if req.Retries != nil {
+		data.Retries = req.Retries.Value
+	}
+	if req.RetryInterval != nil {
+		data.RetryInterval = req.RetryInterval.AsDuration()
 	}
 
 	params := models.ChangeScheduledTaskParams{
