@@ -213,12 +213,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		return nil, err
 	}
 
-	var data models.BackupTaskData
+	var data *models.BackupTaskData
 	switch scheduledTask.Type {
 	case models.ScheduledMySQLBackupTask:
-		data = scheduledTask.Data.MySQLBackupTask.BackupTaskData
+		data = &scheduledTask.Data.MySQLBackupTask.BackupTaskData
 	case models.ScheduledMongoDBBackupTask:
-		data = scheduledTask.Data.MongoDBBackupTask.BackupTaskData
+		data = &scheduledTask.Data.MongoDBBackupTask.BackupTaskData
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
 	}
