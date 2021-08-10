@@ -550,6 +550,19 @@ var databaseSchema = [][]string{
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
 	43: {
+		`CREATE TABLE service_software_versions (
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			software_versions JSONB,
+			next_check_at TIMESTAMP,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (service_id),
+			FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE
+		);`,
+	},
+	44: {
 		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL`,
 	},
 }
