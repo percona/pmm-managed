@@ -78,7 +78,7 @@ func (t *mySQLBackupTask) Run(ctx context.Context) error {
 		ServiceID:  t.ServiceID,
 		LocationID: t.LocationID,
 		Name:       name,
-		ScheduleID: name,
+		ScheduleID: t.ID(),
 	})
 	return err
 }
