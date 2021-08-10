@@ -14,5 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package inventory contains inventory business logic: Nodes, Services, Agents.
-package inventory
+package scheduler
+
+import "context"
+
+//go:generate mockery -name=backupService -case=snake -inpkg -testonly
+
+type backupService interface {
+	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
+}

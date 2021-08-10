@@ -51,11 +51,13 @@ type BackupStatus string
 
 // BackupStatus status (in the same order as in artifacts.proto).
 const (
-	PendingBackupStatus    BackupStatus = "pending"
-	InProgressBackupStatus BackupStatus = "in_progress"
-	PausedBackupStatus     BackupStatus = "paused"
-	SuccessBackupStatus    BackupStatus = "success"
-	ErrorBackupStatus      BackupStatus = "error"
+	PendingBackupStatus        BackupStatus = "pending"
+	InProgressBackupStatus     BackupStatus = "in_progress"
+	PausedBackupStatus         BackupStatus = "paused"
+	SuccessBackupStatus        BackupStatus = "success"
+	ErrorBackupStatus          BackupStatus = "error"
+	DeletingBackupStatus       BackupStatus = "deleting"
+	FailedToDeleteBackupStatus BackupStatus = "failed_to_delete"
 )
 
 // Validate validates backup status.
@@ -66,6 +68,8 @@ func (bs BackupStatus) Validate() error {
 	case PausedBackupStatus:
 	case SuccessBackupStatus:
 	case ErrorBackupStatus:
+	case DeletingBackupStatus:
+	case FailedToDeleteBackupStatus:
 	default:
 		return errors.Wrapf(ErrInvalidArgument, "invalid status '%s'", bs)
 	}
@@ -73,10 +77,19 @@ func (bs BackupStatus) Validate() error {
 	return nil
 }
 
-// Pointer returns a pointer of backup status.
-func (bs BackupStatus) Pointer() *BackupStatus {
-	return &bs
+// BackupStatusPointer returns a pointer of backup status.
+func BackupStatusPointer(status BackupStatus) *BackupStatus {
+	return &status
 }
+
+// ArtifactType represents type how artifact was created.
+type ArtifactType string
+
+// ArtifactType types.
+const (
+	OnDemandArtifactType  ArtifactType = "on_demand"
+	ScheduledArtifactType ArtifactType = "scheduled"
+)
 
 // Artifact represents result of a backup.
 //reform:artifacts
@@ -84,11 +97,13 @@ type Artifact struct {
 	ID         string       `reform:"id,pk"`
 	Name       string       `reform:"name"`
 	Vendor     string       `reform:"vendor"`
-	Version    string       `reform:"version"`
+	DBVersion  string       `reform:"db_version"`
 	LocationID string       `reform:"location_id"`
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
 	Status     BackupStatus `reform:"status"`
+	Type       ArtifactType `reform:"type"`
+	ScheduleID string       `reform:"schedule_id"`
 	CreatedAt  time.Time    `reform:"created_at"`
 }
 

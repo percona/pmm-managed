@@ -518,7 +518,39 @@ var databaseSchema = [][]string{
 		`ALTER TABLE artifacts DROP CONSTRAINT artifacts_service_id_check`,
 	},
 	39: {
-		`ALTER TABLE artifacts ADD COLUMN version VARCHAR NOT NULL`,
+		`CREATE TABLE scheduled_tasks (
+			id VARCHAR NOT NULL,
+			cron_expression VARCHAR NOT NULL CHECK (cron_expression <> ''),
+			type VARCHAR NOT NULL CHECK (type <> ''),
+			start_at TIMESTAMP,
+			last_run TIMESTAMP,
+			next_run TIMESTAMP,
+			data JSONB,
+			disabled BOOLEAN,
+			running BOOLEAN,
+			error VARCHAR,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
+		)`,
+	},
+	40: {
+		`ALTER TABLE agents ADD COLUMN postgresql_options JSONB`,
+	},
+	41: {
+		`ALTER TABLE artifacts
+      ADD COLUMN type VARCHAR NOT NULL CHECK (type <> '') DEFAULT 'on_demand',
+      ADD COLUMN schedule_id VARCHAR`,
+		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
+	},
+	42: {
+		`ALTER TABLE agents
+		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
+	},
+	43: {
+		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL`,
 	},
 }
 

@@ -20,6 +20,7 @@ package dbaas
 import (
 	"context"
 
+	goversion "github.com/hashicorp/go-version"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc"
 )
@@ -63,11 +64,15 @@ type dbaasClient interface {
 	InstallXtraDBOperator(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
 	// InstallPSMDBOperator installs kubernetes psmdb operator.
 	InstallPSMDBOperator(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
+	// StartMonitoring sets up victoria metrics operator to monitor kubernetes cluster.
+	StartMonitoring(ctx context.Context, in *controllerv1beta1.StartMonitoringRequest, opts ...grpc.CallOption) (*controllerv1beta1.StartMonitoringResponse, error)
 }
 
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
+	// GetLatestOperatorVersion returns latest operators versions available based on given params.
+	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.
