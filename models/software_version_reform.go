@@ -29,6 +29,7 @@ func (v *serviceSoftwareVersionsTableType) Name() string {
 func (v *serviceSoftwareVersionsTableType) Columns() []string {
 	return []string{
 		"service_id",
+		"service_type",
 		"software_versions",
 		"next_check_at",
 		"created_at",
@@ -58,6 +59,7 @@ var ServiceSoftwareVersionsTable = &serviceSoftwareVersionsTableType{
 		SQLName: "service_software_versions",
 		Fields: []parse.FieldInfo{
 			{Name: "ServiceID", Type: "string", Column: "service_id"},
+			{Name: "ServiceType", Type: "ServiceType", Column: "service_type"},
 			{Name: "SoftwareVersions", Type: "SoftwareVersions", Column: "software_versions"},
 			{Name: "NextCheckAt", Type: "time.Time", Column: "next_check_at"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
@@ -70,12 +72,13 @@ var ServiceSoftwareVersionsTable = &serviceSoftwareVersionsTableType{
 
 // String returns a string representation of this struct or record.
 func (s ServiceSoftwareVersions) String() string {
-	res := make([]string, 5)
+	res := make([]string, 6)
 	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
-	res[1] = "SoftwareVersions: " + reform.Inspect(s.SoftwareVersions, true)
-	res[2] = "NextCheckAt: " + reform.Inspect(s.NextCheckAt, true)
-	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[1] = "ServiceType: " + reform.Inspect(s.ServiceType, true)
+	res[2] = "SoftwareVersions: " + reform.Inspect(s.SoftwareVersions, true)
+	res[3] = "NextCheckAt: " + reform.Inspect(s.NextCheckAt, true)
+	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[5] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -84,6 +87,7 @@ func (s ServiceSoftwareVersions) String() string {
 func (s *ServiceSoftwareVersions) Values() []interface{} {
 	return []interface{}{
 		s.ServiceID,
+		s.ServiceType,
 		s.SoftwareVersions,
 		s.NextCheckAt,
 		s.CreatedAt,
@@ -96,6 +100,7 @@ func (s *ServiceSoftwareVersions) Values() []interface{} {
 func (s *ServiceSoftwareVersions) Pointers() []interface{} {
 	return []interface{}{
 		&s.ServiceID,
+		&s.ServiceType,
 		&s.SoftwareVersions,
 		&s.NextCheckAt,
 		&s.CreatedAt,

@@ -27,6 +27,7 @@ import (
 // CreateServiceSoftwareVersionsParams are params for creating a new service software versions entry.
 type CreateServiceSoftwareVersionsParams struct {
 	ServiceID        string
+	ServiceType      ServiceType
 	SoftwareVersions []SoftwareVersion
 	NextCheckAt      time.Time
 }
@@ -35,6 +36,17 @@ type CreateServiceSoftwareVersionsParams struct {
 func (p *CreateServiceSoftwareVersionsParams) Validate() error {
 	if p.ServiceID == "" {
 		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+	}
+
+	switch p.ServiceType {
+	case MySQLServiceType,
+		MongoDBServiceType,
+		PostgreSQLServiceType,
+		ProxySQLServiceType,
+		HAProxyServiceType,
+		ExternalServiceType:
+	default:
+		return errors.Wrapf(ErrInvalidArgument, "invalid service type %q", p.ServiceType)
 	}
 
 	for _, sv := range p.SoftwareVersions {
@@ -59,6 +71,7 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 
 	row := &ServiceSoftwareVersions{
 		ServiceID:        params.ServiceID,
+		ServiceType:      params.ServiceType,
 		SoftwareVersions: params.SoftwareVersions,
 		NextCheckAt:      params.NextCheckAt,
 	}
