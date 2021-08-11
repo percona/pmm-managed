@@ -556,6 +556,7 @@ var databaseSchema = [][]string{
 	44: {
 		`CREATE TABLE service_software_versions (
 			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			service_type VARCHAR NOT NULL CHECK (service_type <> ''),
 			software_versions JSONB,
 			next_check_at TIMESTAMP,
 

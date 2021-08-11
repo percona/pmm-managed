@@ -97,6 +97,7 @@ func (s *Service) syncServices() error {
 			if _, ok := cacheServiceIDs[s.ServiceID]; !ok {
 				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
 					ServiceID:        s.ServiceID,
+					ServiceType:      serviceType,
 					SoftwareVersions: []models.SoftwareVersion{},
 					// add a small duration ahead, so the next check will happen when agent established a connection.
 					NextCheckAt: time.Now().Add(30 * time.Second),

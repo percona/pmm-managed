@@ -55,6 +55,7 @@ func (sv *SoftwareVersions) Scan(src interface{}) error { return jsonScan(sv, sr
 //reform:service_software_versions
 type ServiceSoftwareVersions struct {
 	ServiceID        string           `reform:"service_id,pk"`
+	ServiceType      ServiceType      `reform:"service_type"`
 	SoftwareVersions SoftwareVersions `reform:"software_versions"`
 	NextCheckAt      time.Time        `reform:"next_check_at"`
 	CreatedAt        time.Time        `reform:"created_at"`
