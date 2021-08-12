@@ -662,7 +662,7 @@ func main() {
 	backupService := backup.NewService(db, jobsService)
 	schedulerService := scheduler.New(db, backupService)
 	versioner := agents.NewVersionerService(agentsRegistry)
-	versionCache := versioncache.New(db, versioner)
+	versionCache := versioncache.New(versioncache.DefaultConfig(), db, versioner)
 
 	serverParams := &server.Params{
 		DB:                   db,

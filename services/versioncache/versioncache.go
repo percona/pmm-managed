@@ -31,9 +31,26 @@ import (
 )
 
 const (
-	serviceCheckInterval = 24 * time.Hour
-	minCheckInterval     = 5 * time.Second
+	serviceCheckInterval   = 24 * time.Hour
+	minCheckInterval       = 5 * time.Second
+	serviceFirstCheckDelay = 30 * time.Second
 )
+
+// Config represents timings configuration for version cache service.
+type Config struct {
+	ServiceCheckInterval   time.Duration
+	MinCheckInterval       time.Duration
+	ServiceFirstCheckDelay time.Duration
+}
+
+// DefaultConfig returns default configuration for version cache service initialisation.
+func DefaultConfig() Config {
+	return Config{
+		ServiceCheckInterval:   serviceCheckInterval,
+		MinCheckInterval:       minCheckInterval,
+		ServiceFirstCheckDelay: serviceFirstCheckDelay,
+	}
+}
 
 //go:generate mockery -name=Versioner -case=snake -inpkg -testonly
 
@@ -44,6 +61,7 @@ type Versioner interface {
 
 // Service is responsible for caching service software versions in the DB.
 type Service struct {
+	cfg      Config
 	db       *reform.DB
 	l        *logrus.Entry
 	v        Versioner
@@ -51,8 +69,9 @@ type Service struct {
 }
 
 // New creates new service.
-func New(db *reform.DB, v Versioner) *Service {
+func New(cfg Config, db *reform.DB, v Versioner) *Service {
 	return &Service{
+		cfg:      cfg,
 		db:       db,
 		l:        logrus.WithField("component", "version-cache"),
 		v:        v,
@@ -93,14 +112,14 @@ func (s *Service) syncServices() error {
 		for _, sv := range serviceVersions {
 			cacheServiceIDs[sv.ServiceID] = struct{}{}
 		}
-		for _, s := range services {
-			if _, ok := cacheServiceIDs[s.ServiceID]; !ok {
+		for _, service := range services {
+			if _, ok := cacheServiceIDs[service.ServiceID]; !ok {
 				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
-					ServiceID:        s.ServiceID,
+					ServiceID:        service.ServiceID,
 					ServiceType:      serviceType,
 					SoftwareVersions: []models.SoftwareVersion{},
 					// add a small duration ahead, so the next check will happen when agent established a connection.
-					NextCheckAt: time.Now().Add(30 * time.Second),
+					NextCheckAt: time.Now().Add(s.cfg.ServiceFirstCheckDelay),
 				}); err != nil {
 					return err
 				}
@@ -123,7 +142,7 @@ type prepareResults struct {
 // prepareUpdateVersions checks if there is any service that needs software versions update in the cache and
 // shifts the next check time for this service.
 func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
-	results := &prepareResults{CheckAfter: minCheckInterval}
+	results := &prepareResults{CheckAfter: s.cfg.MinCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
@@ -132,14 +151,14 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 			return err
 		}
 		if len(servicesVersions) == 0 {
-			results.CheckAfter = serviceCheckInterval
+			results.CheckAfter = s.cfg.ServiceCheckInterval
 
 			return nil
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
 			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
-			if results.CheckAfter < minCheckInterval {
-				results.CheckAfter = minCheckInterval
+			if results.CheckAfter < s.cfg.MinCheckInterval {
+				results.CheckAfter = s.cfg.MinCheckInterval
 			}
 
 			return nil
@@ -167,7 +186,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 
 		// shift the next check time for this service, so, in case of versions fetch error,
 		// it will not loop in trying, but will continue with other services.
-		nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
+		nextCheckAt := time.Now().UTC().Add(s.cfg.ServiceCheckInterval)
 		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ServiceID,
 			models.UpdateServiceSoftwareVersionsParams{NextCheckAt: &nextCheckAt},
 		); err != nil {
@@ -203,7 +222,7 @@ func softwareName(s agents.Software) (models.SoftwareName, error) {
 func (s *Service) updateVersions() (time.Duration, error) {
 	r, err := s.prepareUpdateVersions()
 	if err != nil {
-		return minCheckInterval, err
+		return s.cfg.MinCheckInterval, err
 	}
 
 	if !r.NeedsUpdate {
@@ -213,10 +232,10 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
 	versions, err := s.v.GetVersions(r.AgentID, softwares)
 	if err != nil {
-		return minCheckInterval, err
+		return s.cfg.MinCheckInterval, err
 	}
 	if len(versions) != len(softwares) {
-		return minCheckInterval, errors.Errorf("slices length mismatch: versions len %d != softwares len %d",
+		return s.cfg.MinCheckInterval, errors.Errorf("slices length mismatch: versions len %d != softwares len %d",
 			len(versions), len(softwares))
 	}
 
@@ -224,7 +243,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	for i, software := range softwares {
 		name, err := softwareName(software)
 		if err != nil {
-			return minCheckInterval, err
+			return s.cfg.MinCheckInterval, err
 		}
 
 		if versions[i].Error != "" {
@@ -244,10 +263,10 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
 		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: &svs},
 	); err != nil {
-		return minCheckInterval, err
+		return s.cfg.MinCheckInterval, err
 	}
 
-	return minCheckInterval, err
+	return s.cfg.MinCheckInterval, err
 }
 
 // SyncAndUpdate triggers sync and update service software versions.

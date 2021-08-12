@@ -58,6 +58,10 @@ func (p *CreateServiceSoftwareVersionsParams) Validate() error {
 		default:
 			return errors.Wrapf(ErrInvalidArgument, "invalid software name %q", sv.Name)
 		}
+
+		if sv.Version == "" {
+			return errors.Wrapf(ErrInvalidArgument, "empty version for software name %q", sv.Name)
+		}
 	}
 
 	return nil
