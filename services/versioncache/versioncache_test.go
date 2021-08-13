@@ -96,7 +96,7 @@ func TestVersionCache(t *testing.T) {
 	done := make(chan struct{}, 1)
 	mockGetVersions := func(oldVersions, newVersions []agents.Version, finish bool) {
 		versionerMock.On("GetVersions", agentID1, softwares).Return(newVersions, nil).Run(func(args mock.Arguments) {
-			v, err := models.FindServiceSoftwareVersions(db.Querier, serviceID1)
+			v, err := models.FindServiceSoftwareVersionsByServiceID(db.Querier, serviceID1)
 			require.NoError(t, err)
 			require.NotNil(t, v)
 

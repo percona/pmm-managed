@@ -136,7 +136,7 @@ type prepareResults struct {
 	ServiceID   string
 	CheckAfter  time.Duration
 	NeedsUpdate bool
-	AgentID     string
+	PMMAgentID  string
 }
 
 // prepareUpdateVersions checks if there is any service that needs software versions update in the cache and
@@ -182,7 +182,7 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 		if len(pmmAgents) == 0 {
 			return errors.Errorf("pmmAgent not found for service")
 		}
-		results.AgentID = pmmAgents[0].AgentID
+		results.PMMAgentID = pmmAgents[0].AgentID
 
 		// shift the next check time for this service, so, in case of versions fetch error,
 		// it will not loop in trying, but will continue with other services.
@@ -219,6 +219,7 @@ func softwareName(s agents.Software) (models.SoftwareName, error) {
 	return softwareName, nil
 }
 
+// updateVersions updates software versions for one service
 func (s *Service) updateVersions() (time.Duration, error) {
 	r, err := s.prepareUpdateVersions()
 	if err != nil {
@@ -230,7 +231,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
-	versions, err := s.v.GetVersions(r.AgentID, softwares)
+	versions, err := s.v.GetVersions(r.PMMAgentID, softwares)
 	if err != nil {
 		return s.cfg.MinCheckInterval, err
 	}

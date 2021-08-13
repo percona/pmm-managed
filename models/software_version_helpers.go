@@ -123,7 +123,7 @@ func UpdateServiceSoftwareVersions(
 		return nil, err
 	}
 
-	row, err := FindServiceSoftwareVersions(q, serviceID)
+	row, err := FindServiceSoftwareVersionsByServiceID(q, serviceID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +141,8 @@ func UpdateServiceSoftwareVersions(
 	return row, nil
 }
 
-// FindServiceSoftwareVersions returns service software versions entry by given service ID if found, ErrNotFound if not.
-func FindServiceSoftwareVersions(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
+// FindServiceSoftwareVersionsByServiceID returns service software versions entry by given service ID if found, ErrNotFound if not.
+func FindServiceSoftwareVersionsByServiceID(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
 	if serviceID == "" {
 		return nil, errors.New("service id is empty")
 	}
@@ -188,7 +188,7 @@ func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftware
 
 // DeleteServiceSoftwareVersions removes entry from the DB by service ID.
 func DeleteServiceSoftwareVersions(q *reform.Querier, serviceID string) error {
-	if _, err := FindServiceSoftwareVersions(q, serviceID); err != nil {
+	if _, err := FindServiceSoftwareVersionsByServiceID(q, serviceID); err != nil {
 		return err
 	}
 
