@@ -537,17 +537,21 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	40: {
-		`ALTER TABLE agents ADD COLUMN postgresql_options JSONB`,
-	},
-	41: {
 		`ALTER TABLE artifacts
       ADD COLUMN type VARCHAR NOT NULL CHECK (type <> '') DEFAULT 'on_demand',
       ADD COLUMN schedule_id VARCHAR`,
 		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
 	},
+	41: {
+		`ALTER TABLE agents ADD COLUMN postgresql_options JSONB`,
+	},
 	42: {
 		`ALTER TABLE agents
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
+	},
+	43: {
+		`UPDATE artifacts SET schedule_id = '' WHERE schedule_id IS NULL`,
+		`ALTER TABLE artifacts ALTER COLUMN schedule_id SET NOT NULL`,
 	},
 }
 
