@@ -142,12 +142,11 @@ func TestVersionCache(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cfg := Config{
-		ServiceCheckInterval:   time.Second,
-		MinCheckInterval:       0,
-		ServiceFirstCheckDelay: 0,
-	}
-	cache := New(cfg, db, versionerMock)
+	serviceCheckInterval = time.Second
+	minCheckInterval = 0
+	serviceFirstCheckDelay = 0
+
+	cache := New(db, versionerMock)
 	go func() {
 		cache.Run(ctx)
 	}()
