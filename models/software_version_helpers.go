@@ -90,16 +90,12 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 // UpdateServiceSoftwareVersionsParams represents params for updating service software versions entity.
 type UpdateServiceSoftwareVersionsParams struct {
 	NextCheckAt      *time.Time
-	SoftwareVersions *[]SoftwareVersion
+	SoftwareVersions []SoftwareVersion
 }
 
 // Validate validates params used for updating a service software versions entry.
 func (u *UpdateServiceSoftwareVersionsParams) Validate() error {
-	if u.SoftwareVersions == nil {
-		return nil
-	}
-
-	for _, sv := range *u.SoftwareVersions {
+	for _, sv := range u.SoftwareVersions {
 		switch sv.Name {
 		case MysqldSoftwareName:
 		case XtrabackupSoftwareName:
@@ -131,7 +127,7 @@ func UpdateServiceSoftwareVersions(
 		row.NextCheckAt = *params.NextCheckAt
 	}
 	if params.SoftwareVersions != nil {
-		row.SoftwareVersions = *params.SoftwareVersions
+		row.SoftwareVersions = params.SoftwareVersions
 	}
 
 	if err := q.Update(row); err != nil {

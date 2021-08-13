@@ -244,7 +244,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	}
 
 	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
-		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: &svs},
+		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: svs},
 	); err != nil {
 		return minCheckInterval, err
 	}
