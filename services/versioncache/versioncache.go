@@ -31,8 +31,9 @@ import (
 )
 
 var (
-	serviceCheckInterval   = 24 * time.Hour
-	minCheckInterval       = 5 * time.Second
+	serviceCheckInterval      = 24 * time.Hour
+	serviceCheckShortInterval = 4 * time.Hour
+	minCheckInterval          = 5 * time.Second
 )
 
 //go:generate mockery -name=Versioner -case=snake -inpkg -testonly
@@ -114,7 +115,7 @@ func (s *Service) findServiceForUpdate() (*service, error) {
 
 		// shift the next check time for this service, so, in case of versions fetch error,
 		// it will not loop in trying, but will continue with other services.
-		nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
+		nextCheckAt := time.Now().UTC().Add(serviceCheckShortInterval)
 		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ServiceID,
 			models.UpdateServiceSoftwareVersionsParams{NextCheckAt: &nextCheckAt},
 		); err != nil {
@@ -190,8 +191,12 @@ func (s *Service) updateVersionsForNextService() (time.Duration, error) {
 		})
 	}
 
+	nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
 	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, foundService.ServiceID,
-		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: svs},
+		models.UpdateServiceSoftwareVersionsParams{
+			NextCheckAt:      &nextCheckAt,
+			SoftwareVersions: svs,
+		},
 	); err != nil {
 		return minCheckInterval, err
 	}
