@@ -163,7 +163,7 @@ type FindServicesSoftwareVersionsFilter struct {
 func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftwareVersionsFilter) ([]*ServiceSoftwareVersions, error) {
 	var args []interface{}
 	var tail strings.Builder
-	tail.WriteString("ORDER BY next_check_at ")
+	tail.WriteString("ORDER BY next_check_at ASC ")
 	if filter.Limit != nil {
 		tail.WriteString("LIMIT $1")
 		args = append(args, *filter.Limit)
