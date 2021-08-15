@@ -89,7 +89,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
 
-		ss.vc.(*mockVersionCache).On("SyncAndUpdate").Once()
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		actualMySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
@@ -150,7 +150,7 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ss.vc.(*mockVersionCache).On("SyncAndUpdate").Once()
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		mySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql-socket",
 			NodeID:      node.NodeId,
@@ -208,7 +208,7 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ss.vc.(*mockVersionCache).On("SyncAndUpdate").Once()
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		mySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql-socket",
 			NodeID:      node.NodeId,
@@ -247,7 +247,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
 
-		ss.vc.(*mockVersionCache).On("SyncAndUpdate").Once()
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		actualMySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql-socket",
 			NodeID:      models.PMMServerNodeID,
@@ -669,7 +669,7 @@ func TestServices(t *testing.T) {
 		ss, _, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
-		ss.vc.(*mockVersionCache).On("SyncAndUpdate").Once()
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,

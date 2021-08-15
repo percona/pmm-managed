@@ -19,6 +19,7 @@ package models
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
@@ -251,6 +252,17 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		return nil, err
 	}
 	if err := q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	const serviceVersionsFirstCheckDelay = 30 * time.Second
+	if _, err := CreateServiceSoftwareVersions(q, CreateServiceSoftwareVersionsParams{
+		ServiceID:        id,
+		ServiceType:      serviceType,
+		SoftwareVersions: []SoftwareVersion{},
+		// add a small duration ahead, so first software versions check will happen when agent established a connection.
+		NextCheckAt: time.Now().Add(serviceVersionsFirstCheckDelay),
+	}); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

@@ -33,7 +33,6 @@ import (
 var (
 	serviceCheckInterval   = 24 * time.Hour
 	minCheckInterval       = 5 * time.Second
-	serviceFirstCheckDelay = 30 * time.Second
 )
 
 //go:generate mockery -name=Versioner -case=snake -inpkg -testonly
@@ -59,59 +58,6 @@ func New(db *reform.DB, v Versioner) *Service {
 		v:        v,
 		updateCh: make(chan struct{}, 1),
 	}
-}
-
-func (s *Service) syncServices() error {
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		serviceType := models.MySQLServiceType
-		services, err := models.FindServices(tx.Querier, models.ServiceFilters{ServiceType: &serviceType})
-		if err != nil {
-			return err
-		}
-
-		serviceIDs := make(map[string]struct{}, len(services))
-		for _, s := range services {
-			serviceIDs[s.ServiceID] = struct{}{}
-		}
-
-		serviceVersions, err := models.FindServicesSoftwareVersions(tx.Querier,
-			models.FindServicesSoftwareVersionsFilter{})
-		if err != nil {
-			return err
-		}
-
-		// remove services software versions from the cache which are no longer exist
-		for _, sv := range serviceVersions {
-			if _, ok := serviceIDs[sv.ServiceID]; !ok {
-				if err := models.DeleteServiceSoftwareVersions(tx.Querier, sv.ServiceID); err != nil {
-					return err
-				}
-			}
-		}
-
-		// add new services software versions to the cache
-		cacheServiceIDs := make(map[string]struct{}, len(serviceVersions))
-		for _, sv := range serviceVersions {
-			cacheServiceIDs[sv.ServiceID] = struct{}{}
-		}
-		for _, service := range services {
-			if _, ok := cacheServiceIDs[service.ServiceID]; !ok {
-				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
-					ServiceID:        service.ServiceID,
-					ServiceType:      serviceType,
-					SoftwareVersions: []models.SoftwareVersion{},
-					// add a small duration ahead, so the next check will happen when agent established a connection.
-					NextCheckAt: time.Now().Add(serviceFirstCheckDelay),
-				}); err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-
-	return err
 }
 
 type prepareResults struct {
@@ -252,8 +198,8 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	return minCheckInterval, err
 }
 
-// SyncAndUpdate triggers sync and update service software versions.
-func (s *Service) SyncAndUpdate() {
+// RequestSoftwareVersionsUpdate triggers update service software versions.
+func (s *Service) RequestSoftwareVersionsUpdate() {
 	select {
 	case s.updateCh <- struct{}{}:
 	default:
@@ -267,37 +213,23 @@ func (s *Service) Run(ctx context.Context) {
 
 	defer close(s.updateCh)
 
-	if err := s.syncServices(); err != nil {
-		s.l.Warn(err)
-	}
-
 	var checkAfter time.Duration
 	for {
 		select {
 		case <-time.After(checkAfter):
-			s.l.Infof("Updating versions...")
-			ca, err := s.updateVersions()
-			if err != nil {
-				s.l.Warn(err)
-			}
-
-			checkAfter = ca
-			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-s.updateCh:
-			s.l.Infof("Syncing services and updating versions...")
-			if err := s.syncServices(); err != nil {
-				s.l.Warn(err)
-			}
-
-			ca, err := s.updateVersions()
-			if err != nil {
-				s.l.Warn(err)
-			}
-
-			checkAfter = ca
-			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-ctx.Done():
 			return
 		}
+
+		s.l.Infof("Updating versions...")
+
+		ca, err := s.updateVersions()
+		if err != nil {
+			s.l.Warn(err)
+		}
+
+		checkAfter = ca
+		s.l.Infof("Done. Next check in %s.", checkAfter)
 	}
 }

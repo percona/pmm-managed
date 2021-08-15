@@ -117,7 +117,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSS
 		return nil, err
 	}
 
-	ss.vc.SyncAndUpdate()
+	ss.vc.RequestSoftwareVersionsUpdate()
 
 	return res.(*inventorypb.MySQLService), nil
 }
