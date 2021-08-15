@@ -60,17 +60,17 @@ func New(db *reform.DB, v Versioner) *Service {
 	}
 }
 
-type prepareResults struct {
+type service struct {
 	ServiceID   string
 	CheckAfter  time.Duration
 	NeedsUpdate bool
 	PMMAgentID  string
 }
 
-// prepareUpdateVersions checks if there is any service that needs software versions update in the cache and
+// findServiceForUpdate checks if there is any service that needs software versions update in the cache and
 // shifts the next check time for this service.
-func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
-	results := &prepareResults{CheckAfter: minCheckInterval}
+func (s *Service) findServiceForUpdate() (*service, error) {
+	results := &service{CheckAfter: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
@@ -147,19 +147,20 @@ func softwareName(s agents.Software) (models.SoftwareName, error) {
 	return softwareName, nil
 }
 
-// updateVersions updates software versions for one service.
-func (s *Service) updateVersions() (time.Duration, error) {
-	r, err := s.prepareUpdateVersions()
+// updateVersionsForNextService tries to find a service that needs update and performs update if such service is found.
+// Returns desired time interval to wait before next call of the updateVersionsForNextService.
+func (s *Service) updateVersionsForNextService() (time.Duration, error) {
+	foundService, err := s.findServiceForUpdate()
 	if err != nil {
 		return minCheckInterval, err
 	}
 
-	if !r.NeedsUpdate {
-		return r.CheckAfter, nil
+	if !foundService.NeedsUpdate {
+		return foundService.CheckAfter, nil
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
-	versions, err := s.v.GetVersions(r.PMMAgentID, softwares)
+	versions, err := s.v.GetVersions(foundService.PMMAgentID, softwares)
 	if err != nil {
 		return minCheckInterval, err
 	}
@@ -189,7 +190,7 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		})
 	}
 
-	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
+	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, foundService.ServiceID,
 		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: svs},
 	); err != nil {
 		return minCheckInterval, err
@@ -224,7 +225,7 @@ func (s *Service) Run(ctx context.Context) {
 
 		s.l.Infof("Updating versions...")
 
-		ca, err := s.updateVersions()
+		ca, err := s.updateVersionsForNextService()
 		if err != nil {
 			s.l.Warn(err)
 		}

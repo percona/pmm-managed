@@ -57,6 +57,14 @@ func TestVersionCache(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16OrNil(777),
 		},
+		&models.ServiceSoftwareVersions{
+			ServiceID:        serviceID1,
+			ServiceType:      models.MySQLServiceType,
+			SoftwareVersions: nil,
+			NextCheckAt:      time.Now(),
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
+		},
 		&models.Agent{
 			AgentID:      agentID1,
 			AgentType:    models.PMMAgentType,
@@ -144,7 +152,6 @@ func TestVersionCache(t *testing.T) {
 
 	serviceCheckInterval = time.Second
 	minCheckInterval = 0
-	serviceFirstCheckDelay = 0
 
 	cache := New(db, versionerMock)
 	go func() {
