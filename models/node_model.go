@@ -71,6 +71,7 @@ func (s *Node) BeforeInsert() error {
 	now := Now()
 	s.CreatedAt = now
 	s.UpdatedAt = now
+	time.Ticker{}
 	if len(s.CustomLabels) == 0 {
 		s.CustomLabels = nil
 	}

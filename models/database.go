@@ -550,6 +550,10 @@ var databaseSchema = [][]string{
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
 	43: {
+		`UPDATE artifacts SET schedule_id = '' WHERE schedule_id IS NULL`,
+		`ALTER TABLE artifacts ALTER COLUMN schedule_id SET NOT NULL`,
+	},
+	44: {
 		`ALTER TABLE artifacts
       ADD COLUMN mode VARCHAR NOT NULL CHECK (mode <> '') DEFAULT 'snapshot'`,
 	},
