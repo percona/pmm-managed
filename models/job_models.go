@@ -30,17 +30,11 @@ type JobType string
 
 // Supported job types.
 const (
-	Echo                    = JobType("echo")
 	MySQLBackupJob          = JobType("mysql_backup")
 	MySQLRestoreBackupJob   = JobType("mysql_restore_backup")
 	MongoDBBackupJob        = JobType("mongodb_backup")
 	MongoDBRestoreBackupJob = JobType("mongodb_restore_backup")
 )
-
-// EchoJobResult stores echo job specific result data.
-type EchoJobResult struct {
-	Message string `json:"message"`
-}
 
 // MySQLBackupJobResult stores MySQL job specific result data.
 type MySQLBackupJobResult struct {
@@ -66,17 +60,10 @@ func (r *JobResult) Scan(src interface{}) error { return jsonScan(r, src) }
 
 // JobResult holds result data for different job types.
 type JobResult struct {
-	Echo                 *EchoJobResult                 `json:"echo,omitempty"`
 	MySQLBackup          *MySQLBackupJobResult          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobResult   `json:"mysql_restore_backup,omitempty"`
 	MongoDBBackup        *MongoDBBackupJobResult        `json:"mongo_db_backup,omitempty"`
 	MongoDBRestoreBackup *MongoDBRestoreBackupJobResult `json:"mongo_db_restore_backup,omitempty"`
-}
-
-// EchoJobData stores echo job specific result data.
-type EchoJobData struct {
-	Message string        `json:"message"`
-	Delay   time.Duration `json:"delay"`
 }
 
 // MySQLBackupJobData stores MySQL job specific result data.
@@ -105,7 +92,6 @@ type MongoDBRestoreBackupJobData struct {
 
 // JobData contains data required for running a job.
 type JobData struct {
-	Echo                 *EchoJobData                 `json:"echo,omitempty"`
 	MySQLBackup          *MySQLBackupJobData          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobData   `json:"mysql_restore_backup,omitempty"`
 	MongoDBBackup        *MongoDBBackupJobData        `json:"mongo_db_backup,omitempty"`

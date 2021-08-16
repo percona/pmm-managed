@@ -351,8 +351,7 @@ func (s *Service) prepareBackupJob(
 				ArtifactID: artifactID,
 			},
 		}
-	case models.Echo,
-		models.MySQLRestoreBackupJob,
+	case models.MySQLRestoreBackupJob,
 		models.MongoDBRestoreBackupJob:
 		return nil, nil, errors.Errorf("%s is not a backup job type", jobType)
 	default:

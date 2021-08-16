@@ -73,41 +73,11 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 	}
 
 	switch result.Type {
-	case models.Echo:
-		resp.Result = &jobsAPI.GetJobResponse_Echo_{
-			Echo: &jobsAPI.GetJobResponse_Echo{
-				Message: result.Data.Echo.Message,
-			},
-		}
 	default:
 		return nil, errors.Errorf("Unexpected job type: %s", result.Type)
 	}
 
 	return resp, nil
-}
-
-// StartEchoJob starts echo job. Its purpose is testing.
-func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
-	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo, &models.JobData{
-		Echo: &models.EchoJobData{
-			Message: req.Message,
-			Delay:   req.Delay.AsDuration(),
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.jobsService.StartEchoJob(res.ID, res.PMMAgentID, req.Timeout.AsDuration(), req.Message, req.Delay.AsDuration())
-	if err != nil {
-		s.saveJobError(res.ID, err.Error())
-		return nil, err
-	}
-
-	return &jobsAPI.StartEchoJobResponse{
-		PmmAgentId: req.PmmAgentId,
-		JobId:      res.ID,
-	}, nil
 }
 
 // CancelJob terminates job.

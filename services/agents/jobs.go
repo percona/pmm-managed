@@ -75,7 +75,6 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 		}
 
 		switch job.Type {
-		case models.Echo:
 		case models.MySQLBackupJob:
 			artifact, err = models.FindArtifactByID(tx.Querier, job.Data.MySQLBackup.ArtifactID)
 			if err != nil {
@@ -135,10 +134,6 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 	}
 
 	switch job.Type {
-	case models.Echo:
-		if err := s.StartEchoJob(job.ID, job.PMMAgentID, job.Timeout, job.Data.Echo.Message, job.Data.Echo.Delay); err != nil {
-			return errors.WithStack(err)
-		}
 	case models.MySQLBackupJob:
 		if err := s.StartMySQLBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig, locationConfig); err != nil {
 			return errors.WithStack(err)
@@ -168,15 +163,6 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 				l.Errorf("failed to handle job error: %s", err)
 			}
 			job.Error = result.Error.Message
-		case *agentpb.JobResult_Echo_:
-			if job.Type != models.Echo {
-				return errors.Errorf("result type echo doesn't match job type %s", job.Type)
-			}
-			job.Data = &models.JobData{
-				Echo: &models.EchoJobData{
-					Message: result.Echo.Message,
-				},
-			}
 		case *agentpb.JobResult_MysqlBackup:
 			if job.Type != models.MySQLBackupJob {
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, job.Type)
@@ -257,8 +243,6 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 func (s *JobsService) handleJobError(job *models.Job) error {
 	var err error
 	switch job.Type {
-	case models.Echo:
-		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.UpdateArtifact(s.db.Querier, job.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
@@ -293,36 +277,6 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 	}()
 
 	return err
-}
-
-// StartEchoJob starts echo job on the pmm-agent.
-func (s *JobsService) StartEchoJob(jobID, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error {
-	req := &agentpb.StartJobRequest{
-		JobId:   jobID,
-		Timeout: durationpb.New(timeout),
-		Job: &agentpb.StartJobRequest_Echo_{
-			Echo: &agentpb.StartJobRequest_Echo{
-				Message: message,
-				Delay:   durationpb.New(delay),
-			},
-		},
-	}
-
-	agent, err := s.r.get(pmmAgentID)
-	if err != nil {
-		return err
-	}
-
-	resp, err := agent.channel.SendAndWaitResponse(req)
-	if err != nil {
-		return err
-	}
-
-	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
-		return errors.Errorf("failed to start echo job: %s", e)
-	}
-
-	return nil
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.

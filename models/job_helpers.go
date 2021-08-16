@@ -56,7 +56,6 @@ type CreateJobParams struct {
 // Validate validates CreateJobParams
 func (p CreateJobParams) Validate() error {
 	switch p.Type {
-	case Echo:
 	case MySQLBackupJob:
 	case MySQLRestoreBackupJob:
 	case MongoDBBackupJob:
