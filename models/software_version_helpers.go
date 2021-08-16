@@ -137,7 +137,8 @@ func UpdateServiceSoftwareVersions(
 	return row, nil
 }
 
-// FindServiceSoftwareVersionsByServiceID returns service software versions entry by given service ID if found, ErrNotFound if not.
+// FindServiceSoftwareVersionsByServiceID returns service software versions entry by given service ID if found,
+// returns wrapped ErrNotFound if not found.
 func FindServiceSoftwareVersionsByServiceID(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
 	if serviceID == "" {
 		return nil, errors.New("service id is empty")

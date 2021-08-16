@@ -52,6 +52,7 @@ func (sv SoftwareVersions) Value() (driver.Value, error) { return jsonValue(sv) 
 func (sv *SoftwareVersions) Scan(src interface{}) error { return jsonScan(sv, src) }
 
 // ServiceSoftwareVersions represents service software versions.
+// It has a one-to-one relationship with the services table.
 //reform:service_software_versions
 type ServiceSoftwareVersions struct {
 	ServiceID        string           `reform:"service_id,pk"`

@@ -62,16 +62,16 @@ func New(db *reform.DB, v Versioner) *Service {
 }
 
 type service struct {
-	ServiceID   string
-	CheckAfter  time.Duration
-	NeedsUpdate bool
-	PMMAgentID  string
+	ServiceID     string
+	WaitNextCheck time.Duration
+	NeedsUpdate   bool
+	PMMAgentID    string
 }
 
 // findServiceForUpdate checks if there is any service that needs software versions update in the cache and
 // shifts the next check time for this service.
 func (s *Service) findServiceForUpdate() (*service, error) {
-	results := &service{CheckAfter: minCheckInterval}
+	results := &service{WaitNextCheck: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
@@ -80,14 +80,16 @@ func (s *Service) findServiceForUpdate() (*service, error) {
 			return err
 		}
 		if len(servicesVersions) == 0 {
-			results.CheckAfter = serviceCheckInterval
+			// there are no entries in the cache, so perform next check later
+			results.WaitNextCheck = serviceCheckInterval
 
 			return nil
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
-			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
-			if results.CheckAfter < minCheckInterval {
-				results.CheckAfter = minCheckInterval
+			// wait until next service check time
+			results.WaitNextCheck = time.Until(servicesVersions[0].NextCheckAt)
+			if results.WaitNextCheck < minCheckInterval {
+				results.WaitNextCheck = minCheckInterval
 			}
 
 			return nil
@@ -157,7 +159,7 @@ func (s *Service) updateVersionsForNextService() (time.Duration, error) {
 	}
 
 	if !foundService.NeedsUpdate {
-		return foundService.CheckAfter, nil
+		return foundService.WaitNextCheck, nil
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
