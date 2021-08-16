@@ -577,8 +577,8 @@ var databaseSchema = [][]string{
 		SELECT
 			service_id,
 			service_type,
-			'{}' AS software_versions,
-			(NOW() AT TIME ZONE 'utc') + INTERVAL '30' SECOND AS next_check_at,
+			'[]' AS software_versions,
+			(NOW() AT TIME ZONE 'utc') AS next_check_at,
 			(NOW() AT TIME ZONE 'utc') AS created_at,
 			(NOW() AT TIME ZONE 'utc') AS updated_at
 		FROM services

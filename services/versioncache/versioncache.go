@@ -87,10 +87,7 @@ func (s *Service) findServiceForUpdate() (*service, error) {
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
 			// wait until next service check time
-			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
-			if results.CheckAfter < minCheckInterval {
-				results.CheckAfter = minCheckInterval
-			}
+			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt) + minCheckInterval
 
 			return nil
 		}
@@ -216,6 +213,8 @@ func (s *Service) RequestSoftwareVersionsUpdate() {
 
 // Run runs software version cache service.
 func (s *Service) Run(ctx context.Context) {
+	time.Sleep(10 * time.Second) // sleep a while, so the server establishes the connections with agents.
+
 	s.l.Info("Starting...")
 	defer s.l.Info("Done.")
 
