@@ -588,6 +588,7 @@ var databaseSchema = [][]string{
 	45: {
 		`ALTER TABLE artifacts
       ADD COLUMN mode VARCHAR NOT NULL CHECK (mode <> '') DEFAULT 'snapshot'`,
+		`ALTER TABLE artifacts ALTER COLUMN mode DROP DEFAULT`,
 	},
 }
 
