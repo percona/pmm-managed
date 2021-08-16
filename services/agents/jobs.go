@@ -33,6 +33,10 @@ import (
 // ErrRetriesExhausted is returned when remaining retries are 0.
 var ErrRetriesExhausted = errors.New("Retries exhausted")
 
+const (
+	maxRestartInterval = 8 * time.Hour
+)
+
 // JobsService provides methods for managing jobs.
 type JobsService struct {
 	r  *Registry
@@ -125,10 +129,8 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 
 	s.l.Debugf("restarting job: %s, delay: %v", jobID, job.Interval)
 
-	t := time.NewTimer(job.Interval)
-
 	select {
-	case <-t.C:
+	case <-time.After(job.Interval):
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -270,7 +272,9 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 	}
 
 	go func() {
-		restartErr := s.RestartJob(context.Background(), job.ID)
+		restartCtx, cancel := context.WithTimeout(context.Background(), maxRestartInterval)
+		defer cancel()
+		restartErr := s.RestartJob(restartCtx, job.ID)
 		if restartErr != nil && restartErr != ErrRetriesExhausted {
 			s.l.Errorf("restart job %s: %v", job.ID, restartErr)
 		}

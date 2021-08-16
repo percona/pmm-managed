@@ -298,7 +298,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	switch dbTask.Type {
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
-		params := BackupTaskParams{
+		params := CommonBackupTaskParams{
 			ServiceID:     data.ServiceID,
 			LocationID:    data.LocationID,
 			Name:          data.Name,
@@ -310,7 +310,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 		task = NewMySQLBackupTask(s.backupService, params)
 	case models.ScheduledMongoDBBackupTask:
 		data := dbTask.Data.MongoDBBackupTask
-		params := BackupTaskParams{
+		params := CommonBackupTaskParams{
 			ServiceID:     data.ServiceID,
 			LocationID:    data.LocationID,
 			Name:          data.Name,

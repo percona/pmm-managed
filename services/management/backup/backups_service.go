@@ -44,6 +44,11 @@ type BackupsService struct {
 	l               *logrus.Entry
 }
 
+const (
+	maxRetriesAttempts = 10
+	maxRetryInterval   = 8 * time.Hour
+)
+
 // NewBackupsService creates new backups API service.
 func NewBackupsService(db *reform.DB, backupService backupService, scheduleService scheduleService) *BackupsService {
 	return &BackupsService{
@@ -56,6 +61,14 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
+	if req.Retries > maxRetriesAttempts {
+		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+	}
+
+	if req.RetryInterval.AsDuration() > maxRetryInterval {
+		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+	}
+
 	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
 		ServiceID:     req.ServiceId,
 		LocationID:    req.LocationId,
@@ -91,7 +104,16 @@ func (s *BackupsService) RestoreBackup(
 // ScheduleBackup add new backup task to scheduler.
 func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.ScheduleBackupRequest) (*backupv1beta1.ScheduleBackupResponse, error) {
 	var id string
-	err := s.db.InTransaction(func(tx *reform.TX) error {
+
+	if req.Retries > maxRetriesAttempts {
+		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+	}
+
+	if req.RetryInterval.AsDuration() > maxRetryInterval {
+		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+	}
+
+	errTx := s.db.InTransaction(func(tx *reform.TX) error {
 		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
@@ -102,7 +124,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			return err
 		}
 
-		backupParams := scheduler.BackupTaskParams{
+		backupParams := scheduler.CommonBackupTaskParams{
 			ServiceID:     req.ServiceId,
 			LocationID:    req.LocationId,
 			Name:          req.Name,
@@ -144,8 +166,8 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		id = scheduledTask.ID
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	if errTx != nil {
+		return nil, errTx
 	}
 	return &backupv1beta1.ScheduleBackupResponse{ScheduledBackupId: id}, nil
 }
@@ -233,9 +255,15 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		data.Retention = req.Retention.Value
 	}
 	if req.Retries != nil {
+		if req.Retries.Value > maxRetriesAttempts {
+			return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		}
 		data.Retries = req.Retries.Value
 	}
 	if req.RetryInterval != nil {
+		if req.RetryInterval.AsDuration() > maxRetryInterval {
+			return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		}
 		data.RetryInterval = req.RetryInterval.AsDuration()
 	}
 

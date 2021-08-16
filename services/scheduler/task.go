@@ -46,8 +46,8 @@ func (c *common) SetID(id string) {
 	c.id = id
 }
 
-// BackupTaskParams contains common fields for all backup tasks.
-type BackupTaskParams struct {
+// CommonBackupTaskParams contains common fields for all backup tasks.
+type CommonBackupTaskParams struct {
 	ServiceID     string
 	LocationID    string
 	Name          string
@@ -60,15 +60,15 @@ type BackupTaskParams struct {
 type mySQLBackupTask struct {
 	*common
 	backupService backupService
-	BackupTaskParams
+	CommonBackupTaskParams
 }
 
 // NewMySQLBackupTask create new task for mysql backup.
-func NewMySQLBackupTask(backupService backupService, params BackupTaskParams) Task {
+func NewMySQLBackupTask(backupService backupService, params CommonBackupTaskParams) Task {
 	return &mySQLBackupTask{
-		common:           &common{},
-		backupService:    backupService,
-		BackupTaskParams: params,
+		common:                 &common{},
+		backupService:          backupService,
+		CommonBackupTaskParams: params,
 	}
 }
 
@@ -106,15 +106,15 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 type mongoBackupTask struct {
 	*common
 	backupService backupService
-	BackupTaskParams
+	CommonBackupTaskParams
 }
 
 // NewMongoBackupTask create new task for mongo backup.
-func NewMongoBackupTask(backupService backupService, params BackupTaskParams) Task {
+func NewMongoBackupTask(backupService backupService, params CommonBackupTaskParams) Task {
 	return &mongoBackupTask{
-		common:           &common{},
-		backupService:    backupService,
-		BackupTaskParams: params,
+		common:                 &common{},
+		backupService:          backupService,
+		CommonBackupTaskParams: params,
 	}
 }
 
