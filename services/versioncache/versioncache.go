@@ -63,15 +63,15 @@ func New(db *reform.DB, v Versioner) *Service {
 
 type service struct {
 	ServiceID     string
-	WaitNextCheck time.Duration
-	NeedsUpdate   bool
+	CheckAfter    time.Duration
+	WaitNextCheck bool
 	PMMAgentID    string
 }
 
 // findServiceForUpdate checks if there is any service that needs software versions update in the cache and
 // shifts the next check time for this service.
 func (s *Service) findServiceForUpdate() (*service, error) {
-	results := &service{WaitNextCheck: minCheckInterval}
+	results := &service{CheckAfter: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
@@ -81,21 +81,21 @@ func (s *Service) findServiceForUpdate() (*service, error) {
 		}
 		if len(servicesVersions) == 0 {
 			// there are no entries in the cache, so perform next check later
-			results.WaitNextCheck = serviceCheckInterval
+			results.CheckAfter = serviceCheckInterval
 
 			return nil
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
 			// wait until next service check time
-			results.WaitNextCheck = time.Until(servicesVersions[0].NextCheckAt)
-			if results.WaitNextCheck < minCheckInterval {
-				results.WaitNextCheck = minCheckInterval
+			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
+			if results.CheckAfter < minCheckInterval {
+				results.CheckAfter = minCheckInterval
 			}
 
 			return nil
 		}
 
-		results.NeedsUpdate = true
+		results.WaitNextCheck = true
 		results.ServiceID = servicesVersions[0].ServiceID
 
 		service, err := models.FindServiceByID(tx.Querier, servicesVersions[0].ServiceID)
@@ -158,8 +158,8 @@ func (s *Service) updateVersionsForNextService() (time.Duration, error) {
 		return minCheckInterval, err
 	}
 
-	if !foundService.NeedsUpdate {
-		return foundService.WaitNextCheck, nil
+	if !foundService.WaitNextCheck {
+		return foundService.CheckAfter, nil
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
