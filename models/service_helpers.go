@@ -29,6 +29,8 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+const serviceVersionsFirstCheckDelay = 30 * time.Second
+
 func checkServiceUniqueID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Service ID")
@@ -255,15 +257,16 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		return nil, errors.WithStack(err)
 	}
 
-	const serviceVersionsFirstCheckDelay = 30 * time.Second
-	if _, err := CreateServiceSoftwareVersions(q, CreateServiceSoftwareVersionsParams{
-		ServiceID:        id,
-		ServiceType:      serviceType,
-		SoftwareVersions: []SoftwareVersion{},
-		// add a small duration ahead, so first software versions check will happen when agent established a connection.
-		NextCheckAt: time.Now().Add(serviceVersionsFirstCheckDelay),
-	}); err != nil {
-		return nil, errors.WithStack(err)
+	if serviceType == MySQLServiceType {
+		if _, err := CreateServiceSoftwareVersions(q, CreateServiceSoftwareVersionsParams{
+			ServiceID:        id,
+			ServiceType:      serviceType,
+			SoftwareVersions: []SoftwareVersion{},
+			// add a small duration ahead, so first software versions check will happen when agent established a connection.
+			NextCheckAt: time.Now().Add(serviceVersionsFirstCheckDelay),
+		}); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	return row, nil

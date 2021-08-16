@@ -159,7 +159,8 @@ type FindServicesSoftwareVersionsFilter struct {
 	Limit *int
 }
 
-// FindServicesSoftwareVersions returns all services software versions.
+// FindServicesSoftwareVersions returns all services software versions sorted by next_check_at in ascending order
+// if limit is not specified and limited number of entries otherwise.
 func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftwareVersionsFilter) ([]*ServiceSoftwareVersions, error) {
 	var args []interface{}
 	var tail strings.Builder

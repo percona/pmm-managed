@@ -566,6 +566,23 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (service_id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE
 		);`,
+		`INSERT INTO service_software_versions(
+			service_id,
+			service_type,
+			software_versions,
+			next_check_at,
+			created_at,
+			updated_at
+		)
+		SELECT
+			service_id,
+			service_type,
+			'{}' AS software_versions,
+			(NOW() AT TIME ZONE 'utc') + INTERVAL '30' SECOND AS next_check_at,
+			(NOW() AT TIME ZONE 'utc') AS created_at,
+			(NOW() AT TIME ZONE 'utc') AS updated_at
+		FROM services
+        WHERE service_type = 'mysql';`,
 	},
 }
 
