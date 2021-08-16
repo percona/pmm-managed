@@ -46,7 +46,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		Type:           models.ScheduledMySQLBackupTask,
 		Data: models.ScheduledTaskData{
 			MySQLBackupTask: &models.MySQLBackupTaskData{
-				BackupTaskData: models.BackupTaskData{
+				CommonBackupTaskData: models.CommonBackupTaskData{
 					ServiceID:   "",
 					LocationID:  "",
 					Name:        "task",
@@ -127,7 +127,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		createParams2.Type = models.ScheduledMySQLBackupTask
 		createParams2.Data = models.ScheduledTaskData{
 			MySQLBackupTask: &models.MySQLBackupTaskData{
-				BackupTaskData: models.BackupTaskData{
+				CommonBackupTaskData: models.CommonBackupTaskData{
 					ServiceID:  "svc1",
 					LocationID: "loc1",
 					Name:       "mysql",
@@ -140,7 +140,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		createParams2.Type = models.ScheduledMongoDBBackupTask
 		createParams2.Data = models.ScheduledTaskData{
 			MongoDBBackupTask: &models.MongoBackupTaskData{
-				BackupTaskData: models.BackupTaskData{
+				CommonBackupTaskData: models.CommonBackupTaskData{
 					ServiceID:  "svc2",
 					LocationID: "loc1",
 					Name:       "mongo",

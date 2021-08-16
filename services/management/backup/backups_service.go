@@ -213,12 +213,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		return nil, err
 	}
 
-	var data *models.BackupTaskData
+	var data *models.CommonBackupTaskData
 	switch scheduledTask.Type {
 	case models.ScheduledMySQLBackupTask:
-		data = &scheduledTask.Data.MySQLBackupTask.BackupTaskData
+		data = &scheduledTask.Data.MySQLBackupTask.CommonBackupTaskData
 	case models.ScheduledMongoDBBackupTask:
-		data = &scheduledTask.Data.MongoDBBackupTask.BackupTaskData
+		data = &scheduledTask.Data.MongoDBBackupTask.CommonBackupTaskData
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
 	}
@@ -319,14 +319,14 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		scheduledBackup.StartTime = timestamppb.New(task.StartAt)
 	}
 
-	var commonBackupData models.BackupTaskData
+	var commonBackupData models.CommonBackupTaskData
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
-		commonBackupData = task.Data.MySQLBackupTask.BackupTaskData
+		commonBackupData = task.Data.MySQLBackupTask.CommonBackupTaskData
 		scheduledBackup.DataModel = backupv1beta1.DataModel_PHYSICAL
 
 	case models.ScheduledMongoDBBackupTask:
-		commonBackupData = task.Data.MongoDBBackupTask.BackupTaskData
+		commonBackupData = task.Data.MongoDBBackupTask.CommonBackupTaskData
 		scheduledBackup.DataModel = backupv1beta1.DataModel_LOGICAL
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", task.Type)

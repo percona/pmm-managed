@@ -156,33 +156,33 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 
 func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, result *agentpb.JobResult) {
 	var scheduleID string
-	if e := s.db.InTransaction(func(t *reform.TX) error {
-		res, err := models.FindJobByID(t.Querier, result.JobId)
+	if errTx := s.db.InTransaction(func(t *reform.TX) error {
+		job, err := models.FindJobByID(t.Querier, result.JobId)
 		if err != nil {
 			return err
 		}
 
 		switch result := result.Result.(type) {
 		case *agentpb.JobResult_Error_:
-			if err := s.handleJobError(res); err != nil {
+			if err := s.handleJobError(job); err != nil {
 				l.Errorf("failed to handle job error: %s", err)
 			}
-			res.Error = result.Error.Message
+			job.Error = result.Error.Message
 		case *agentpb.JobResult_Echo_:
-			if res.Type != models.Echo {
-				return errors.Errorf("result type echo doesn't match job type %s", res.Type)
+			if job.Type != models.Echo {
+				return errors.Errorf("result type echo doesn't match job type %s", job.Type)
 			}
-			res.Data = &models.JobData{
+			job.Data = &models.JobData{
 				Echo: &models.EchoJobData{
 					Message: result.Echo.Message,
 				},
 			}
 		case *agentpb.JobResult_MysqlBackup:
-			if res.Type != models.MySQLBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
+			if job.Type != models.MySQLBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, job.Type)
 			}
 
-			artifact, err := models.UpdateArtifact(t.Querier, res.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+			artifact, err := models.UpdateArtifact(t.Querier, job.Data.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
 				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
@@ -193,11 +193,11 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 				scheduleID = artifact.ScheduleID
 			}
 		case *agentpb.JobResult_MongodbBackup:
-			if res.Type != models.MongoDBBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
+			if job.Type != models.MongoDBBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, job.Type)
 			}
 
-			artifact, err := models.UpdateArtifact(t.Querier, res.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+			artifact, err := models.UpdateArtifact(t.Querier, job.Data.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
 				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
@@ -208,13 +208,13 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 				scheduleID = artifact.ScheduleID
 			}
 		case *agentpb.JobResult_MysqlRestoreBackup:
-			if res.Type != models.MySQLRestoreBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLRestoreBackupJob, res.Type)
+			if job.Type != models.MySQLRestoreBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLRestoreBackupJob, job.Type)
 			}
 
 			_, err := models.ChangeRestoreHistoryItem(
 				t.Querier,
-				res.Data.MySQLRestoreBackup.RestoreID,
+				job.Data.MySQLRestoreBackup.RestoreID,
 				models.ChangeRestoreHistoryItemParams{
 					Status: models.SuccessRestoreStatus,
 				})
@@ -223,13 +223,13 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 			}
 
 		case *agentpb.JobResult_MongodbRestoreBackup:
-			if res.Type != models.MongoDBRestoreBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBRestoreBackupJob, res.Type)
+			if job.Type != models.MongoDBRestoreBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBRestoreBackupJob, job.Type)
 			}
 
 			_, err := models.ChangeRestoreHistoryItem(
 				t.Querier,
-				res.Data.MongoDBRestoreBackup.RestoreID,
+				job.Data.MongoDBRestoreBackup.RestoreID,
 				models.ChangeRestoreHistoryItemParams{
 					Status: models.SuccessRestoreStatus,
 				})
@@ -239,10 +239,10 @@ func (s *JobsService) handleJobResult(ctx context.Context, l *logrus.Entry, resu
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
-		res.Done = true
-		return t.Update(res)
-	}); e != nil {
-		l.Errorf("Failed to save job result: %+v", e)
+		job.Done = true
+		return t.Update(job)
+	}); errTx != nil {
+		l.Errorf("Failed to save job result: %+v", errTx)
 	}
 
 	if scheduleID != "" {

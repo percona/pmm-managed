@@ -90,7 +90,7 @@ func (t *mySQLBackupTask) Type() models.ScheduledTaskType {
 func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
 		MySQLBackupTask: &models.MySQLBackupTaskData{
-			BackupTaskData: models.BackupTaskData{
+			CommonBackupTaskData: models.CommonBackupTaskData{
 				ServiceID:     t.ServiceID,
 				LocationID:    t.LocationID,
 				Name:          t.Name,
@@ -136,7 +136,7 @@ func (t *mongoBackupTask) Type() models.ScheduledTaskType {
 func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
 		MongoDBBackupTask: &models.MongoBackupTaskData{
-			BackupTaskData: models.BackupTaskData{
+			CommonBackupTaskData: models.CommonBackupTaskData{
 				ServiceID:     t.ServiceID,
 				LocationID:    t.LocationID,
 				Name:          t.Name,

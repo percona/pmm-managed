@@ -55,7 +55,7 @@ func (t *dummyTask) Type() models.ScheduledTaskType {
 func (t *dummyTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
 		MySQLBackupTask: &models.MySQLBackupTaskData{
-			BackupTaskData: models.BackupTaskData{
+			CommonBackupTaskData: models.CommonBackupTaskData{
 				ServiceID:   "",
 				LocationID:  "",
 				Name:        "",

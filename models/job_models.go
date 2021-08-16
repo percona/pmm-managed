@@ -88,7 +88,7 @@ type MySQLBackupJobData struct {
 // MySQLRestoreBackupJobData stores MySQL restore backup job specific result data.
 type MySQLRestoreBackupJobData struct {
 	ServiceID string `json:"service_id"`
-	RestoreID string `json:"restore_id,omitempty"`
+	RestoreID string `json:"restore_id"`
 }
 
 // MongoDBBackupJobData stores MongoDB job specific result data.
@@ -100,16 +100,16 @@ type MongoDBBackupJobData struct {
 // MongoDBRestoreBackupJobData stores MongoDB restore backup job specific result data.
 type MongoDBRestoreBackupJobData struct {
 	ServiceID string `json:"service_id"`
-	RestoreID string `json:"restore_id,omitempty"`
+	RestoreID string `json:"restore_id"`
 }
 
 // JobData contains data required for running a job.
 type JobData struct {
 	Echo                 *EchoJobData                 `json:"echo,omitempty"`
-	MySQLBackup          *MySQLBackupJobData          `json:"mySQLBackup,omitempty"`
+	MySQLBackup          *MySQLBackupJobData          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobData   `json:"mysql_restore_backup,omitempty"`
-	MongoDBBackup        *MongoDBBackupJobData        `json:"mongoDBBackup,omitempty"`
-	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongoDBRestoreBackup,omitempty"`
+	MongoDBBackup        *MongoDBBackupJobData        `json:"mongo_db_backup,omitempty"`
+	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongo_db_restore_backup,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.

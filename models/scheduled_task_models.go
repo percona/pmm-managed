@@ -57,8 +57,8 @@ type ScheduledTaskData struct {
 	MongoDBBackupTask *MongoBackupTaskData `json:"mongodb_backup,omitempty"`
 }
 
-// BackupTaskData contains common data for all backup tasks.
-type BackupTaskData struct {
+// CommonBackupTaskData contains common data for all backup tasks.
+type CommonBackupTaskData struct {
 	ServiceID     string        `json:"service_id"`
 	LocationID    string        `json:"location_id"`
 	Name          string        `json:"name"`
@@ -70,12 +70,12 @@ type BackupTaskData struct {
 
 // MySQLBackupTaskData contains data for mysql backup task.
 type MySQLBackupTaskData struct {
-	BackupTaskData
+	CommonBackupTaskData
 }
 
 // MongoBackupTaskData contains data for mysql backup task.
 type MongoBackupTaskData struct {
-	BackupTaskData
+	CommonBackupTaskData
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
