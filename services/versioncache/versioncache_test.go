@@ -152,6 +152,7 @@ func TestVersionCache(t *testing.T) {
 
 	serviceCheckInterval = time.Second
 	minCheckInterval = 0
+	startupDelay = 0
 
 	cache := New(db, versionerMock)
 	go func() {

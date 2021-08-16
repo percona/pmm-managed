@@ -31,6 +31,7 @@ import (
 )
 
 var (
+	startupDelay              = 10 * time.Second
 	serviceCheckInterval      = 24 * time.Hour
 	serviceCheckShortInterval = 4 * time.Hour
 	minCheckInterval          = 5 * time.Second
@@ -213,7 +214,7 @@ func (s *Service) RequestSoftwareVersionsUpdate() {
 
 // Run runs software version cache service.
 func (s *Service) Run(ctx context.Context) {
-	time.Sleep(10 * time.Second) // sleep a while, so the server establishes the connections with agents.
+	time.Sleep(startupDelay) // sleep a while, so the server establishes the connections with agents.
 
 	s.l.Info("Starting...")
 	defer s.l.Info("Done.")
