@@ -60,5 +60,5 @@ type connectionChecker interface {
 // versionCache is a subset of methods of versioncache.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type versionCache interface {
-	SyncAndUpdate()
+	RequestSoftwareVersionsUpdate()
 }

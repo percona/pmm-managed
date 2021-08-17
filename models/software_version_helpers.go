@@ -58,6 +58,10 @@ func (p *CreateServiceSoftwareVersionsParams) Validate() error {
 		default:
 			return errors.Wrapf(ErrInvalidArgument, "invalid software name %q", sv.Name)
 		}
+
+		if sv.Version == "" {
+			return errors.Wrapf(ErrInvalidArgument, "empty version for software name %q", sv.Name)
+		}
 	}
 
 	return nil
@@ -86,16 +90,12 @@ func CreateServiceSoftwareVersions(q *reform.Querier, params CreateServiceSoftwa
 // UpdateServiceSoftwareVersionsParams represents params for updating service software versions entity.
 type UpdateServiceSoftwareVersionsParams struct {
 	NextCheckAt      *time.Time
-	SoftwareVersions *[]SoftwareVersion
+	SoftwareVersions []SoftwareVersion
 }
 
 // Validate validates params used for updating a service software versions entry.
 func (u *UpdateServiceSoftwareVersionsParams) Validate() error {
-	if u.SoftwareVersions == nil {
-		return nil
-	}
-
-	for _, sv := range *u.SoftwareVersions {
+	for _, sv := range u.SoftwareVersions {
 		switch sv.Name {
 		case MysqldSoftwareName:
 		case XtrabackupSoftwareName:
@@ -119,7 +119,7 @@ func UpdateServiceSoftwareVersions(
 		return nil, err
 	}
 
-	row, err := FindServiceSoftwareVersions(q, serviceID)
+	row, err := FindServiceSoftwareVersionsByServiceID(q, serviceID)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func UpdateServiceSoftwareVersions(
 		row.NextCheckAt = *params.NextCheckAt
 	}
 	if params.SoftwareVersions != nil {
-		row.SoftwareVersions = *params.SoftwareVersions
+		row.SoftwareVersions = params.SoftwareVersions
 	}
 
 	if err := q.Update(row); err != nil {
@@ -137,8 +137,9 @@ func UpdateServiceSoftwareVersions(
 	return row, nil
 }
 
-// FindServiceSoftwareVersions returns service software versions entry by given service ID if found, ErrNotFound if not.
-func FindServiceSoftwareVersions(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
+// FindServiceSoftwareVersionsByServiceID returns service software versions entry by given service ID if found,
+// returns wrapped ErrNotFound if not found.
+func FindServiceSoftwareVersionsByServiceID(q *reform.Querier, serviceID string) (*ServiceSoftwareVersions, error) {
 	if serviceID == "" {
 		return nil, errors.New("service id is empty")
 	}
@@ -159,11 +160,12 @@ type FindServicesSoftwareVersionsFilter struct {
 	Limit *int
 }
 
-// FindServicesSoftwareVersions returns all services software versions.
+// FindServicesSoftwareVersions returns all services software versions sorted by next_check_at in ascending order
+// if limit is not specified and limited number of entries otherwise.
 func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftwareVersionsFilter) ([]*ServiceSoftwareVersions, error) {
 	var args []interface{}
 	var tail strings.Builder
-	tail.WriteString("ORDER BY next_check_at ")
+	tail.WriteString("ORDER BY next_check_at ASC ")
 	if filter.Limit != nil {
 		tail.WriteString("LIMIT $1")
 		args = append(args, *filter.Limit)
@@ -184,7 +186,7 @@ func FindServicesSoftwareVersions(q *reform.Querier, filter FindServicesSoftware
 
 // DeleteServiceSoftwareVersions removes entry from the DB by service ID.
 func DeleteServiceSoftwareVersions(q *reform.Querier, serviceID string) error {
-	if _, err := FindServiceSoftwareVersions(q, serviceID); err != nil {
+	if _, err := FindServiceSoftwareVersionsByServiceID(q, serviceID); err != nil {
 		return err
 	}
 

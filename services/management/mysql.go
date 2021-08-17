@@ -185,7 +185,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	}
 
 	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
-	s.vc.SyncAndUpdate()
+	s.vc.RequestSoftwareVersionsUpdate()
 
 	return res, nil
 }

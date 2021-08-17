@@ -30,9 +30,11 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 )
 
-const (
-	serviceCheckInterval = 24 * time.Hour
-	minCheckInterval     = 5 * time.Second
+var (
+	startupDelay              = 10 * time.Second
+	serviceCheckInterval      = 24 * time.Hour
+	serviceCheckShortInterval = 4 * time.Hour
+	minCheckInterval          = 5 * time.Second
 )
 
 //go:generate mockery -name=Versioner -case=snake -inpkg -testonly
@@ -60,70 +62,17 @@ func New(db *reform.DB, v Versioner) *Service {
 	}
 }
 
-func (s *Service) syncServices() error {
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		serviceType := models.MySQLServiceType
-		services, err := models.FindServices(tx.Querier, models.ServiceFilters{ServiceType: &serviceType})
-		if err != nil {
-			return err
-		}
-
-		serviceIDs := make(map[string]struct{}, len(services))
-		for _, s := range services {
-			serviceIDs[s.ServiceID] = struct{}{}
-		}
-
-		serviceVersions, err := models.FindServicesSoftwareVersions(tx.Querier,
-			models.FindServicesSoftwareVersionsFilter{})
-		if err != nil {
-			return err
-		}
-
-		// remove services software versions from the cache which are no longer exist
-		for _, sv := range serviceVersions {
-			if _, ok := serviceIDs[sv.ServiceID]; !ok {
-				if err := models.DeleteServiceSoftwareVersions(tx.Querier, sv.ServiceID); err != nil {
-					return err
-				}
-			}
-		}
-
-		// add new services software versions to the cache
-		cacheServiceIDs := make(map[string]struct{}, len(serviceVersions))
-		for _, sv := range serviceVersions {
-			cacheServiceIDs[sv.ServiceID] = struct{}{}
-		}
-		for _, s := range services {
-			if _, ok := cacheServiceIDs[s.ServiceID]; !ok {
-				if _, err := models.CreateServiceSoftwareVersions(tx.Querier, models.CreateServiceSoftwareVersionsParams{
-					ServiceID:        s.ServiceID,
-					ServiceType:      serviceType,
-					SoftwareVersions: []models.SoftwareVersion{},
-					// add a small duration ahead, so the next check will happen when agent established a connection.
-					NextCheckAt: time.Now().Add(30 * time.Second),
-				}); err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-
-	return err
+type service struct {
+	ServiceID     string
+	CheckAfter    time.Duration
+	WaitNextCheck bool
+	PMMAgentID    string
 }
 
-type prepareResults struct {
-	ServiceID   string
-	CheckAfter  time.Duration
-	NeedsUpdate bool
-	AgentID     string
-}
-
-// prepareUpdateVersions checks if there is any service that needs software versions update in the cache and
+// findServiceForUpdate checks if there is any service that needs software versions update in the cache and
 // shifts the next check time for this service.
-func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
-	results := &prepareResults{CheckAfter: minCheckInterval}
+func (s *Service) findServiceForUpdate() (*service, error) {
+	results := &service{CheckAfter: minCheckInterval}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
@@ -132,20 +81,19 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 			return err
 		}
 		if len(servicesVersions) == 0 {
+			// there are no entries in the cache, so perform next check later
 			results.CheckAfter = serviceCheckInterval
 
 			return nil
 		}
 		if servicesVersions[0].NextCheckAt.After(time.Now()) {
-			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt)
-			if results.CheckAfter < minCheckInterval {
-				results.CheckAfter = minCheckInterval
-			}
+			// wait until next service check time
+			results.CheckAfter = time.Until(servicesVersions[0].NextCheckAt) + minCheckInterval
 
 			return nil
 		}
 
-		results.NeedsUpdate = true
+		results.WaitNextCheck = true
 		results.ServiceID = servicesVersions[0].ServiceID
 
 		service, err := models.FindServiceByID(tx.Querier, servicesVersions[0].ServiceID)
@@ -163,11 +111,12 @@ func (s *Service) prepareUpdateVersions() (*prepareResults, error) {
 		if len(pmmAgents) == 0 {
 			return errors.Errorf("pmmAgent not found for service")
 		}
-		results.AgentID = pmmAgents[0].AgentID
+
+		results.PMMAgentID = pmmAgents[0].AgentID
 
 		// shift the next check time for this service, so, in case of versions fetch error,
 		// it will not loop in trying, but will continue with other services.
-		nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
+		nextCheckAt := time.Now().UTC().Add(serviceCheckShortInterval)
 		if _, err := models.UpdateServiceSoftwareVersions(tx.Querier, servicesVersions[0].ServiceID,
 			models.UpdateServiceSoftwareVersionsParams{NextCheckAt: &nextCheckAt},
 		); err != nil {
@@ -200,18 +149,20 @@ func softwareName(s agents.Software) (models.SoftwareName, error) {
 	return softwareName, nil
 }
 
-func (s *Service) updateVersions() (time.Duration, error) {
-	r, err := s.prepareUpdateVersions()
+// updateVersionsForNextService tries to find a service that needs update and performs update if such service is found.
+// Returns desired time interval to wait before next call of the updateVersionsForNextService.
+func (s *Service) updateVersionsForNextService() (time.Duration, error) {
+	foundService, err := s.findServiceForUpdate()
 	if err != nil {
 		return minCheckInterval, err
 	}
 
-	if !r.NeedsUpdate {
-		return r.CheckAfter, nil
+	if !foundService.WaitNextCheck {
+		return foundService.CheckAfter, nil
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
-	versions, err := s.v.GetVersions(r.AgentID, softwares)
+	versions, err := s.v.GetVersions(foundService.PMMAgentID, softwares)
 	if err != nil {
 		return minCheckInterval, err
 	}
@@ -241,8 +192,12 @@ func (s *Service) updateVersions() (time.Duration, error) {
 		})
 	}
 
-	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, r.ServiceID,
-		models.UpdateServiceSoftwareVersionsParams{SoftwareVersions: &svs},
+	nextCheckAt := time.Now().UTC().Add(serviceCheckInterval)
+	if _, err := models.UpdateServiceSoftwareVersions(s.db.Querier, foundService.ServiceID,
+		models.UpdateServiceSoftwareVersionsParams{
+			NextCheckAt:      &nextCheckAt,
+			SoftwareVersions: svs,
+		},
 	); err != nil {
 		return minCheckInterval, err
 	}
@@ -250,8 +205,8 @@ func (s *Service) updateVersions() (time.Duration, error) {
 	return minCheckInterval, err
 }
 
-// SyncAndUpdate triggers sync and update service software versions.
-func (s *Service) SyncAndUpdate() {
+// RequestSoftwareVersionsUpdate triggers update service software versions.
+func (s *Service) RequestSoftwareVersionsUpdate() {
 	select {
 	case s.updateCh <- struct{}{}:
 	default:
@@ -260,42 +215,29 @@ func (s *Service) SyncAndUpdate() {
 
 // Run runs software version cache service.
 func (s *Service) Run(ctx context.Context) {
+	time.Sleep(startupDelay) // sleep a while, so the server establishes the connections with agents.
+
 	s.l.Info("Starting...")
 	defer s.l.Info("Done.")
 
 	defer close(s.updateCh)
 
-	if err := s.syncServices(); err != nil {
-		s.l.Warn(err)
-	}
-
 	var checkAfter time.Duration
 	for {
 		select {
-		case <-time.After(checkAfter):
-			s.l.Infof("Updating versions...")
-			ca, err := s.updateVersions()
-			if err != nil {
-				s.l.Warn(err)
-			}
-
-			checkAfter = ca
-			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-s.updateCh:
-			s.l.Infof("Syncing services and updating versions...")
-			if err := s.syncServices(); err != nil {
-				s.l.Warn(err)
-			}
-
-			ca, err := s.updateVersions()
-			if err != nil {
-				s.l.Warn(err)
-			}
-
-			checkAfter = ca
-			s.l.Infof("Done. Next check in %s.", checkAfter)
 		case <-ctx.Done():
 			return
 		}
+
+		s.l.Infof("Updating versions...")
+
+		ca, err := s.updateVersionsForNextService()
+		if err != nil {
+			s.l.Warn(err)
+		}
+
+		checkAfter = ca
+		s.l.Infof("Done. Next check in %s.", checkAfter)
 	}
 }
