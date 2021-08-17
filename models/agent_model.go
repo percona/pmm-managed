@@ -393,7 +393,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		// between the last host and the question mark (?) that begins the string of options.
 		path := database
 		if database == "" {
-			path = "/"
+			// Don't use an empty database because not all MongoDB flavors will set it to the
+			// default authentication database so, we need to do it manually.
+			path = "/admin"
 		}
 
 		if s.TLS {
