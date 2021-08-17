@@ -23,6 +23,7 @@ import (
 	"github.com/percona/pmm-managed/services/scheduler"
 )
 
+//go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
 //go:generate mockery -name=backupService -case=snake -inpkg -testonly
 //go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
 //go:generate mockery -name=removalService -case=snake -inpkg -testonly
@@ -36,6 +37,7 @@ type awsS3 interface {
 type backupService interface {
 	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 	RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error)
+	FindArtifactCompatibleServices(ctx context.Context, artifactID string) ([]*models.Service, error)
 }
 
 // schedulerService is a subset of method of scheduler.Service used by this package.

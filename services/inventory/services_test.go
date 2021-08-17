@@ -207,7 +207,7 @@ func TestServices(t *testing.T) {
 			AzureClientId: "test",
 		})
 		require.NoError(t, err)
-		
+
 		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		mySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql-socket",

@@ -26,6 +26,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
 )
 
 // Service represents core logic for db backup.
@@ -33,21 +34,99 @@ type Service struct {
 	db          *reform.DB
 	jobsService jobsService
 	l           *logrus.Entry
+	v           versioner
 }
 
 // NewService creates new backups logic service.
-func NewService(db *reform.DB, jobsService jobsService) *Service {
+func NewService(db *reform.DB, jobsService jobsService, v versioner) *Service {
 	return &Service{
 		l:           logrus.WithField("component", "management/backup/backup"),
 		db:          db,
 		jobsService: jobsService,
+		v:           v,
 	}
+}
+
+// softwaresCompatibleOnService checks if all the necessary backup tools are installed,
+// and they are compatible with the db version.
+// Returns db version.
+func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID string) (string, error) {
+	var pmmAgentID string
+	var serviceType models.ServiceType
+	if err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		service, err := models.FindServiceByID(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+
+		serviceType = service.ServiceType
+
+		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+		if len(pmmAgents) == 0 {
+			return errors.Errorf("pmmAgent not found for service %q", serviceID)
+		}
+
+		pmmAgentID = pmmAgents[0].AgentID
+
+		return nil
+	}); err != nil {
+		return "", err
+	}
+
+	if serviceType != models.MySQLServiceType {
+		return "", nil
+	}
+
+	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
+	svs, err := s.v.GetVersions(pmmAgentID, softwares)
+	if err != nil {
+		return "", err
+	}
+	if len(svs) != len(softwares) {
+		return "", errors.Errorf("response slice len %d != request len %d", len(svs), len(softwares))
+	}
+
+	svm := make(map[models.SoftwareName]string, len(softwares))
+	for i, software := range softwares {
+		var name models.SoftwareName
+		switch software.(type) {
+		case *agents.Mysqld:
+			name = models.MysqldSoftwareName
+		case *agents.Xtrabackup:
+			name = models.XtrabackupSoftwareName
+		case *agents.Xbcloud:
+			name = models.XbcloudSoftwareName
+		case *agents.Qpress:
+			name = models.QpressSoftwareName
+		default:
+			return "", errors.Errorf("unexpected software type %T", s)
+		}
+
+		if svs[i].Error != "" {
+			return "", errors.Errorf("failed to get software %s version: %s", name, svs[i].Error)
+		}
+
+		svm[name] = svs[i].Version
+	}
+
+	if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
+		return "", err
+	}
+
+	return svm[models.MysqldSoftwareName], nil
 }
 
 // PerformBackup starts on-demand backup.
 func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name,
 	scheduleID string) (string, error) {
-	var err error
+	dbVersion, err := s.softwaresCompatibleOnService(ctx, serviceID)
+	if err != nil {
+		return "", err
+	}
+
 	var artifact *models.Artifact
 	var location *models.BackupLocation
 	var svc *models.Service
@@ -55,6 +134,7 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		var err error
 		svc, err = models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
 			return err
@@ -86,6 +166,7 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 		artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
 			Name:       name,
 			Vendor:     string(svc.ServiceType),
+			DBVersion:  dbVersion,
 			LocationID: location.ID,
 			ServiceID:  svc.ServiceID,
 			DataModel:  dataModel,
@@ -135,6 +216,7 @@ func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name
 type prepareRestoreJobParams struct {
 	AgentID      string
 	ArtifactName string
+	DBVersion    string
 	Location     *models.BackupLocation
 	ServiceType  models.ServiceType
 	DBConfig     *models.DBConfig
@@ -142,14 +224,25 @@ type prepareRestoreJobParams struct {
 
 // RestoreBackup starts restore backup job.
 func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error) {
+	dbVersion, err := s.softwaresCompatibleOnService(ctx, serviceID)
+	if err != nil {
+		return "", err
+	}
+
 	var params *prepareRestoreJobParams
 	var jobID, restoreID string
-
-	err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+	if err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		var err error
 		params, err = s.prepareRestoreJob(tx.Querier, serviceID, artifactID)
 		if err != nil {
 			return err
+		}
+
+		if params.ServiceType == models.MySQLServiceType && params.DBVersion != "" {
+			if params.DBVersion != dbVersion {
+				return errors.Errorf("incompatible service: artifact db version %q != db version %q",
+					params.DBVersion, dbVersion)
+			}
 		}
 
 		restore, err := models.CreateRestoreHistoryItem(tx.Querier, models.CreateRestoreHistoryItemParams{
@@ -200,8 +293,7 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 		jobID = job.ID
 
 		return err
-	})
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 
@@ -240,17 +332,18 @@ func (s *Service) prepareRestoreJob(
 		return nil, err
 	}
 
-	agents, err := models.FindPMMAgentsForService(q, serviceID)
+	pmmAgents, err := models.FindPMMAgentsForService(q, serviceID)
 	if err != nil {
 		return nil, err
 	}
-	if len(agents) == 0 {
+	if len(pmmAgents) == 0 {
 		return nil, errors.Errorf("cannot find pmm agent for service %s", serviceID)
 	}
 
 	return &prepareRestoreJobParams{
-		AgentID:      agents[0].AgentID,
+		AgentID:      pmmAgents[0].AgentID,
 		ArtifactName: artifact.Name,
+		DBVersion:    artifact.DBVersion,
 		Location:     location,
 		ServiceType:  service.ServiceType,
 		DBConfig:     dbConfig,
@@ -347,4 +440,121 @@ func (s *Service) prepareBackupJob(
 	}
 
 	return res, dbConfig, nil
+}
+
+func (s *Service) FindArtifactCompatibleServices(
+	ctx context.Context,
+	artifactID string,
+) ([]*models.Service, error) {
+	var compatibleServices []*models.Service
+	if err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		artifact, err := models.FindArtifactByID(tx.Querier, artifactID)
+		if err != nil {
+			return err
+		}
+
+		serviceType := models.ServiceType(artifact.Vendor)
+		switch serviceType {
+		case models.MySQLServiceType,
+			models.MongoDBServiceType:
+		case models.PostgreSQLServiceType,
+			models.ProxySQLServiceType,
+			models.HAProxyServiceType,
+			models.ExternalServiceType:
+			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", serviceType)
+		default:
+			return status.Errorf(codes.Internal, "unknown service: %s", serviceType)
+		}
+
+		// allow restore to the same service if db version is unknown or service type is MongoDB.
+		if artifact.DBVersion == "" || serviceType == models.MongoDBServiceType {
+			s, err := models.FindServiceByID(tx.Querier, artifact.ServiceID)
+			if err != nil {
+				return err
+			}
+
+			compatibleServices = []*models.Service{s}
+
+			return nil
+		}
+
+		svs, err := models.FindServicesSoftwareVersions(
+			tx.Querier,
+			models.FindServicesSoftwareVersionsFilter{
+				ServiceType: &serviceType,
+			},
+			models.SoftwareVersionsOrderByServiceID,
+		)
+		if err != nil {
+			return err
+		}
+
+		compatibleServiceIDs := make([]string, 0, len(svs))
+		for _, sv := range svs {
+			if err := mySQLArtifactVersionCompatible(
+				artifact.DBVersion,
+				softwareVersionsMap(sv.SoftwareVersions),
+			); err != nil {
+				s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
+				continue
+			}
+
+			compatibleServiceIDs = append(compatibleServiceIDs, sv.ServiceID)
+		}
+
+		servicesMap, err := models.FindServicesByIDs(tx.Querier, compatibleServiceIDs)
+		if err != nil {
+			return err
+		}
+		for _, id := range compatibleServiceIDs {
+			compatibleServices = append(compatibleServices, servicesMap[id])
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return compatibleServices, nil
+}
+
+func softwareVersionsMap(svs models.SoftwareVersions) map[models.SoftwareName]string {
+	m := make(map[models.SoftwareName]string, len(svs))
+	for _, sv := range svs {
+		m[sv.Name] = sv.Version
+	}
+	return m
+}
+
+func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) error {
+	for _, name := range []models.SoftwareName{
+		models.MysqldSoftwareName,
+		models.XtrabackupSoftwareName,
+		models.XbcloudSoftwareName,
+		models.QpressSoftwareName,
+	} {
+		if svm[name] == "" {
+			return errors.Errorf("software %q is not installed", name)
+		}
+	}
+
+	if svm[models.XtrabackupSoftwareName] != svm[models.XbcloudSoftwareName] {
+		return errors.Errorf("xtrabackup version %q != xbcloud version %q",
+			svm[models.XtrabackupSoftwareName], svm[models.XbcloudSoftwareName])
+	}
+
+	return nil
+}
+
+func mySQLArtifactVersionCompatible(dbVersion string, svm map[models.SoftwareName]string) error {
+	if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
+		return err
+	}
+
+	v := svm[models.MysqldSoftwareName]
+	if dbVersion != v {
+		return errors.Errorf("artifact version %q != db version %q", dbVersion, v)
+	}
+
+	return nil
 }

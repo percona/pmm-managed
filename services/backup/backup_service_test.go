@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/percona/pmm-managed/services/agents"
+
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -67,7 +69,8 @@ func TestStartBackup(t *testing.T) {
 	mockedJobsService := &mockJobsService{}
 	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	backupService := NewService(db, mockedJobsService)
+	mockedVersioner := &mockVersioner{}
+	backupService := NewService(db, mockedJobsService, mockedVersioner)
 
 	t.Cleanup(func() {
 		_ = sqlDB.Close()
@@ -89,6 +92,19 @@ func TestStartBackup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	softwares := []agents.Software{
+		&agents.Mysqld{},
+		&agents.Xtrabackup{},
+		&agents.Xbcloud{},
+		&agents.Qpress{},
+	}
+	versions1 := []agents.Version{
+		{Version: "8.0.0"},
+		{Version: "8.0.0"},
+		{Version: "8.0.0"},
+		{Version: "1.1"},
+	}
+	mockedVersioner.On("GetVersions", *agent.PMMAgentID, softwares).Return(versions1, nil).Once()
 	artifactID, err := backupService.PerformBackup(ctx, pointer.GetString(agent.ServiceID), locationRes.ID, "test_backup", "")
 	assert.NoError(t, err)
 

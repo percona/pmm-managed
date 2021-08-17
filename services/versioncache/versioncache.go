@@ -76,7 +76,11 @@ func (s *Service) findServiceForUpdate() (*service, error) {
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
 		filter := models.FindServicesSoftwareVersionsFilter{Limit: pointer.ToInt(1)}
-		servicesVersions, err := models.FindServicesSoftwareVersions(tx.Querier, filter)
+		servicesVersions, err := models.FindServicesSoftwareVersions(
+			tx.Querier,
+			filter,
+			models.SoftwareVersionsOrderByNextCheckAt,
+		)
 		if err != nil {
 			return err
 		}

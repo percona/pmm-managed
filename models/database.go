@@ -566,8 +566,6 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (service_id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE
 		);`,
-	},
-	45: {
 		`INSERT INTO service_software_versions(
 			service_id,
 			service_type,
@@ -586,7 +584,7 @@ var databaseSchema = [][]string{
 		FROM services
         WHERE service_type = 'mysql';`,
 	},
-	46: {
+	45: {
 		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL`,
 	},
 }
