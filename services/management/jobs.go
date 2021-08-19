@@ -73,6 +73,7 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 	}
 
 	switch result.Type {
+	case models.MySQLBackupJob, models.MySQLRestoreBackupJob, models.MongoDBBackupJob, models.MongoDBRestoreBackupJob:
 	default:
 		return nil, errors.Errorf("Unexpected job type: %s", result.Type)
 	}
