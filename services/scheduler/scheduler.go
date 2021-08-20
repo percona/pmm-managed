@@ -18,7 +18,6 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -214,11 +213,6 @@ func (s *Service) addDBTask(dbTask *models.ScheduledTask) error {
 	s.jobsMx.Lock()
 	s.jobs[dbTask.ID] = scheduleJob
 	s.jobsMx.Unlock()
-
-	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!1")
-	fmt.Println(dbTask.ID)
-	fmt.Println(s.scheduler.Jobs())
-
 	return nil
 }
 func (s *Service) wrapTask(task Task, id string) func() {
