@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -256,6 +257,12 @@ func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, opera
 	return lowestVersion.String(), nil
 }
 
+// GetVersionServiceURL returns base URL for version service currently used
 func (c *VersionServiceClient) GetVersionServiceURL() string {
-	return c.url
+	url, err := url.Parse(c.url)
+	if err != nil {
+		c.l.Warnf("failed to parse url %q: %v", c.url, err)
+		return c.url
+	}
+	return url.Scheme + "://" + url.Host
 }
