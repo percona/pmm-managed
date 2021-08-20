@@ -31,7 +31,7 @@ import (
 )
 
 // ErrRetriesExhausted is returned when remaining retries are 0.
-var ErrRetriesExhausted = errors.New("Retries exhausted")
+var ErrRetriesExhausted = errors.New("retries exhausted")
 
 const (
 	maxRestartInterval = 8 * time.Hour
@@ -109,8 +109,10 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 				return errors.WithStack(err)
 			}
 
-		case models.MySQLRestoreBackupJob:
-		case models.MongoDBRestoreBackupJob:
+		case models.MySQLRestoreBackupJob, models.MongoDBRestoreBackupJob:
+			fallthrough
+		default:
+			return errors.Errorf("job type %v can't be restarted", job.Type)
 		}
 
 		return nil

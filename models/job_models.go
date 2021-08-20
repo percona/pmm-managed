@@ -52,12 +52,6 @@ type MongoDBBackupJobResult struct {
 type MongoDBRestoreBackupJobResult struct {
 }
 
-// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (r JobResult) Value() (driver.Value, error) { return jsonValue(r) }
-
-// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (r *JobResult) Scan(src interface{}) error { return jsonScan(r, src) }
-
 // JobResult holds result data for different job types.
 type JobResult struct {
 	MySQLBackup          *MySQLBackupJobResult          `json:"mysql_backup,omitempty"`
@@ -65,6 +59,12 @@ type JobResult struct {
 	MongoDBBackup        *MongoDBBackupJobResult        `json:"mongo_db_backup,omitempty"`
 	MongoDBRestoreBackup *MongoDBRestoreBackupJobResult `json:"mongo_db_restore_backup,omitempty"`
 }
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (r JobResult) Value() (driver.Value, error) { return jsonValue(r) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (r *JobResult) Scan(src interface{}) error { return jsonScan(r, src) }
 
 // MySQLBackupJobData stores MySQL job specific result data.
 type MySQLBackupJobData struct {
