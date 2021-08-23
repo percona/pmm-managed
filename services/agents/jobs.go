@@ -64,7 +64,7 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 	var dbConfig *models.DBConfig
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		job, err = models.FindJobByID(s.db.Querier, jobID)
+		job, err = models.FindJobByID(tx.Querier, jobID)
 		if err != nil {
 			return errors.WithStack(err)
 		}
