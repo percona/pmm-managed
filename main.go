@@ -46,7 +46,6 @@ import (
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
-	jobs1beta1 "github.com/percona/pmm/api/managementpb/jobs"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -203,7 +202,6 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.vmdb, deps.agentsStateUpdater, deps.connectionCheck))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, management.NewChecksAPIService(deps.checksService))
-	jobs1beta1.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.jobsService))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
 	deps.templatesService.Collect(ctx)
@@ -324,8 +322,6 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		backupv1beta1.RegisterLocationsHandlerFromEndpoint,
 		backupv1beta1.RegisterArtifactsHandlerFromEndpoint,
 		backupv1beta1.RegisterRestoreHistoryHandlerFromEndpoint,
-
-		jobs1beta1.RegisterJobsHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
