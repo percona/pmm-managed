@@ -246,7 +246,7 @@ func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, opera
 		// No update available.
 		return "", nil
 	}
-
+	// TODO OPTIMISE THIS THE SAME WAY AS THE NEXT OPERATOR VERSION GETTING
 	// Find lowest version.
 	lowestVersion := greaterThanCurrent[0]
 	for i := 1; i < len(greaterThanCurrent); i++ {
