@@ -17,7 +17,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
-	github.com/aws/aws-sdk-go v1.33.10
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.0
 	github.com/go-co-op/gocron v1.6.1
@@ -35,7 +35,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/percona-platform/dbaas-api v0.0.0-20210726192627-670b3725d0ac
 	github.com/percona-platform/saas v0.0.0-20210628125953-5bf84e6eefa0
-	github.com/percona/pmm v0.0.0-20210817100437-9a31cbb59d5f
+	github.com/percona/pmm v0.0.0-20210823164714-a72e2f1ca451
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0

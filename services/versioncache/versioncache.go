@@ -229,6 +229,7 @@ func (s *Service) Run(ctx context.Context) {
 	var checkAfter time.Duration
 	for {
 		select {
+		case <-time.After(checkAfter):
 		case <-s.updateCh:
 		case <-ctx.Done():
 			return

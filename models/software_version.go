@@ -29,6 +29,7 @@ import (
 // SoftwareName represents software name.
 type SoftwareName string
 
+// Validate validates data model.
 func (sn SoftwareName) Validate() error {
 	switch sn {
 	case MysqldSoftwareName,
@@ -75,21 +76,7 @@ func (sv SoftwareVersions) Value() (driver.Value, error) {
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (sv *SoftwareVersions) Scan(src interface{}) error {
-	if err := jsonScan(sv, src); err != nil {
-		return err
-	}
-
-	for _, s := range *sv {
-		if err := s.Name.Validate(); err != nil {
-			return err
-		}
-
-		if s.Version == "" {
-			return errors.Errorf("no version set for software %q", s.Name)
-		}
-	}
-
-	return nil
+	return jsonScan(sv, src)
 }
 
 // ServiceSoftwareVersions represents service software versions.

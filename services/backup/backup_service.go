@@ -47,10 +47,30 @@ func NewService(db *reform.DB, jobsService jobsService, v versioner) *Service {
 	}
 }
 
-// softwaresCompatibleOnService checks if all the necessary backup tools are installed,
-// and they are compatible with the db version.
-// Returns db version.
-func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID string) (string, error) {
+func softwareName(s agents.Software) (models.SoftwareName, error) {
+	var softwareName models.SoftwareName
+	switch software := s.(type) {
+	case *agents.Mysqld:
+		softwareName = models.MysqldSoftwareName
+	case *agents.Xtrabackup:
+		softwareName = models.XtrabackupSoftwareName
+	case *agents.Xbcloud:
+		softwareName = models.XbcloudSoftwareName
+	case *agents.Qpress:
+		softwareName = models.QpressSoftwareName
+	default:
+		return "", errors.Errorf("invalid software type %T", software)
+	}
+
+	return softwareName, nil
+}
+
+type pmmAgentResult struct {
+	id          string
+	serviceType models.ServiceType
+}
+
+func (s *Service) findPMMAgentForService(ctx context.Context, serviceID string) (*pmmAgentResult, error) {
 	var pmmAgentID string
 	var serviceType models.ServiceType
 	if err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
@@ -73,15 +93,30 @@ func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID st
 
 		return nil
 	}); err != nil {
+		return nil, err
+	}
+
+	return &pmmAgentResult{
+		id:          pmmAgentID,
+		serviceType: serviceType,
+	}, nil
+}
+
+// softwaresCompatibleOnService checks if all the necessary backup tools are installed,
+// and they are compatible with the db version.
+// Returns db version.
+func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID string) (string, error) {
+	pmmAgent, err := s.findPMMAgentForService(ctx, serviceID)
+	if err != nil {
 		return "", err
 	}
 
-	if serviceType != models.MySQLServiceType {
+	if pmmAgent.serviceType != models.MySQLServiceType {
 		return "", nil
 	}
 
 	softwares := []agents.Software{&agents.Mysqld{}, &agents.Xtrabackup{}, &agents.Xbcloud{}, &agents.Qpress{}}
-	svs, err := s.v.GetVersions(pmmAgentID, softwares)
+	svs, err := s.v.GetVersions(pmmAgent.id, softwares)
 	if err != nil {
 		return "", err
 	}
@@ -91,18 +126,9 @@ func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID st
 
 	svm := make(map[models.SoftwareName]string, len(softwares))
 	for i, software := range softwares {
-		var name models.SoftwareName
-		switch software.(type) {
-		case *agents.Mysqld:
-			name = models.MysqldSoftwareName
-		case *agents.Xtrabackup:
-			name = models.XtrabackupSoftwareName
-		case *agents.Xbcloud:
-			name = models.XbcloudSoftwareName
-		case *agents.Qpress:
-			name = models.QpressSoftwareName
-		default:
-			return "", errors.Errorf("unexpected software type %T", s)
+		name, err := softwareName(software)
+		if err != nil {
+			return "", err
 		}
 
 		if svs[i].Error != "" {
@@ -442,6 +468,70 @@ func (s *Service) prepareBackupJob(
 	return res, dbConfig, nil
 }
 
+func vendorToServiceType(vendor string) (models.ServiceType, error) {
+	serviceType := models.ServiceType(vendor)
+	switch serviceType {
+	case models.MySQLServiceType,
+		models.MongoDBServiceType:
+	case models.PostgreSQLServiceType,
+		models.ProxySQLServiceType,
+		models.HAProxyServiceType,
+		models.ExternalServiceType:
+		return "", status.Errorf(codes.Unimplemented, "unimplemented service: %s", serviceType)
+	default:
+		return "", status.Errorf(codes.Internal, "unknown service: %s", serviceType)
+	}
+
+	return serviceType, nil
+}
+
+func (s *Service) findArtifactCompatibleServices(
+	q *reform.Querier,
+	serviceID string,
+	serviceType models.ServiceType,
+	dbVersion string,
+) ([]*models.Service, error) {
+	// allow restore to the same service if db version is unknown or service type is MongoDB.
+	if dbVersion == "" || serviceType == models.MongoDBServiceType {
+		service, err := models.FindServiceByID(q, serviceID)
+		if err != nil {
+			s.l.WithError(err).Warnf("restore is not possible to the same service id %q", serviceID)
+			return []*models.Service{}, nil
+		}
+
+		return []*models.Service{service}, nil
+	}
+
+	filter := models.FindServicesSoftwareVersionsFilter{ServiceType: &serviceType}
+	svs, err := models.FindServicesSoftwareVersions(q, filter, models.SoftwareVersionsOrderByServiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	compatibleServiceIDs := make([]string, 0, len(svs))
+	for _, sv := range svs {
+		if err := mySQLArtifactVersionCompatible(dbVersion, softwareVersionsMap(sv.SoftwareVersions)); err != nil {
+			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
+			continue
+		}
+
+		compatibleServiceIDs = append(compatibleServiceIDs, sv.ServiceID)
+	}
+
+	servicesMap, err := models.FindServicesByIDs(q, compatibleServiceIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	compatibleServices := make([]*models.Service, 0, len(compatibleServiceIDs))
+	for _, id := range compatibleServiceIDs {
+		compatibleServices = append(compatibleServices, servicesMap[id])
+	}
+
+	return compatibleServices, nil
+}
+
+// FindArtifactCompatibleServices finds compatible services which can be used to restoring an artifact to.
 func (s *Service) FindArtifactCompatibleServices(
 	ctx context.Context,
 	artifactID string,
@@ -449,65 +539,27 @@ func (s *Service) FindArtifactCompatibleServices(
 	var compatibleServices []*models.Service
 	if err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		artifact, err := models.FindArtifactByID(tx.Querier, artifactID)
+		switch {
+		case err == nil:
+		case errors.Is(err, models.ErrNotFound):
+			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", artifactID)
+		default:
+			return err
+		}
+
+		serviceType, err := vendorToServiceType(artifact.Vendor)
 		if err != nil {
 			return err
 		}
 
-		serviceType := models.ServiceType(artifact.Vendor)
-		switch serviceType {
-		case models.MySQLServiceType,
-			models.MongoDBServiceType:
-		case models.PostgreSQLServiceType,
-			models.ProxySQLServiceType,
-			models.HAProxyServiceType,
-			models.ExternalServiceType:
-			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", serviceType)
-		default:
-			return status.Errorf(codes.Internal, "unknown service: %s", serviceType)
-		}
-
-		// allow restore to the same service if db version is unknown or service type is MongoDB.
-		if artifact.DBVersion == "" || serviceType == models.MongoDBServiceType {
-			s, err := models.FindServiceByID(tx.Querier, artifact.ServiceID)
-			if err != nil {
-				return err
-			}
-
-			compatibleServices = []*models.Service{s}
-
-			return nil
-		}
-
-		svs, err := models.FindServicesSoftwareVersions(
+		compatibleServices, err = s.findArtifactCompatibleServices(
 			tx.Querier,
-			models.FindServicesSoftwareVersionsFilter{
-				ServiceType: &serviceType,
-			},
-			models.SoftwareVersionsOrderByServiceID,
+			artifact.ServiceID,
+			serviceType,
+			artifact.DBVersion,
 		)
 		if err != nil {
 			return err
-		}
-
-		compatibleServiceIDs := make([]string, 0, len(svs))
-		for _, sv := range svs {
-			if err := mySQLArtifactVersionCompatible(
-				artifact.DBVersion,
-				softwareVersionsMap(sv.SoftwareVersions),
-			); err != nil {
-				s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
-				continue
-			}
-
-			compatibleServiceIDs = append(compatibleServiceIDs, sv.ServiceID)
-		}
-
-		servicesMap, err := models.FindServicesByIDs(tx.Querier, compatibleServiceIDs)
-		if err != nil {
-			return err
-		}
-		for _, id := range compatibleServiceIDs {
-			compatibleServices = append(compatibleServices, servicesMap[id])
 		}
 
 		return nil

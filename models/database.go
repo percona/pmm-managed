@@ -585,7 +585,7 @@ var databaseSchema = [][]string{
         WHERE service_type = 'mysql';`,
 	},
 	45: {
-		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL`,
+		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL DEFAULT ''`,
 	},
 }
 

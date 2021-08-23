@@ -20,8 +20,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/percona/pmm-managed/services/agents"
-
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -30,6 +28,7 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
