@@ -597,6 +597,16 @@ var databaseSchema = [][]string{
 			ADD COLUMN timeout BIGINT
 		`,
 	},
+	46: {
+		`CREATE TABLE job_logs (
+			job_id VARCHAR NOT NULL,
+			chunk_id INTEGER NOT NULL,
+			message BYTEA NOT NULL,
+			PRIMARY KEY (job_id),
+			FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE,
+			UNIQUE (job_id, chunk_id)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

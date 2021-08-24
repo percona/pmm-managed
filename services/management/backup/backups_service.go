@@ -326,6 +326,11 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil
 }
 
+// GetLogs returns logs for artifact.
+func (s *BackupsService) GetLogs(ctx context.Context, request *backupv1beta1.GetLogsRequest) (*backupv1beta1.GetLogsResponse, error) {
+	panic("implement me")
+}
+
 func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	services map[string]*models.Service,
 	locations map[string]*models.BackupLocation) (*backupv1beta1.ScheduledBackup, error) {
