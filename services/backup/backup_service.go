@@ -130,7 +130,6 @@ func (s *Service) softwaresCompatibleOnService(ctx context.Context, serviceID st
 		if err != nil {
 			return "", err
 		}
-
 		if svs[i].Error != "" {
 			return "", errors.Errorf("failed to get software %s version: %s", name, svs[i].Error)
 		}
@@ -489,10 +488,10 @@ func (s *Service) findArtifactCompatibleServices(
 	q *reform.Querier,
 	serviceID string,
 	serviceType models.ServiceType,
-	dbVersion string,
+	artifactDBVersion string,
 ) ([]*models.Service, error) {
 	// allow restore to the same service if db version is unknown or service type is MongoDB.
-	if dbVersion == "" || serviceType == models.MongoDBServiceType {
+	if artifactDBVersion == "" || serviceType == models.MongoDBServiceType {
 		service, err := models.FindServiceByID(q, serviceID)
 		if err != nil {
 			s.l.WithError(err).Warnf("restore is not possible to the same service id %q", serviceID)
@@ -510,8 +509,17 @@ func (s *Service) findArtifactCompatibleServices(
 
 	compatibleServiceIDs := make([]string, 0, len(svs))
 	for _, sv := range svs {
-		if err := mySQLArtifactVersionCompatible(dbVersion, softwareVersionsMap(sv.SoftwareVersions)); err != nil {
+		svm := softwareVersionsMap(sv.SoftwareVersions)
+		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
 			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
+			continue
+		}
+
+		serviceDBVersion := svm[models.MysqldSoftwareName]
+		if artifactDBVersion != serviceDBVersion {
+			s.l.Debugf("skip incompatible service id %q: artifact version %q != db version %q\"", sv.ServiceID,
+				artifactDBVersion, serviceDBVersion,
+			)
 			continue
 		}
 
@@ -595,17 +603,13 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 			svm[models.XtrabackupSoftwareName], svm[models.XbcloudSoftwareName])
 	}
 
-	return nil
-}
-
-func mySQLArtifactVersionCompatible(dbVersion string, svm map[models.SoftwareName]string) error {
-	if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
+	ok, err := mysqlAndXtrabackupCompatible(svm[models.MysqldSoftwareName], svm[models.XtrabackupSoftwareName])
+	if err != nil {
 		return err
 	}
-
-	v := svm[models.MysqldSoftwareName]
-	if dbVersion != v {
-		return errors.Errorf("artifact version %q != db version %q", dbVersion, v)
+	if !ok {
+		return errors.Errorf("mysql version %q is not compatible with xtrabackup version %q",
+			svm[models.MysqldSoftwareName], svm[models.XtrabackupSoftwareName])
 	}
 
 	return nil
