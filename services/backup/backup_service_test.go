@@ -98,9 +98,9 @@ func TestStartBackup(t *testing.T) {
 		&agents.Qpress{},
 	}
 	versions1 := []agents.Version{
-		{Version: "8.0.0"},
-		{Version: "8.0.0"},
-		{Version: "8.0.0"},
+		{Version: "8.0.25"},
+		{Version: "8.0.25"},
+		{Version: "8.0.25"},
 		{Version: "1.1"},
 	}
 	mockedVersioner.On("GetVersions", *agent.PMMAgentID, softwares).Return(versions1, nil).Once()
