@@ -438,8 +438,6 @@ github.com/percona-platform/dbaas-api v0.0.0-20210726192627-670b3725d0ac h1:AVIC
 github.com/percona-platform/dbaas-api v0.0.0-20210726192627-670b3725d0ac/go.mod h1:zgb9gTJusc8Jv2zRNAlWV0/XQ8IK+hwHMc9lIqfK0tM=
 github.com/percona-platform/saas v0.0.0-20210628125953-5bf84e6eefa0 h1:PwmQIqBMTsoYSSbpNjw6H1LYNULG6bxbj2OaAk3XnMk=
 github.com/percona-platform/saas v0.0.0-20210628125953-5bf84e6eefa0/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
-github.com/percona/pmm v0.0.0-20210803085537-535d3c161596 h1:rDBLX1MT60vJMsOC7okzhCNYzs/5fxDvPrPWbV8JCPw=
-github.com/percona/pmm v0.0.0-20210803085537-535d3c161596/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/pmm v0.0.0-20210826120320-86d8cff5c9ee h1:xoAT0LEp9/FCLXeuA6V9zoDx25X08K5aUdD8qZIMnKc=
 github.com/percona/pmm v0.0.0-20210826120320-86d8cff5c9ee/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
@@ -550,8 +548,7 @@ go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qL
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
 go.mongodb.org/mongo-driver v1.3.4/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
-go.mongodb.org/mongo-driver v1.3.5 h1:S0ZOruh4YGHjD7JoN7mIsTrNjnQbOjrmgrx6l6pZN7I=
-go.mongodb.org/mongo-driver v1.3.5/go.mod h1:Ual6Gkco7ZGQw8wE1t4tLnvBsf6yVSM60qW6TgOeJ5c=
+go.mongodb.org/mongo-driver v1.7.1 h1:jwqTeEM3x6L9xDXrCxN0Hbg7vdGfPBOTIkr0+/LYZDA=
 go.mongodb.org/mongo-driver v1.7.1/go.mod h1:Q4oFMbo1+MSNqICAdYMlC/zSTrwCogR4R8NzkI+yfU8=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=
 go.opencensus.io v0.20.2/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=
