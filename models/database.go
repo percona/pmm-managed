@@ -584,8 +584,20 @@ var databaseSchema = [][]string{
 		FROM services
         WHERE service_type = 'mysql';`,
 	},
-
 	45: {
+		`ALTER TABLE artifacts
+			ADD COLUMN updated_at TIMESTAMP`,
+		`UPDATE artifacts SET updated_at = created_at`,
+		`ALTER TABLE artifacts ALTER COLUMN updated_at SET NOT NULL`,
+		`ALTER TABLE job_results RENAME TO jobs`,
+		`ALTER TABLE jobs
+			ADD COLUMN data JSONB,
+			ADD COLUMN retries INTEGER,
+			ADD COLUMN interval BIGINT,
+			ADD COLUMN timeout BIGINT
+		`,
+	},
+	46: {
 		`ALTER TABLE artifacts
       ADD COLUMN mode VARCHAR NOT NULL CHECK (mode <> '') DEFAULT 'snapshot'`,
 		`ALTER TABLE artifacts ALTER COLUMN mode DROP DEFAULT`,

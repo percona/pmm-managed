@@ -130,7 +130,3 @@ type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
 }
-
-type backupService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name string, mode models.BackupMode, scheduleID string) (string, error)
-}

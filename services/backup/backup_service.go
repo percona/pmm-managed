@@ -48,33 +48,38 @@ func NewService(db *reform.DB, jobsService jobsService, agentsRegistry agentsReg
 	}
 }
 
+// PerformBackupParams are params for performing backup.
+type PerformBackupParams struct {
+	ServiceID     string
+	LocationID    string
+	Name          string
+	ScheduleID    string
+	Mode          models.BackupMode
+	Retries       uint32
+	RetryInterval time.Duration
+}
+
 // PerformBackup starts on-demand backup.
-func (s *Service) PerformBackup(
-	ctx context.Context,
-	serviceID string,
-	locationID string,
-	name string,
-	mode models.BackupMode,
-	scheduleID string,
-) (string, error) {
+func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams) (string, error) {
 	var err error
 	var artifact *models.Artifact
 	var location *models.BackupLocation
 	var svc *models.Service
-	var job *models.JobResult
+	var job *models.Job
 	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		svc, err = models.FindServiceByID(tx.Querier, serviceID)
+		svc, err = models.FindServiceByID(tx.Querier, params.ServiceID)
 		if err != nil {
 			return err
 		}
 
-		if mode == models.Snapshot {
+		name := params.Name
+		if params.Mode == models.Snapshot {
 			name = name + "_" + time.Now().Format(time.RFC3339)
 		}
 
-		location, err = models.FindBackupLocationByID(tx.Querier, locationID)
+		location, err = models.FindBackupLocationByID(tx.Querier, params.LocationID)
 		if err != nil {
 			return err
 		}
@@ -111,9 +116,9 @@ func (s *Service) PerformBackup(
 				LocationID: location.ID,
 				ServiceID:  svc.ServiceID,
 				DataModel:  dataModel,
-				Mode:       mode,
+				Mode:       params.Mode,
 				Status:     models.PendingBackupStatus,
-				ScheduleID: scheduleID,
+				ScheduleID: params.ScheduleID,
 			}); err != nil {
 				return err
 			}
@@ -125,7 +130,7 @@ func (s *Service) PerformBackup(
 			}
 		}
 
-		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType)
+		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType, params.Mode, params.Retries, params.RetryInterval)
 		if err != nil {
 			return err
 		}
@@ -143,9 +148,9 @@ func (s *Service) PerformBackup(
 
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig) // TODO mode
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig) // TODO mode
 	case models.MongoDBServiceType:
-		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, name, config, mode, locationConfig)
+		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, params.Mode, locationConfig)
 	case models.PostgreSQLServiceType,
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,
@@ -198,18 +203,18 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 		}
 
 		var jobType models.JobType
-		var jobResultData *models.JobResultData
+		var jobData *models.JobData
 		switch service.ServiceType {
 		case models.MySQLServiceType:
 			jobType = models.MySQLRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
+			jobData = &models.JobData{
+				MySQLRestoreBackup: &models.MySQLRestoreBackupJobData{
 					RestoreID: restoreID,
 				}}
 		case models.MongoDBServiceType:
 			jobType = models.MongoDBRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobResult{
+			jobData = &models.JobData{
+				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobData{
 					RestoreID: restoreID,
 				}}
 		case models.PostgreSQLServiceType,
@@ -221,7 +226,11 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 			return errors.Errorf("unsupported service type: %s", service.ServiceType)
 		}
 
-		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)
+		job, err := models.CreateJob(tx.Querier, models.CreateJobParams{
+			PMMAgentID: params.AgentID,
+			Type:       jobType,
+			Data:       jobData,
+		})
 		if err != nil {
 			return err
 		}
@@ -367,7 +376,10 @@ func (s *Service) prepareBackupJob(
 	service *models.Service,
 	artifactID string,
 	jobType models.JobType,
-) (*models.JobResult, *models.DBConfig, error) {
+	mode models.BackupMode,
+	retries uint32,
+	retryInterval time.Duration,
+) (*models.Job, *models.DBConfig, error) {
 	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
 	if err != nil {
 		return nil, nil, err
@@ -382,29 +394,37 @@ func (s *Service) prepareBackupJob(
 		return nil, nil, errors.Errorf("pmmAgent not found for service")
 	}
 
-	var jobResultData *models.JobResultData
+	var jobData *models.JobData
 	switch jobType {
 	case models.MySQLBackupJob:
-		jobResultData = &models.JobResultData{
-			MySQLBackup: &models.MySQLBackupJobResult{
+		jobData = &models.JobData{
+			MySQLBackup: &models.MySQLBackupJobData{
+				ServiceID:  service.ServiceID,
 				ArtifactID: artifactID,
 			},
 		}
 	case models.MongoDBBackupJob:
-		jobResultData = &models.JobResultData{
-			MongoDBBackup: &models.MongoDBBackupJobResult{
+		jobData = &models.JobData{
+			MongoDBBackup: &models.MongoDBBackupJobData{
+				ServiceID:  service.ServiceID,
 				ArtifactID: artifactID,
+				Mode:       mode,
 			},
 		}
-	case models.Echo,
-		models.MySQLRestoreBackupJob,
+	case models.MySQLRestoreBackupJob,
 		models.MongoDBRestoreBackupJob:
 		return nil, nil, errors.Errorf("%s is not a backup job type", jobType)
 	default:
 		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)
 	}
 
-	res, err := models.CreateJobResult(q, pmmAgents[0].AgentID, jobType, jobResultData)
+	res, err := models.CreateJob(q, models.CreateJobParams{
+		PMMAgentID: pmmAgents[0].AgentID,
+		Type:       jobType,
+		Data:       jobData,
+		Retries:    retries,
+		Interval:   retryInterval,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
