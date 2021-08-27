@@ -59,6 +59,7 @@ func TestSettings(t *testing.T) {
 		assert.Equal(t, expectedSTTCheckIntervals, res.Payload.Settings.SttCheckIntervals)
 		assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
 		assert.Equal(t, []string{"aws"}, res.Payload.Settings.AWSPartitions)
+		assert.False(t, res.Payload.Settings.UpdatesDisabled)
 		assert.True(t, res.Payload.Settings.AlertingEnabled)
 		assert.Empty(t, res.Payload.Settings.EmailAlertingSettings)
 		assert.Empty(t, res.Payload.Settings.SlackAlertingSettings)
