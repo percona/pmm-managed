@@ -104,7 +104,11 @@ func TestStartBackup(t *testing.T) {
 		{Version: "1.1"},
 	}
 	mockedVersioner.On("GetVersions", *agent.PMMAgentID, softwares).Return(versions1, nil).Once()
-	artifactID, err := backupService.PerformBackup(ctx, pointer.GetString(agent.ServiceID), locationRes.ID, "test_backup", "")
+	artifactID, err := backupService.PerformBackup(ctx, PerformBackupParams{
+		ServiceID:  pointer.GetString(agent.ServiceID),
+		LocationID: locationRes.ID,
+		Name:       "test_backup",
+	})
 	assert.NoError(t, err)
 
 	assert.NoError(t, err)
