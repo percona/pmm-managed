@@ -159,8 +159,9 @@ func (s *TemplatesService) Collect(ctx context.Context) {
 
 	saasTemplates, err := s.downloadTemplates(ctx)
 	if err != nil {
+		// just log the error and don't return, if the user is not connected to SaaS
+		// we should still collect and show the Built-In templates.
 		s.l.Errorf("Failed to download rule templates from SaaS: %s.", err)
-		return
 	}
 
 	templates := make([]templateInfo, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates)+len(saasTemplates))
