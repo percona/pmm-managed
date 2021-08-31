@@ -637,7 +637,7 @@ type SetupDBParams struct {
 	MigrationVersion *int
 }
 
-// SetupDB runs PostgreSQL database migrations and optionally adds initial data.
+// SetupDB runs PostgreSQL database migrations and optionally creates database and adds initial data.
 func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	var logger reform.Logger
 	if params.Logf != nil {
@@ -651,9 +651,57 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	}
 	var currentVersion int
 	err := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
+	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "28000" { // invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+		var databaseName = params.Username
+		var roleName = params.Username
+
+		if params.Logf != nil {
+			params.Logf("Creating database %s and role %s", databaseName, roleName)
+		}
+		db, err := OpenDB("127.0.0.1:5432", "", "postgres", "")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		defer db.Close() //nolint:errcheck
+
+		var countDatabases int
+		err = db.QueryRow(`SELECT COUNT(*) FROM pg_database WHERE datname = $1`, databaseName).Scan(&countDatabases)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if countDatabases == 0 {
+			tx.Prepare(`do $$ begin execute format($f$create table %I()$f$,$1); end; $$;`)
+
+			_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+
+		var countRoles int
+		err = db.QueryRow(`SELECT COUNT(*) FROM pg_roles WHERE rolname=$1`, roleName).Scan(&countRoles)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if countRoles == 0 {
+			_, err = db.Exec(fmt.Sprintf(`CREATE USER "%s" LOGIN PASSWORD 'md5da757ec3e22c6d86a2bb8e70307fa937'`, roleName))
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			_, err = db.Exec(`GRANT ALL PRIVILEGES ON DATABASE $1 TO $2`, databaseName, roleName)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+		err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
+	}
 	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
 		err = nil
 	}
+
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
