@@ -62,15 +62,6 @@ type SoftwareVersions []SoftwareVersion
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
 func (sv SoftwareVersions) Value() (driver.Value, error) {
-	for _, s := range sv {
-		if err := s.Name.Validate(); err != nil {
-			return nil, err
-		}
-
-		if s.Version == "" {
-			return nil, errors.Errorf("no version set for software %q", s.Name)
-		}
-	}
 	return jsonValue(sv)
 }
 
