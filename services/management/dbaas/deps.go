@@ -20,6 +20,7 @@ package dbaas
 import (
 	"context"
 
+	goversion "github.com/hashicorp/go-version"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc"
 )
@@ -63,11 +64,25 @@ type dbaasClient interface {
 	InstallXtraDBOperator(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
 	// InstallPSMDBOperator installs kubernetes psmdb operator.
 	InstallPSMDBOperator(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
+	// StartMonitoring sets up victoria metrics operator to monitor kubernetes cluster.
+	StartMonitoring(ctx context.Context, in *controllerv1beta1.StartMonitoringRequest, opts ...grpc.CallOption) (*controllerv1beta1.StartMonitoringResponse, error)
 }
 
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
+	// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+	// if given database version is supported by given operator version, error is nil in that case.
+	IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error)
+	// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+	// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+	// version service does not have any matching versions.
+	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
+	// LatestOperatorVersion returns latest operators versions available based on given params.
+	LatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPXCOperatorVersion, latestPSMDBOperatorVersion *goversion.Version, err error)
+	// NextOperatorVersion returns operator versions that is a direct successor of currently installed one.
+	// Compatibility with PMM is not taken into account.
+	NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

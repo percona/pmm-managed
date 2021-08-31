@@ -18,59 +18,128 @@ package backup
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/backup"
+	"github.com/percona/pmm-managed/services/scheduler"
 )
 
 // BackupsService represents backups API.
 type BackupsService struct {
-	db          *reform.DB
-	jobsService jobsService
+	db              *reform.DB
+	backupService   backupService
+	scheduleService scheduleService
+	l               *logrus.Entry
 }
 
+const (
+	maxRetriesAttempts = 10
+	maxRetryInterval   = 8 * time.Hour
+)
+
 // NewBackupsService creates new backups API service.
-func NewBackupsService(db *reform.DB, jobsService jobsService) *BackupsService {
+func NewBackupsService(db *reform.DB, backupService backupService, scheduleService scheduleService) *BackupsService {
 	return &BackupsService{
-		db:          db,
-		jobsService: jobsService,
+		l:               logrus.WithField("component", "management/backup/backups"),
+		db:              db,
+		backupService:   backupService,
+		scheduleService: scheduleService,
 	}
 }
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	var err error
-	var artifact *models.Artifact
-	var location *models.BackupLocation
-	var svc *models.Service
-	var job *models.JobResult
-	var config *models.DBConfig
+	if req.Retries > maxRetriesAttempts {
+		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+	}
 
-	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
+	if req.RetryInterval.AsDuration() > maxRetryInterval {
+		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+	}
+
+	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
+		ServiceID:     req.ServiceId,
+		LocationID:    req.LocationId,
+		Name:          req.Name,
+		Retries:       req.Retries,
+		RetryInterval: req.RetryInterval.AsDuration(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.StartBackupResponse{
+		ArtifactId: artifactID,
+	}, nil
+}
+
+// RestoreBackup starts restore backup job.
+func (s *BackupsService) RestoreBackup(
+	ctx context.Context,
+	req *backupv1beta1.RestoreBackupRequest,
+) (*backupv1beta1.RestoreBackupResponse, error) {
+
+	id, err := s.backupService.RestoreBackup(ctx, req.ServiceId, req.ArtifactId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.RestoreBackupResponse{
+		RestoreId: id,
+	}, nil
+}
+
+// ScheduleBackup add new backup task to scheduler.
+func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.ScheduleBackupRequest) (*backupv1beta1.ScheduleBackupResponse, error) {
+	var id string
+
+	if req.Retries > maxRetriesAttempts {
+		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+	}
+
+	if req.RetryInterval.AsDuration() > maxRetryInterval {
+		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+	}
+
+	errTx := s.db.InTransaction(func(tx *reform.TX) error {
+		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
 		}
 
-		location, err = models.FindBackupLocationByID(tx.Querier, req.LocationId)
+		_, err = models.FindBackupLocationByID(tx.Querier, req.LocationId)
 		if err != nil {
 			return err
 		}
 
-		var dataModel models.DataModel
-		var jobType models.JobType
+		backupParams := scheduler.CommonBackupTaskParams{
+			ServiceID:     req.ServiceId,
+			LocationID:    req.LocationId,
+			Name:          req.Name,
+			Description:   req.Description,
+			Retention:     req.Retention,
+			Retries:       req.Retries,
+			RetryInterval: req.RetryInterval.AsDuration(),
+		}
+
+		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			dataModel = models.PhysicalDataModel
-			jobType = models.MySQLBackupJob
+			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
 		case models.MongoDBServiceType:
-			dataModel = models.LogicalDataModel
-			jobType = models.MongoDBBackupJob
+			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -80,274 +149,233 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
 		}
 
-		artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
-			Name:       req.Name,
-			Vendor:     string(svc.ServiceType),
-			LocationID: location.ID,
-			ServiceID:  svc.ServiceID,
-			DataModel:  dataModel,
-			Status:     models.PendingBackupStatus,
-		})
-		if err != nil {
-			return err
+		t := req.StartTime.AsTime()
+		if t.Unix() == 0 {
+			t = time.Time{}
 		}
 
-		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType)
+		scheduledTask, err := s.scheduleService.Add(task, scheduler.AddParams{
+			CronExpression: req.CronExpression,
+			Disabled:       !req.Enabled,
+			StartAt:        t,
+		})
 		if err != nil {
-			return err
+			return status.Errorf(codes.InvalidArgument, "Couldn't schedule backup: %v", err)
 		}
+
+		id = scheduledTask.ID
 		return nil
 	})
-	if errTX != nil {
-		return nil, errTX
+	if errTx != nil {
+		return nil, errTx
 	}
-
-	locationConfig := &models.BackupLocationConfig{
-		PMMServerConfig: location.PMMServerConfig,
-		PMMClientConfig: location.PMMClientConfig,
-		S3Config:        location.S3Config,
-	}
-
-	switch svc.ServiceType {
-	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
-	case models.MongoDBServiceType:
-		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
-	case models.PostgreSQLServiceType,
-		models.ProxySQLServiceType,
-		models.HAProxyServiceType,
-		models.ExternalServiceType:
-		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
-	default:
-		return nil, status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return &backupv1beta1.StartBackupResponse{
-		ArtifactId: artifact.ID,
-	}, nil
+	return &backupv1beta1.ScheduleBackupResponse{ScheduledBackupId: id}, nil
 }
 
-// RestoreBackup starts restore backup job.
-func (s *BackupsService) RestoreBackup(
-	ctx context.Context,
-	req *backupv1beta1.RestoreBackupRequest,
-) (*backupv1beta1.RestoreBackupResponse, error) {
-	var params *prepareRestoreJobParams
-	var jobID, restoreID string
-
-	err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		var err error
-		params, err = s.prepareRestoreJob(tx.Querier, req.ServiceId, req.ArtifactId)
-		if err != nil {
-			return err
-		}
-
-		restore, err := models.CreateRestoreHistoryItem(tx.Querier, models.CreateRestoreHistoryItemParams{
-			ArtifactID: req.ArtifactId,
-			ServiceID:  req.ServiceId,
-			Status:     models.InProgressRestoreStatus,
-		})
-		if err != nil {
-			return err
-		}
-
-		restoreID = restore.ID
-
-		service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
-		if err != nil {
-			return err
-		}
-
-		var jobType models.JobType
-		var jobResultData *models.JobResultData
-		switch service.ServiceType {
-		case models.MySQLServiceType:
-			jobType = models.MySQLRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
-					RestoreID: restoreID,
-				}}
-		case models.MongoDBServiceType:
-			jobType = models.MongoDBRestoreBackupJob
-			jobResultData = &models.JobResultData{
-				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobResult{
-					RestoreID: restoreID,
-				}}
-		case models.PostgreSQLServiceType,
-			models.ProxySQLServiceType,
-			models.HAProxyServiceType,
-			models.ExternalServiceType:
-			return errors.Errorf("backup restore unimplemented for service type: %s", service.ServiceType)
-		default:
-			return errors.Errorf("unsupported service type: %s", service.ServiceType)
-		}
-
-		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)
-		if err != nil {
-			return err
-		}
-
-		jobID = job.ID
-
-		return err
+// ListScheduledBackups lists all tasks related to backup.
+func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1beta1.ListScheduledBackupsRequest) (*backupv1beta1.ListScheduledBackupsResponse, error) {
+	tasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
+		Types: []models.ScheduledTaskType{
+			models.ScheduledMySQLBackupTask,
+			models.ScheduledMongoDBBackupTask,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.startRestoreJob(jobID, req.ServiceId, params); err != nil {
+	locationIDs := make([]string, 0, len(tasks))
+	serviceIDs := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		var serviceID string
+		var locationID string
+		switch t.Type {
+		case models.ScheduledMySQLBackupTask:
+			serviceID = t.Data.MySQLBackupTask.ServiceID
+			locationID = t.Data.MySQLBackupTask.LocationID
+		case models.ScheduledMongoDBBackupTask:
+			serviceID = t.Data.MongoDBBackupTask.ServiceID
+			locationID = t.Data.MongoDBBackupTask.LocationID
+		default:
+			continue
+		}
+		serviceIDs = append(serviceIDs, serviceID)
+		locationIDs = append(locationIDs, locationID)
+	}
+	locations, err := models.FindBackupLocationsByIDs(s.db.Querier, locationIDs)
+	if err != nil {
 		return nil, err
 	}
 
-	return &backupv1beta1.RestoreBackupResponse{
-		RestoreId: restoreID,
+	services, err := models.FindServicesByIDs(s.db.Querier, serviceIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduledBackups := make([]*backupv1beta1.ScheduledBackup, 0, len(tasks))
+	for _, task := range tasks {
+		scheduledBackup, err := convertTaskToScheduledBackup(task, services, locations)
+		if err != nil {
+			s.l.WithError(err).Warnf("convert task to scheduledBackup")
+			continue
+		}
+		scheduledBackups = append(scheduledBackups, scheduledBackup)
+	}
+
+	return &backupv1beta1.ListScheduledBackupsResponse{
+		ScheduledBackups: scheduledBackups,
 	}, nil
+
 }
 
-func (s *BackupsService) prepareBackupJob(
-	q *reform.Querier,
-	service *models.Service,
-	artifactID string,
-	jobType models.JobType,
-) (*models.JobResult, *models.DBConfig, error) {
-	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
+// ChangeScheduledBackup changes existing scheduled backup task.
+func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv1beta1.ChangeScheduledBackupRequest) (*backupv1beta1.ChangeScheduledBackupResponse, error) {
+	scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduledBackupId)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	pmmAgents, err := models.FindPMMAgentsForService(q, service.ServiceID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if len(pmmAgents) == 0 {
-		return nil, nil, errors.Errorf("pmmAgent not found for service")
-	}
-
-	var jobResultData *models.JobResultData
-	switch jobType {
-	case models.MySQLBackupJob:
-		jobResultData = &models.JobResultData{
-			MySQLBackup: &models.MySQLBackupJobResult{
-				ArtifactID: artifactID,
-			},
-		}
-	case models.MongoDBBackupJob:
-		jobResultData = &models.JobResultData{
-			MongoDBBackup: &models.MongoDBBackupJobResult{
-				ArtifactID: artifactID,
-			},
-		}
-	case models.Echo,
-		models.MySQLRestoreBackupJob,
-		models.MongoDBRestoreBackupJob:
-		return nil, nil, errors.Errorf("%s is not a backup job type", jobType)
+	var data *models.CommonBackupTaskData
+	switch scheduledTask.Type {
+	case models.ScheduledMySQLBackupTask:
+		data = &scheduledTask.Data.MySQLBackupTask.CommonBackupTaskData
+	case models.ScheduledMongoDBBackupTask:
+		data = &scheduledTask.Data.MongoDBBackupTask.CommonBackupTaskData
 	default:
-		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
 	}
 
-	res, err := models.CreateJobResult(q, pmmAgents[0].AgentID, jobType, jobResultData)
-
-	if err != nil {
-		return nil, nil, err
+	if req.Name != nil {
+		data.Name = req.Name.Value
+	}
+	if req.Description != nil {
+		data.Description = req.Description.Value
+	}
+	if req.Retention != nil {
+		data.Retention = req.Retention.Value
+	}
+	if req.Retries != nil {
+		if req.Retries.Value > maxRetriesAttempts {
+			return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		}
+		data.Retries = req.Retries.Value
+	}
+	if req.RetryInterval != nil {
+		if req.RetryInterval.AsDuration() > maxRetryInterval {
+			return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		}
+		data.RetryInterval = req.RetryInterval.AsDuration()
 	}
 
-	return res, dbConfig, nil
+	params := models.ChangeScheduledTaskParams{
+		Data: scheduledTask.Data,
+	}
+
+	if req.Enabled != nil {
+		params.Disable = pointer.ToBool(!req.Enabled.Value)
+	}
+
+	if req.CronExpression != nil {
+		params.CronExpression = pointer.ToString(req.CronExpression.Value)
+	}
+
+	if err := s.scheduleService.Update(req.ScheduledBackupId, params); err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.ChangeScheduledBackupResponse{}, nil
 }
 
-type prepareRestoreJobParams struct {
-	AgentID      string
-	ArtifactName string
-	Location     *models.BackupLocation
-	ServiceType  models.ServiceType
-	DBConfig     *models.DBConfig
-}
-
-func (s *BackupsService) prepareRestoreJob(
-	q *reform.Querier,
-	serviceID string,
-	artifactID string,
-) (*prepareRestoreJobParams, error) {
-	service, err := models.FindServiceByID(q, serviceID)
+// RemoveScheduledBackup stops and removes existing scheduled backup task.
+func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
+	task, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduledBackupId)
 	if err != nil {
 		return nil, err
 	}
-
-	artifact, err := models.FindArtifactByID(q, artifactID)
-	if err != nil {
-		return nil, err
+	switch task.Type {
+	case models.ScheduledMySQLBackupTask:
+	case models.ScheduledMongoDBBackupTask:
+	default:
+		return nil, errors.Errorf("non-backup task: %s", task.Type)
 	}
 
-	location, err := models.FindBackupLocationByID(q, artifact.LocationID)
-	if err != nil {
-		return nil, err
-	}
-
-	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
-	if err != nil {
-		return nil, err
-	}
-
-	agents, err := models.FindPMMAgentsForService(q, serviceID)
-	if err != nil {
-		return nil, err
-	}
-	if len(agents) == 0 {
-		return nil, errors.Errorf("cannot find pmm agent for service %s", serviceID)
-	}
-
-	return &prepareRestoreJobParams{
-		AgentID:      agents[0].AgentID,
-		ArtifactName: artifact.Name,
-		Location:     location,
-		ServiceType:  service.ServiceType,
-		DBConfig:     dbConfig,
-	}, nil
-}
-
-func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
-	locationConfig := &models.BackupLocationConfig{
-		PMMServerConfig: params.Location.PMMServerConfig,
-		PMMClientConfig: params.Location.PMMClientConfig,
-		S3Config:        params.Location.S3Config,
-	}
-
-	switch params.ServiceType {
-	case models.MySQLServiceType:
-		if err := s.jobsService.StartMySQLRestoreBackupJob(
-			jobID,
-			params.AgentID,
-			serviceID,
-			0,
-			params.ArtifactName,
-			locationConfig,
-		); err != nil {
+	errTx := s.db.InTransaction(func(tx *reform.TX) error {
+		artifacts, err := models.FindArtifacts(tx.Querier, models.ArtifactFilters{
+			ScheduleID: req.ScheduledBackupId,
+		})
+		if err != nil {
 			return err
 		}
-	case models.MongoDBServiceType:
-		if err := s.jobsService.StartMongoDBRestoreBackupJob(
-			jobID,
-			params.AgentID,
-			0,
-			params.ArtifactName,
-			params.DBConfig,
-			locationConfig,
-		); err != nil {
-			return err
+
+		for _, artifact := range artifacts {
+			_, err := models.UpdateArtifact(tx.Querier, artifact.ID, models.UpdateArtifactParams{
+				ScheduleID: pointer.ToString(""),
+			})
+			if err != nil {
+				return err
+			}
 		}
-	case models.PostgreSQLServiceType,
-		models.ProxySQLServiceType,
-		models.HAProxyServiceType,
-		models.ExternalServiceType:
-		return status.Errorf(codes.Unimplemented, "unimplemented service: %s", params.ServiceType)
-	default:
-		return status.Errorf(codes.Unknown, "unknown service: %s", params.ServiceType)
+
+		return s.scheduleService.Remove(req.ScheduledBackupId)
+	})
+
+	if errTx != nil {
+		return nil, errTx
 	}
 
-	return nil
+	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil
+}
+
+func convertTaskToScheduledBackup(task *models.ScheduledTask,
+	services map[string]*models.Service,
+	locations map[string]*models.BackupLocation) (*backupv1beta1.ScheduledBackup, error) {
+	scheduledBackup := &backupv1beta1.ScheduledBackup{
+		ScheduledBackupId: task.ID,
+		CronExpression:    task.CronExpression,
+		Enabled:           !task.Disabled,
+	}
+
+	if !task.LastRun.IsZero() {
+		scheduledBackup.LastRun = timestamppb.New(task.LastRun)
+	}
+
+	if !task.NextRun.IsZero() {
+		scheduledBackup.NextRun = timestamppb.New(task.NextRun)
+	}
+
+	if !task.StartAt.IsZero() {
+		scheduledBackup.StartTime = timestamppb.New(task.StartAt)
+	}
+
+	var commonBackupData models.CommonBackupTaskData
+	switch task.Type {
+	case models.ScheduledMySQLBackupTask:
+		commonBackupData = task.Data.MySQLBackupTask.CommonBackupTaskData
+		scheduledBackup.DataModel = backupv1beta1.DataModel_PHYSICAL
+
+	case models.ScheduledMongoDBBackupTask:
+		commonBackupData = task.Data.MongoDBBackupTask.CommonBackupTaskData
+		scheduledBackup.DataModel = backupv1beta1.DataModel_LOGICAL
+	default:
+		return nil, fmt.Errorf("unknown task type: %s", task.Type)
+	}
+
+	scheduledBackup.ServiceId = commonBackupData.ServiceID
+	scheduledBackup.LocationId = commonBackupData.LocationID
+	scheduledBackup.Name = commonBackupData.Name
+	scheduledBackup.Description = commonBackupData.Description
+	scheduledBackup.Retention = commonBackupData.Retention
+	scheduledBackup.Retries = commonBackupData.Retries
+
+	if commonBackupData.RetryInterval > 0 {
+		scheduledBackup.RetryInterval = durationpb.New(commonBackupData.RetryInterval)
+	}
+
+	scheduledBackup.ServiceName = services[scheduledBackup.ServiceId].ServiceName
+	scheduledBackup.Vendor = string(services[scheduledBackup.ServiceId].ServiceType)
+	scheduledBackup.LocationName = locations[scheduledBackup.LocationId].Name
+
+	return scheduledBackup, nil
 }
 
 // Check interfaces.

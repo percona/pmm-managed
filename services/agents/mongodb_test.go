@@ -37,10 +37,11 @@ func TestMongodbExporterConfig(t *testing.T) {
 		Port:    pointer.ToUint16(27017),
 	}
 	exporter := &models.Agent{
-		AgentID:   "agent-id",
-		AgentType: models.MongoDBExporterType,
-		Username:  pointer.ToString("username"),
-		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
+		AgentID:       "agent-id",
+		AgentType:     models.MongoDBExporterType,
+		Username:      pointer.ToString("username"),
+		Password:      pointer.ToString("s3cur3 p@$$w0r4."),
+		AgentPassword: pointer.ToString("agent-password"),
 	}
 	actual := mongodbExporterConfig(mongodb, exporter, redactSecrets, pmmAgentVersion)
 	expected := &agentpb.SetStateRequest_AgentProcess{
@@ -57,9 +58,9 @@ func TestMongodbExporterConfig(t *testing.T) {
 		},
 		Env: []string{
 			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
-			"HTTP_AUTH=pmm:agent-id",
+			"HTTP_AUTH=pmm:agent-password",
 		},
-		RedactWords: []string{"s3cur3 p@$$w0r4."},
+		RedactWords: []string{"s3cur3 p@$$w0r4.", "agent-password"},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)
@@ -87,6 +88,29 @@ func TestMongodbExporterConfig(t *testing.T) {
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
 		expected := "MONGODB_URI=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000&ssl=true&" +
 			"tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=passwordoftls"
+		assert.Equal(t, expected, actual.Env[0])
+		expectedFiles := map[string]string{
+			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
+			"caFilePlaceholder":             exporter.MongoDBOptions.TLSCa,
+		}
+		assert.Equal(t, expectedFiles, actual.TextFiles)
+	})
+
+	t.Run("AuthenticationDatabase", func(t *testing.T) {
+		exporter.TLS = true
+		exporter.MongoDBOptions = &models.MongoDBOptions{
+			TLSCertificateKey:             "content-of-tls-certificate-key",
+			TLSCertificateKeyFilePassword: "passwordoftls",
+			TLSCa:                         "content-of-tls-ca",
+			AuthenticationMechanism:       "MONGODB-X509",
+			AuthenticationDatabase:        "$external",
+		}
+		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
+		expected := `MONGODB_URI=mongodb://1.2.3.4:27017/$external?authMechanism=MONGODB-X509` +
+			`&authSource=%24external&connectTimeoutMS=1000&ssl=true` +
+			`&tlsCaFile={{.TextFiles.caFilePlaceholder}}` +
+			`&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}` +
+			`&tlsCertificateKeyFilePassword=passwordoftls`
 		assert.Equal(t, expected, actual.Env[0])
 		expectedFiles := map[string]string{
 			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,

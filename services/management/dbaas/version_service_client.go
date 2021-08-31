@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
+	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -36,6 +38,8 @@ const (
 	pxcOperator   = "pxc-operator"
 )
 
+var errNoVersionsFound = errors.New("no versions to compare current version with found")
+
 // componentVersion contains info about exact component version.
 type componentVersion struct {
 	ImagePath string `json:"imagePath"`
@@ -45,30 +49,34 @@ type componentVersion struct {
 }
 
 type matrix struct {
-	Mongod       map[string]componentVersion `json:"mongod"`
-	Pxc          map[string]componentVersion `json:"pxc"`
-	Pmm          map[string]componentVersion `json:"pmm"`
-	Proxysql     map[string]componentVersion `json:"proxysql"`
-	Haproxy      map[string]componentVersion `json:"haproxy"`
-	Backup       map[string]componentVersion `json:"backup"`
-	Operator     map[string]componentVersion `json:"operator"`
-	LogCollector map[string]componentVersion `json:"logCollector"`
+	Mongod        map[string]componentVersion `json:"mongod"`
+	Pxc           map[string]componentVersion `json:"pxc"`
+	Pmm           map[string]componentVersion `json:"pmm"`
+	Proxysql      map[string]componentVersion `json:"proxysql"`
+	Haproxy       map[string]componentVersion `json:"haproxy"`
+	Backup        map[string]componentVersion `json:"backup"`
+	Operator      map[string]componentVersion `json:"operator"`
+	LogCollector  map[string]componentVersion `json:"logCollector"`
+	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
+}
+
+type Version struct {
+	Product        string `json:"product"`
+	ProductVersion string `json:"operator"`
+	Matrix         matrix `json:"matrix"`
 }
 
 // VersionServiceResponse represents response from version service API.
 type VersionServiceResponse struct {
-	Versions []struct {
-		Product  string `json:"product"`
-		Operator string `json:"operator"`
-		Matrix   matrix `json:"matrix"`
-	} `json:"versions"`
+	Versions []Version `json:"versions"`
 }
 
 // componentsParams contains params to filter components in version service API.
 type componentsParams struct {
-	operator        string
-	operatorVersion string
-	dbVersion       string
+	product        string
+	productVersion string
+	dbVersion      string
 }
 
 // VersionServiceClient represents a client for Version Service API.
@@ -76,6 +84,7 @@ type VersionServiceClient struct {
 	url  string
 	http *http.Client
 	irtm prom.Collector
+	l    *logrus.Entry
 }
 
 // NewVersionServiceClient creates a new client for given version service URL.
@@ -101,6 +110,7 @@ func NewVersionServiceClient(url string) *VersionServiceClient {
 			Transport: t,
 		},
 		irtm: irtm,
+		l:    logrus.WithField("component", "VersionServiceClient"),
 	}
 }
 
@@ -116,9 +126,9 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 
 // Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
-	paths := []string{c.url, params.operator}
-	if params.operatorVersion != "" {
-		paths = append(paths, params.operatorVersion)
+	paths := []string{c.url, params.product}
+	if params.productVersion != "" {
+		paths = append(paths, params.productVersion)
 		if params.dbVersion != "" {
 			paths = append(paths, params.dbVersion)
 		}
@@ -145,4 +155,147 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	}
 
 	return &vsResponse, nil
+}
+
+// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+// if given database version is supported by given operator version, error is nil in that case.
+func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
+	m, err := c.Matrix(ctx, componentsParams{
+		product:        operatorType,
+		productVersion: operatorVersion,
+		dbVersion:      databaseVersion,
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(m.Versions) != 0, nil
+}
+
+// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+// version service does not have any matching versions.
+func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+	pmm, err := goversion.NewVersion(pmmVersion)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := c.Matrix(ctx, componentsParams{product: "pmm-server", productVersion: pmm.Core().String()})
+	if err != nil {
+		return false, err
+	}
+
+	if len(resp.Versions) == 0 {
+		return false, nil
+	}
+
+	var operatorVersions map[string]componentVersion
+	switch operatorType {
+	case pxcOperator:
+		operatorVersions = resp.Versions[0].Matrix.PXCOperator
+	case psmdbOperator:
+		operatorVersions = resp.Versions[0].Matrix.PSMDBOperator
+	default:
+		return false, errors.Errorf("%q is an unknown operator type", operatorType)
+	}
+
+	for version := range operatorVersions {
+		if version == operatorVersion {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func latest(m map[string]componentVersion) (*goversion.Version, error) {
+	if len(m) == 0 {
+		return nil, errNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
+	for version := range m {
+		parsedVersion, err := goversion.NewVersion(version)
+		if err != nil {
+			return nil, err
+		}
+		if parsedVersion.GreaterThan(latest) {
+			latest = parsedVersion
+		}
+	}
+	return latest, nil
+}
+
+// LatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+	if pmmVersion == "" {
+		return nil, nil, errors.New("given PMM version is empty")
+	}
+	params := componentsParams{
+		product:        "pmm-server",
+		productVersion: pmmVersion,
+	}
+	resp, err := c.Matrix(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resp.Versions) != 1 {
+		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
+	}
+	pmmVersionDeps := resp.Versions[0]
+	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
+	if err != nil {
+		return nil, nil, err
+	}
+	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
+	return latestPXCOperator, latestPSMDBOperator, err
+}
+
+// NextOperatorVersion returns operator version that is direct successor of currently installed one.
+// It returns nil if update is not available or error occurred. It does not take PMM version into consideration.
+// We need to upgrade to current + 1 version for upgrade to be successful. So even if dbaas-controller does not support the
+// operator, we need to upgrade to it on our way to supported one.
+func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
+	if installedVersion == "" {
+		return
+	}
+	// Get all operator versions
+	params := componentsParams{
+		product: operatorType,
+	}
+	matrix, err := c.Matrix(ctx, params)
+	if err != nil {
+		return
+	}
+	if len(matrix.Versions) == 0 {
+		return
+	}
+
+	// Find next versions if installed.
+	if installedVersion != "" {
+		return next(matrix.Versions, installedVersion)
+	}
+	return
+}
+
+func next(versions []Version, installedVersion string) (*goversion.Version, error) {
+	if len(versions) == 0 {
+		return nil, errNoVersionsFound
+	}
+	// Get versions greater than currently installed one.
+	var nextVersion *goversion.Version
+	installed, err := goversion.NewVersion(installedVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, version := range versions {
+		v, err := goversion.NewVersion(version.ProductVersion)
+		if err != nil {
+			return nil, err
+		}
+		if v.GreaterThan(installed) && (nextVersion == nil || nextVersion.GreaterThan(v)) {
+			nextVersion = v
+		}
+	}
+
+	return nextVersion, nil
 }

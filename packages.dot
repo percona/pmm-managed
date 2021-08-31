@@ -3,6 +3,7 @@ digraph packages {
 	"/" -> "/services/agents";
 	"/" -> "/services/agents/grpc";
 	"/" -> "/services/alertmanager";
+	"/" -> "/services/backup";
 	"/" -> "/services/checks";
 	"/" -> "/services/dbaas";
 	"/" -> "/services/grafana";
@@ -16,9 +17,11 @@ digraph packages {
 	"/" -> "/services/minio";
 	"/" -> "/services/platform";
 	"/" -> "/services/qan";
+	"/" -> "/services/scheduler";
 	"/" -> "/services/server";
 	"/" -> "/services/supervisord";
 	"/" -> "/services/telemetry";
+	"/" -> "/services/versioncache";
 	"/" -> "/services/victoriametrics";
 	"/" -> "/services/vmalert";
 	"/cmd/pmm-managed-init" -> "/models";
