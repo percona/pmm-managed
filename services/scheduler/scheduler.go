@@ -151,19 +151,22 @@ func (s *Service) Remove(id string) error {
 
 // Update changes scheduled task in DB and re-add it to scheduler.
 func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) error {
-	txErr := s.db.InTransaction(func(tx *reform.TX) error {
-		dbTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
-		if err != nil {
-			return err
-		}
-		s.mx.Lock()
-		_ = s.scheduler.RemoveByTag(id)
-		s.mx.Unlock()
-
-		return s.addDBTask(dbTask)
+	return s.db.InTransaction(func(tx *reform.TX) error {
+		return s.UpdateInTX(tx, id, params)
 	})
+}
 
-	return txErr
+// UpdateInTX same as Update but run as a part of some external transaction.
+func (s *Service) UpdateInTX(tx *reform.TX, id string, params models.ChangeScheduledTaskParams) error {
+	dbTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
+	if err != nil {
+		return err
+	}
+	s.mx.Lock()
+	_ = s.scheduler.RemoveByTag(id)
+	s.mx.Unlock()
+
+	return s.addDBTask(dbTask)
 }
 
 func (s *Service) loadFromDB() error {
