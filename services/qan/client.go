@@ -24,6 +24,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/qanpb"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"gopkg.in/reform.v1"
@@ -247,8 +248,7 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 		c.l.Debugf("%+v", qanReq)
 		res, err := c.c.Collect(ctx, qanReq)
 		if err != nil {
-			return nil // TODO temporary
-			//return errors.Wrap(err, "failed to sent CollectRequest to QAN")
+			return errors.Wrap(err, "failed to sent CollectRequest to QAN")
 		}
 		c.l.Debugf("%+v", res)
 
