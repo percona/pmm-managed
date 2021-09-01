@@ -9,6 +9,8 @@ import (
 
 	models "github.com/percona/pmm-managed/models"
 
+	reform "gopkg.in/reform.v1"
+
 	scheduler "github.com/percona/pmm-managed/services/scheduler"
 )
 
@@ -59,13 +61,13 @@ func (_m *mockScheduleService) Run(ctx context.Context) {
 	_m.Called(ctx)
 }
 
-// Update provides a mock function with given fields: id, params
-func (_m *mockScheduleService) Update(id string, params models.ChangeScheduledTaskParams) error {
-	ret := _m.Called(id, params)
+// UpdateInTX provides a mock function with given fields: tx, id, params
+func (_m *mockScheduleService) UpdateInTX(tx *reform.TX, id string, params models.ChangeScheduledTaskParams) error {
+	ret := _m.Called(tx, id, params)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, models.ChangeScheduledTaskParams) error); ok {
-		r0 = rf(id, params)
+	if rf, ok := ret.Get(0).(func(*reform.TX, string, models.ChangeScheduledTaskParams) error); ok {
+		r0 = rf(tx, id, params)
 	} else {
 		r0 = ret.Error(0)
 	}
