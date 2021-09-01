@@ -36,6 +36,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/percona-platform/dbaas-api v0.0.0-20210830094230-60d2a17b710c
 	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
+	github.com/percona/percona-toolkit v0.0.0-20210901132734-e8ee68c5e53a // indirect
 	github.com/percona/pmm v0.0.0-20210831063050-13aadde8ab6e
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
@@ -49,7 +50,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.starlark.net v0.0.0-20201210151846-e81fc95f7bd5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
-	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
