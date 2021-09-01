@@ -73,7 +73,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		return nil, err
 	}
 	var dataModel models.DataModel
-	switch svc.ServiceType {
+	switch svc.ServiceType { //nolint:exhaustive
 	case models.MySQLServiceType:
 		dataModel = models.PhysicalDataModel
 	case models.MongoDBServiceType:
@@ -314,13 +314,10 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 						return status.Errorf(codes.FailedPrecondition, err.Error())
 					}
 				} else {
-					// On mongoDB incremental backup disabling switch-off PITR
-					if data.Mode == models.Incremental {
-						disablePITR = true
-					}
+					// on mongoDB incremental backup disabling switch-off PITR
+					disablePITR = data.Mode == models.Incremental
 				}
 			}
-
 		}
 
 		if req.CronExpression != nil {
