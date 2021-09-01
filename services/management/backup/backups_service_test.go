@@ -173,8 +173,9 @@ func TestScheduledBackups(t *testing.T) {
 			Vendor:     "mysql",
 			LocationID: locationRes.ID,
 			ServiceID:  *agent.ServiceID,
-			DataModel:  "physical",
-			Status:     "pending",
+			DataModel:  models.PhysicalDataModel,
+			Mode:       models.Snapshot,
+			Status:     models.PendingBackupStatus,
 			ScheduleID: id,
 		})
 		require.NoError(t, err)

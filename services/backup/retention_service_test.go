@@ -89,7 +89,8 @@ func TestEnsureRetention(t *testing.T) {
 			Vendor:     "MongoDB",
 			LocationID: locationRes.ID,
 			ServiceID:  *agent.ServiceID,
-			DataModel:  "physical",
+			DataModel:  models.PhysicalDataModel,
+			Mode:       models.Snapshot,
 			Status:     models.SuccessBackupStatus,
 			ScheduleID: task.ID,
 		})
