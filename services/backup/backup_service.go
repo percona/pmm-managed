@@ -55,6 +55,7 @@ type PerformBackupParams struct {
 	LocationID    string
 	Name          string
 	ScheduleID    string
+	DataModel     models.DataModel
 	Mode          models.BackupMode
 	Retries       uint32
 	RetryInterval time.Duration
@@ -85,14 +86,17 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			return err
 		}
 
-		var dataModel models.DataModel
 		var jobType models.JobType
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			dataModel = models.PhysicalDataModel
+			if params.DataModel != models.PhysicalDataModel {
+				return errors.New("the only supported data model for mySQL is physical")
+			}
 			jobType = models.MySQLBackupJob
 		case models.MongoDBServiceType:
-			dataModel = models.LogicalDataModel
+			if params.DataModel != models.LogicalDataModel {
+				return errors.New("the only supported data model for mongoDB is logical")
+			}
 			jobType = models.MongoDBBackupJob
 
 			if err = checkMongoBackupPreconditions(tx.Querier, svc, params.Mode, params.ScheduleID); err != nil {
@@ -119,7 +123,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 				Vendor:     string(svc.ServiceType),
 				LocationID: location.ID,
 				ServiceID:  svc.ServiceID,
-				DataModel:  dataModel,
+				DataModel:  params.DataModel,
 				Mode:       params.Mode,
 				Status:     models.PendingBackupStatus,
 				ScheduleID: params.ScheduleID,

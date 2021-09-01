@@ -68,10 +68,23 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
 	}
 
+	svc, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+	var dataModel models.DataModel
+	switch svc.ServiceType {
+	case models.MySQLServiceType:
+		dataModel = models.PhysicalDataModel
+	case models.MongoDBServiceType:
+		dataModel = models.LogicalDataModel
+	}
+
 	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
 		ServiceID:     req.ServiceId,
 		LocationID:    req.LocationId,
 		Name:          req.Name,
+		DataModel:     dataModel,
 		Mode:          models.Snapshot,
 		Retries:       req.Retries,
 		RetryInterval: req.RetryInterval.AsDuration(),
@@ -113,7 +126,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
 	}
 
-	mode, err := convertBackupMode(req.Mode)
+	mode, err := convertBackupModeToModel(req.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -122,11 +135,6 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
-		}
-
-		if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, svc.ServiceID, mode); err != nil {
-			return status.Errorf(codes.FailedPrecondition, "Can't create scheduled backup for "+
-				"service %s: %v", svc.ServiceName, err)
 		}
 
 		_, err = models.FindBackupLocationByID(tx.Querier, req.LocationId)
@@ -151,8 +159,14 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT {
 				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mySQL: %s", req.Mode.String())
 			}
+			backupParams.DataModel = models.PhysicalDataModel
 			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
 		case models.MongoDBServiceType:
+			if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, svc.ServiceID, "", mode); err != nil {
+				return status.Errorf(codes.FailedPrecondition, "Can't create scheduled backup for "+
+					"service %s: %v", svc.ServiceName, err)
+			}
+			backupParams.DataModel = models.LogicalDataModel
 			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
@@ -296,7 +310,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 			if scheduledTask.Type == models.ScheduledMongoDBBackupTask {
 				if req.Enabled.Value {
 					// check mongoDB specific requirements before enabling scheduled backups
-					if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, serviceID, data.Mode); err != nil {
+					if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, serviceID, scheduledTask.ID, data.Mode); err != nil {
 						return status.Errorf(codes.FailedPrecondition, err.Error())
 					}
 				} else {
@@ -403,11 +417,8 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
 		commonBackupData = task.Data.MySQLBackupTask.CommonBackupTaskData
-		scheduledBackup.DataModel = backupv1beta1.DataModel_PHYSICAL
-
 	case models.ScheduledMongoDBBackupTask:
 		commonBackupData = task.Data.MongoDBBackupTask.CommonBackupTaskData
-		scheduledBackup.DataModel = backupv1beta1.DataModel_LOGICAL
 	default:
 		return nil, errors.Errorf("unknown task type: %s", task.Type)
 	}
@@ -418,6 +429,15 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	scheduledBackup.Description = commonBackupData.Description
 	scheduledBackup.Retention = commonBackupData.Retention
 	scheduledBackup.Retries = commonBackupData.Retries
+
+	var err error
+	if scheduledBackup.DataModel, err = convertDataModel(commonBackupData.DataModel); err != nil {
+		return nil, err
+	}
+
+	if scheduledBackup.Mode, err = convertModelToBackupMode(commonBackupData.Mode); err != nil {
+		return nil, err
+	}
 
 	if commonBackupData.RetryInterval > 0 {
 		scheduledBackup.RetryInterval = durationpb.New(commonBackupData.RetryInterval)
@@ -430,7 +450,7 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	return scheduledBackup, nil
 }
 
-func convertBackupMode(mode backupv1beta1.BackupMode) (models.BackupMode, error) {
+func convertBackupModeToModel(mode backupv1beta1.BackupMode) (models.BackupMode, error) {
 	switch mode {
 	case backupv1beta1.BackupMode_SNAPSHOT:
 		return models.Snapshot, nil
@@ -441,7 +461,18 @@ func convertBackupMode(mode backupv1beta1.BackupMode) (models.BackupMode, error)
 	}
 }
 
-func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID string, mode models.BackupMode) error {
+func convertModelToBackupMode(mode models.BackupMode) (backupv1beta1.BackupMode, error) {
+	switch mode {
+	case models.Snapshot:
+		return backupv1beta1.BackupMode_SNAPSHOT, nil
+	case models.Incremental:
+		return backupv1beta1.BackupMode_INCREMENTAL, nil
+	default:
+		return 0, errors.Errorf("unknown backup mode: %s", mode)
+	}
+}
+
+func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID, scheduleID string, mode models.BackupMode) error {
 	switch mode {
 	case models.Incremental:
 		// Incremental backup can be enabled only if there is no other scheduled backups.
@@ -453,8 +484,10 @@ func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID strin
 			return err
 		}
 
-		if len(tasks) != 0 {
-			return errors.New("incremental backup can be enabled only if there is no other scheduled backups")
+		for _, task := range tasks {
+			if task.ID != scheduleID {
+				return errors.New("incremental backup can be enabled only if there is no other scheduled backups enabled")
+			}
 		}
 	case models.Snapshot:
 		// Snapshot backup can be enabled it there is no enabled incremental backup.

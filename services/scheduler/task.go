@@ -52,6 +52,7 @@ type CommonBackupTaskParams struct {
 	LocationID    string
 	Name          string
 	Description   string
+	DataModel     models.DataModel
 	Mode          models.BackupMode
 	Retention     uint32
 	Retries       uint32
@@ -75,11 +76,14 @@ func NewMySQLBackupTask(backupService backupService, params CommonBackupTaskPara
 
 func (t *mySQLBackupTask) Run(ctx context.Context) error {
 	_, err := t.backupService.PerformBackup(ctx, backup.PerformBackupParams{
-		ServiceID:  t.ServiceID,
-		LocationID: t.LocationID,
-		Name:       t.Name,
-		Mode:       t.Mode,
-		ScheduleID: t.ID(),
+		ServiceID:     t.ServiceID,
+		LocationID:    t.LocationID,
+		Name:          t.Name,
+		Mode:          t.Mode,
+		DataModel:     t.DataModel,
+		ScheduleID:    t.ID(),
+		Retries:       t.Retries,
+		RetryInterval: t.RetryInterval,
 	})
 	return err
 }
@@ -97,6 +101,8 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 				Name:          t.Name,
 				Description:   t.Description,
 				Retention:     t.Retention,
+				DataModel:     t.DataModel,
+				Mode:          t.Mode,
 				Retries:       t.Retries,
 				RetryInterval: t.RetryInterval,
 			},
@@ -121,11 +127,14 @@ func NewMongoBackupTask(backupService backupService, params CommonBackupTaskPara
 
 func (t *mongoBackupTask) Run(ctx context.Context) error {
 	_, err := t.backupService.PerformBackup(ctx, backup.PerformBackupParams{
-		ServiceID:  t.ServiceID,
-		LocationID: t.LocationID,
-		Name:       t.Name,
-		Mode:       t.Mode,
-		ScheduleID: t.ID(),
+		ServiceID:     t.ServiceID,
+		LocationID:    t.LocationID,
+		Name:          t.Name,
+		DataModel:     t.DataModel,
+		Mode:          t.Mode,
+		ScheduleID:    t.ID(),
+		Retries:       t.Retries,
+		RetryInterval: t.RetryInterval,
 	})
 	return err
 }
@@ -142,6 +151,7 @@ func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 				LocationID:    t.LocationID,
 				Name:          t.Name,
 				Description:   t.Description,
+				DataModel:     t.DataModel,
 				Mode:          t.Mode,
 				Retention:     t.Retention,
 				Retries:       t.Retries,

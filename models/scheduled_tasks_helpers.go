@@ -96,7 +96,6 @@ func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*Sch
 		crossJoin = true
 		andConds = append(andConds, "value ->> 'mode' = "+q.Placeholder(idx))
 		args = append(args, filters.Mode)
-		idx++
 	}
 
 	var tail strings.Builder
