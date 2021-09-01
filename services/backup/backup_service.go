@@ -91,6 +91,9 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			if params.DataModel != models.PhysicalDataModel {
 				return errors.New("the only supported data model for mySQL is physical")
 			}
+			if params.Mode != models.Snapshot {
+				return errors.New("the only supported backup mode for mySQL is snapshot")
+			}
 			jobType = models.MySQLBackupJob
 		case models.MongoDBServiceType:
 			if params.DataModel != models.LogicalDataModel {
@@ -152,7 +155,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig) // TODO mode
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig)
 	case models.MongoDBServiceType:
 		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, params.Mode, locationConfig)
 	case models.PostgreSQLServiceType,
