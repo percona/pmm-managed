@@ -19,8 +19,6 @@ package backup
 import (
 	"context"
 
-	"gopkg.in/reform.v1"
-
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/scheduler"
@@ -49,7 +47,7 @@ type scheduleService interface {
 	Run(ctx context.Context)
 	Add(task scheduler.Task, params scheduler.AddParams) (*models.ScheduledTask, error)
 	Remove(id string) error
-	UpdateInTX(tx *reform.TX, id string, params models.ChangeScheduledTaskParams) error
+	Update(id string, params models.ChangeScheduledTaskParams) error
 }
 
 type removalService interface {

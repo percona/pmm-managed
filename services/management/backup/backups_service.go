@@ -324,7 +324,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 			params.CronExpression = pointer.ToString(req.CronExpression.Value)
 		}
 
-		return s.scheduleService.UpdateInTX(tx, req.ScheduledBackupId, params)
+		return s.scheduleService.Update(req.ScheduledBackupId, params)
 	})
 	if errTx != nil {
 		return nil, errTx
