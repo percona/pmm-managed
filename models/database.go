@@ -650,8 +650,8 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		latestVersion = *params.MigrationVersion
 	}
 	var currentVersion int
-	err := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "28000" { // invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+	errDB := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
+	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" { // invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
 		var databaseName = params.Username
 		var roleName = params.Username
 
@@ -694,14 +694,14 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 				return nil, errors.WithStack(err)
 			}
 		}
-		err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
+		errDB = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
 	}
-	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
-		err = nil
+	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+		errDB = nil
 	}
 
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if errDB != nil {
+		return nil, errors.WithStack(errDB)
 	}
 	if params.Logf != nil {
 		params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
