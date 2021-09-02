@@ -708,7 +708,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	}
 
 	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
-	err = db.InTransaction(func(tx *reform.TX) error {
+	err := db.InTransaction(func(tx *reform.TX) error {
 		for version := currentVersion + 1; version <= latestVersion; version++ {
 			if params.Logf != nil {
 				params.Logf("Migrating database to schema version %d ...", version)
