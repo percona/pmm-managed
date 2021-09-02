@@ -671,8 +671,6 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		}
 
 		if countDatabases == 0 {
-			tx.Prepare(`do $$ begin execute format($f$create table %I()$f$,$1); end; $$;`)
-
 			_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
 			if err != nil {
 				return nil, errors.WithStack(err)
