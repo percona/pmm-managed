@@ -453,6 +453,8 @@ func convertBackupModeToModel(mode backupv1beta1.BackupMode) (models.BackupMode,
 		return models.Snapshot, nil
 	case backupv1beta1.BackupMode_INCREMENTAL:
 		return models.Incremental, nil
+	case backupv1beta1.BackupMode_BACKUP_MODE_INVALID:
+		return "", status.Errorf(codes.InvalidArgument, "invalid backup mode: %s", mode.String())
 	default:
 		return "", status.Errorf(codes.InvalidArgument, "Unknown backup mode: %s", mode.String())
 	}
