@@ -718,7 +718,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
 				q = strings.TrimSpace(q)
-				if _, err = tx.Exec(q); err != nil {
+				if _, err := tx.Exec(q); err != nil {
 					return errors.Wrapf(err, "failed to execute statement:\n%s", q)
 				}
 			}
