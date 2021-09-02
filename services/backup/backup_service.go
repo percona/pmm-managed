@@ -257,6 +257,7 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 	return restoreID, nil
 }
 
+// SwitchMongoPITR switches Point-in-Time recovery feature for mongoDB with given serviceID.
 func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error {
 	var res *models.ActionResult
 	var pmmAgentID, DSN string
@@ -268,6 +269,11 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 		service, err = models.FindServiceByID(s.db.Querier, serviceID)
 		if err != nil {
 			return err
+		}
+
+		if service.ServiceType != models.MongoDBServiceType {
+			return errors.Errorf("Point-in-Time recovery feature available only for mongoDB services,"+
+				"given service id: %s, service type: %s", serviceID, service.ServiceType)
 		}
 
 		agents, err := models.FindPMMAgentsForService(s.db.Querier, serviceID)

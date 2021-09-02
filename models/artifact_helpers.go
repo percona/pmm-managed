@@ -137,6 +137,7 @@ func FindArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	}
 }
 
+// FindArtifactByName returns artifact by given name if found, ErrNotFound if not.
 func FindArtifactByName(q *reform.Querier, name string) (*Artifact, error) {
 	if name == "" {
 		return nil, errors.New("provided artifact name is empty")
