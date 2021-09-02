@@ -258,27 +258,39 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 }
 
 func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error {
-	service, err := models.FindServiceByID(s.db.Querier, serviceID)
-	if err != nil {
-		return err
-	}
+	var res *models.ActionResult
+	var pmmAgentID, DSN string
+	var agent *models.Agent
+	var service *models.Service
 
-	agents, err := models.FindPMMAgentsForService(s.db.Querier, serviceID)
-	if err != nil {
-		return err
-	}
-	if len(agents) == 0 {
-		return errors.Errorf("cannot find pmm agent for service %s", serviceID)
-	}
-	pmmAgentID := agents[0].AgentID
-	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
-	if err != nil {
-		return err
-	}
+	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		var err error
+		service, err = models.FindServiceByID(s.db.Querier, serviceID)
+		if err != nil {
+			return err
+		}
 
-	DSN, agent, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, serviceID, pmmAgentID, "")
-	if err != nil {
-		return err
+		agents, err := models.FindPMMAgentsForService(s.db.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+		if len(agents) == 0 {
+			return errors.Errorf("cannot find pmm agent for service %s", serviceID)
+		}
+		pmmAgentID := agents[0].AgentID
+		res, err = models.CreateActionResult(s.db.Querier, pmmAgentID)
+		if err != nil {
+			return err
+		}
+
+		DSN, agent, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, serviceID, pmmAgentID, "")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if errTX != nil {
+		return errTX
 	}
 
 	return s.agentsRegistry.StartPBMSwitchPITRActions(
