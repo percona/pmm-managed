@@ -19,6 +19,7 @@ package models
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
@@ -254,10 +255,22 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		return nil, errors.WithStack(err)
 	}
 
+	if serviceType == MySQLServiceType {
+		if _, err := CreateServiceSoftwareVersions(q, CreateServiceSoftwareVersionsParams{
+			ServiceID:        id,
+			ServiceType:      serviceType,
+			SoftwareVersions: []SoftwareVersion{},
+			NextCheckAt:      time.Now(),
+		}); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
 	return row, nil
 }
 
 // RemoveService removes single Service.
+// If associated service software versions entry exists it is removed by the ON DELETE CASCADE option.
 func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	s, err := FindServiceByID(q, id)
 	if err != nil {
@@ -269,7 +282,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		return errors.Wrap(err, "failed to select Agent IDs")
 	}
 
-	artifacts, err := FindArtifacts(q, &ArtifactFilters{ServiceID: id})
+	artifacts, err := FindArtifacts(q, ArtifactFilters{ServiceID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to select artifacts")
 	}

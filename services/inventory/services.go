@@ -29,17 +29,27 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	db   *reform.DB
-	r    agentsRegistry
-	vmdb prometheusService
+	db    *reform.DB
+	r     agentsRegistry
+	state agentsStateUpdater
+	vmdb  prometheusService
+	vc    versionCache
 }
 
 // NewServicesService creates new ServicesService
-func NewServicesService(db *reform.DB, r agentsRegistry, vmdb prometheusService) *ServicesService {
+func NewServicesService(
+	db *reform.DB,
+	r agentsRegistry,
+	state agentsStateUpdater,
+	vmdb prometheusService,
+	vc versionCache,
+) *ServicesService {
 	return &ServicesService{
-		db:   db,
-		r:    r,
-		vmdb: vmdb,
+		db:    db,
+		r:     r,
+		state: state,
+		vmdb:  vmdb,
+		vc:    vc,
 	}
 }
 
@@ -106,6 +116,9 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSS
 	if err != nil {
 		return nil, err
 	}
+
+	ss.vc.RequestSoftwareVersionsUpdate()
+
 	return res.(*inventorypb.MySQLService), nil
 }
 
@@ -283,7 +296,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 	}
 
 	for pmmAgentID := range pmmAgentIds {
-		ss.r.RequestStateUpdate(ctx, pmmAgentID)
+		ss.state.RequestStateUpdate(ctx, pmmAgentID)
 	}
 
 	if force {

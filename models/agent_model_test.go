@@ -105,6 +105,7 @@ func TestAgent(t *testing.T) {
 			TLSCertificateKey:             "key",
 			TLSCertificateKeyFilePassword: "pass",
 			TLSCa:                         "cert",
+			AuthenticationMechanism:       "MONGODB-X509",
 		}
 		mysqlOptions := models.MySQLOptions{
 			TLSCa:   "ca",
@@ -134,8 +135,8 @@ func TestAgent(t *testing.T) {
 			models.ProxySQLExporterType:        "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?timeout=1s&tls=true",
 			models.QANMySQLPerfSchemaAgentType: "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom",
 			models.QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom",
-			models.MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
-			models.QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
+			models.MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
+			models.QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
 			models.PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslcert={{.TextFiles.certificateFilePlaceholder}}&sslkey={{.TextFiles.certificateKeyFilePlaceholder}}&sslmode=verify-full&sslrootcert={{.TextFiles.caFilePlaceholder}}",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
@@ -147,10 +148,28 @@ func TestAgent(t *testing.T) {
 		//nolint:lll
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = models.MongoDBExporterType
+			// reset values from the previous test
 			agent.MongoDBOptions.TLSCertificateKeyFilePassword = ""
+			agent.MongoDBOptions.AuthenticationMechanism = ""
 
 			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, time.Second, "", nil))
 			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, 0, "", nil))
+			expectedFiles := map[string]string{
+				"caFilePlaceholder":             "cert",
+				"certificateKeyFilePlaceholder": "key",
+			}
+			assert.Equal(t, expectedFiles, agent.Files())
+		})
+
+		t.Run("MongoDB Auth Database", func(t *testing.T) {
+			agent.AgentType = models.MongoDBExporterType
+			// reset values from the previous test
+			agent.MongoDBOptions.TLSCertificateKeyFilePassword = ""
+			agent.MongoDBOptions.AuthenticationMechanism = "MONGO-X509"
+			agent.MongoDBOptions.AuthenticationDatabase = "$external"
+
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?authMechanism=MONGO-X509&authSource=%24external&connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?authMechanism=MONGO-X509&authSource=%24external&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, 0, "", nil))
 			expectedFiles := map[string]string{
 				"caFilePlaceholder":             "cert",
 				"certificateKeyFilePlaceholder": "key",
@@ -225,7 +244,7 @@ func TestPostgresAgentTLS(t *testing.T) {
 }
 
 func TestPostgresWithSocket(t *testing.T) {
-	t.Run("empty-passowrd", func(t *testing.T) {
+	t.Run("empty-password", func(t *testing.T) {
 		agent := &models.Agent{
 			Username:      pointer.ToString("username"),
 			AgentType:     models.PostgresExporterType,
@@ -239,7 +258,7 @@ func TestPostgresWithSocket(t *testing.T) {
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
-	t.Run("empty-user-passowrd", func(t *testing.T) {
+	t.Run("empty-user-password", func(t *testing.T) {
 		agent := &models.Agent{
 			AgentType: models.PostgresExporterType,
 		}
@@ -263,7 +282,7 @@ func TestPostgresWithSocket(t *testing.T) {
 }
 
 func TestMongoWithSocket(t *testing.T) {
-	t.Run("empty-passowrd", func(t *testing.T) {
+	t.Run("empty-password", func(t *testing.T) {
 		agent := &models.Agent{
 			Username:      pointer.ToString("username"),
 			AgentType:     models.MongoDBExporterType,
@@ -277,7 +296,7 @@ func TestMongoWithSocket(t *testing.T) {
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
-	t.Run("empty-user-passowrd", func(t *testing.T) {
+	t.Run("empty-user-password", func(t *testing.T) {
 		agent := &models.Agent{
 			AgentType: models.MongoDBExporterType,
 		}

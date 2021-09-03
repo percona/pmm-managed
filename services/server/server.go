@@ -56,7 +56,7 @@ const platformAPITimeout = 10 * time.Second
 type Server struct {
 	db                   *reform.DB
 	vmdb                 prometheusService
-	r                    agentsRegistry
+	agentsState          agentsStateUpdater
 	vmalert              vmAlertService
 	vmalertExternalRules vmAlertExternalRules
 	alertmanager         alertmanagerService
@@ -68,7 +68,6 @@ type Server struct {
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
-	backupService        backupService
 
 	l *logrus.Entry
 
@@ -93,7 +92,7 @@ type pmmUpdateAuth struct {
 // Params holds the parameters needed to create a new service.
 type Params struct {
 	DB                   *reform.DB
-	AgentsRegistry       agentsRegistry
+	AgentsStateUpdater   agentsStateUpdater
 	VMDB                 prometheusService
 	VMAlert              prometheusService
 	Alertmanager         alertmanagerService
@@ -106,7 +105,6 @@ type Params struct {
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
-	BackupService        backupService
 }
 
 // NewServer returns new server for Server service.
@@ -120,7 +118,7 @@ func NewServer(params *Params) (*Server, error) {
 	s := &Server{
 		db:                   params.DB,
 		vmdb:                 params.VMDB,
-		r:                    params.AgentsRegistry,
+		agentsState:          params.AgentsStateUpdater,
 		vmalert:              params.VMAlert,
 		alertmanager:         params.Alertmanager,
 		checksService:        params.ChecksService,
@@ -429,7 +427,7 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 // convertSettings merges database settings and settings from environment variables into API response.
 func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 	res := &serverpb.Settings{
-		UpdatesDisabled:  s.envSettings.DisableUpdates,
+		UpdatesDisabled:  settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
 		MetricsResolutions: &serverpb.MetricsResolutions{
 			Hr: durationpb.New(settings.MetricsResolutions.HR),
@@ -522,6 +520,10 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// check request parameters compatibility with environment variables
 
+	if req.EnableUpdates && s.envSettings.DisableUpdates {
+		return status.Error(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
+	}
+
 	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
 	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
@@ -582,6 +584,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		metricsRes := req.MetricsResolutions
 		sttCheckIntervals := req.SttCheckIntervals
 		settingsParams := &models.ChangeSettingsParams{
+			DisableUpdates:   req.DisableUpdates,
+			EnableUpdates:    req.EnableUpdates,
 			DisableTelemetry: req.DisableTelemetry,
 			EnableTelemetry:  req.EnableTelemetry,
 			STTCheckIntervals: models.STTCheckIntervals{
@@ -722,7 +726,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
-		if err := s.r.UpdateAgentsState(ctx); err != nil {
+		if err := s.agentsState.UpdateAgentsState(ctx); err != nil {
 			return nil, err
 		}
 	}

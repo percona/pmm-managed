@@ -3,6 +3,7 @@ module github.com/percona/pmm-managed
 go 1.16
 
 // Use for local development, but do not commit:
+// replace github.com/percona/pmm => ../pmm
 // replace github.com/percona-platform/saas => ../saas
 // replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
@@ -17,7 +18,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
-	github.com/aws/aws-sdk-go v1.33.10
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.0
 	github.com/go-co-op/gocron v1.6.1
@@ -34,7 +35,7 @@ require (
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/percona-platform/dbaas-api v0.0.0-20210820115744-de9e856c9932
-	github.com/percona-platform/saas v0.0.0-20210628125953-5bf84e6eefa0
+	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
 	github.com/percona/pmm v0.0.0-20210728114037-d8628961080b
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1

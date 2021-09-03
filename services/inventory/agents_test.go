@@ -34,6 +34,7 @@ import (
 )
 
 func TestAgents(t *testing.T) {
+
 	t.Run("Basic", func(t *testing.T) {
 		// FIXME split this test into several smaller
 
@@ -46,8 +47,8 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -95,6 +96,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedNodeExporter, actualAgent)
 
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		s, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
@@ -355,7 +357,7 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedNode, node)
 
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "pmm-server")
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "pmm-server")
 
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
@@ -447,8 +449,8 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -498,7 +500,7 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
 
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
@@ -534,8 +536,8 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -586,8 +588,8 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -603,6 +605,8 @@ func TestAgents(t *testing.T) {
 			Connected:    true,
 		}
 		assert.Equal(t, expectedPMMAgent, pmmAgent)
+
+		ss.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
 		s, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
@@ -652,7 +656,7 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedNode, node)
 
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "pmm-server")
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "pmm-server")
 
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
@@ -677,7 +681,7 @@ func TestAgents(t *testing.T) {
 	t.Run("PushMetricsExternalExporter", func(t *testing.T) {
 		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
-		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "pmm-server")
+		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "pmm-server")
 
 		service, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
 			ServiceName:   "External service",

@@ -86,6 +86,8 @@ type MongoDBOptions struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
 	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
 	TLSCa                         string `json:"tls_ca"`
+	AuthenticationMechanism       string `json:"authentication_mechanism"`
+	AuthenticationDatabase        string `json:"authentication_database"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -147,6 +149,7 @@ type Agent struct {
 
 	Username      *string `reform:"username"`
 	Password      *string `reform:"password"`
+	AgentPassword *string `reform:"agent_password"`
 	TLS           bool    `reform:"tls"`
 	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 
@@ -220,6 +223,16 @@ func (s *Agent) GetCustomLabels() (map[string]string, error) {
 // SetCustomLabels encodes custom labels.
 func (s *Agent) SetCustomLabels(m map[string]string) error {
 	return setLabels(m, &s.CustomLabels)
+}
+
+// GetAgentPassword returns agent password, if it is empty then agent ID.
+func (s *Agent) GetAgentPassword() string {
+	password := s.AgentID
+	if pointer.GetString(s.AgentPassword) != "" {
+		password = *s.AgentPassword
+	}
+
+	return password
 }
 
 // UnifiedLabels returns combined standard and custom labels with empty labels removed.
@@ -388,17 +401,23 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			if s.TLSSkipVerify {
 				q.Add("tlsInsecure", "true")
 			}
+		}
 
-			if s.MongoDBOptions != nil {
-				if s.MongoDBOptions.TLSCertificateKey != "" {
-					q.Add("tlsCertificateKeyFile", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
-				}
-				if s.MongoDBOptions.TLSCertificateKeyFilePassword != "" {
-					q.Add("tlsCertificateKeyFilePassword", s.MongoDBOptions.TLSCertificateKeyFilePassword)
-				}
-				if s.MongoDBOptions.TLSCa != "" {
-					q.Add("tlsCaFile", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
-				}
+		if s.MongoDBOptions != nil {
+			if s.MongoDBOptions.TLSCertificateKey != "" {
+				q.Add("tlsCertificateKeyFile", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
+			}
+			if s.MongoDBOptions.TLSCertificateKeyFilePassword != "" {
+				q.Add("tlsCertificateKeyFilePassword", s.MongoDBOptions.TLSCertificateKeyFilePassword)
+			}
+			if s.MongoDBOptions.TLSCa != "" {
+				q.Add("tlsCaFile", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
+			}
+			if s.MongoDBOptions.AuthenticationMechanism != "" {
+				q.Add("authMechanism", s.MongoDBOptions.AuthenticationMechanism)
+			}
+			if s.MongoDBOptions.AuthenticationDatabase != "" {
+				q.Add("authSource", s.MongoDBOptions.AuthenticationDatabase)
 			}
 		}
 
