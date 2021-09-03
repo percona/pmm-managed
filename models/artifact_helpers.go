@@ -196,13 +196,9 @@ func (p *CreateArtifactParams) Validate() error {
 	if p.ServiceID == "" {
 		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
 	}
-	switch p.Mode {
-	case Snapshot:
-	case Incremental:
-	case "":
-		return errors.Wrap(ErrInvalidArgument, "backup mode shouldn't be empty")
-	default:
-		return errors.Wrapf(ErrInvalidArgument, "unknown backup mode: %s", p.Mode)
+
+	if err := p.Mode.Validate(); err != nil {
+		return err
 	}
 
 	if err := p.DataModel.Validate(); err != nil {

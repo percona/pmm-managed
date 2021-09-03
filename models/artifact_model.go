@@ -98,7 +98,21 @@ type BackupMode string
 const (
 	Snapshot    BackupMode = "snapshot"
 	Incremental BackupMode = "incremental"
+	PITR        BackupMode = "pitr"
 )
+
+// Validate validates backup mode.
+func (m BackupMode) Validate() error {
+	switch m {
+	case Snapshot:
+	case Incremental:
+	case PITR:
+	default:
+		return errors.Wrapf(ErrInvalidArgument, "invalid backup mode '%s'", m)
+	}
+
+	return nil
+}
 
 // Artifact represents result of a backup.
 //reform:artifacts

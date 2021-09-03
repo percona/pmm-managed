@@ -99,6 +99,9 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			if params.DataModel != models.LogicalDataModel {
 				return errors.New("the only supported data model for mongoDB is logical")
 			}
+			if params.Mode != models.Snapshot && params.Mode != models.PITR {
+				return errors.New("the only supported backups mode for mongoDB is snapshot and PITR")
+			}
 			jobType = models.MongoDBBackupJob
 
 			// For incremental backups we can reuse same artifact entity, at least for MongoDB.

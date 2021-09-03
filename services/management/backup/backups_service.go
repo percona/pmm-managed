@@ -162,6 +162,9 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			backupParams.DataModel = models.PhysicalDataModel
 			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
 		case models.MongoDBServiceType:
+			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT && req.Mode != backupv1beta1.BackupMode_PITR {
+				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mongoDB: %s", req.Mode.String())
+			}
 			if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, svc.ServiceID, "", mode); err != nil {
 				return status.Errorf(codes.FailedPrecondition, "Can't create scheduled backup for "+
 					"service %s: %v", svc.ServiceName, err)
@@ -453,6 +456,8 @@ func convertBackupModeToModel(mode backupv1beta1.BackupMode) (models.BackupMode,
 		return models.Snapshot, nil
 	case backupv1beta1.BackupMode_INCREMENTAL:
 		return models.Incremental, nil
+	case backupv1beta1.BackupMode_PITR:
+		return models.PITR, nil
 	case backupv1beta1.BackupMode_BACKUP_MODE_INVALID:
 		return "", status.Errorf(codes.InvalidArgument, "invalid backup mode: %s", mode.String())
 	default:
@@ -466,6 +471,8 @@ func convertModelToBackupMode(mode models.BackupMode) (backupv1beta1.BackupMode,
 		return backupv1beta1.BackupMode_SNAPSHOT, nil
 	case models.Incremental:
 		return backupv1beta1.BackupMode_INCREMENTAL, nil
+	case models.PITR:
+		return backupv1beta1.BackupMode_PITR, nil
 	default:
 		return 0, errors.Errorf("unknown backup mode: %s", mode)
 	}
@@ -473,8 +480,8 @@ func convertModelToBackupMode(mode models.BackupMode) (backupv1beta1.BackupMode,
 
 func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID, scheduleID string, mode models.BackupMode) error {
 	switch mode {
-	case models.Incremental:
-		// Incremental backup can be enabled only if there is no other scheduled backups.
+	case models.PITR:
+		// PITR backup can be enabled only if there is no other scheduled backups.
 		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
 			Disabled:  pointer.ToBool(false),
 			ServiceID: serviceID,
@@ -485,7 +492,7 @@ func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID, sche
 
 		for _, task := range tasks {
 			if task.ID != scheduleID {
-				return errors.New("incremental backup can be enabled only if there is no other scheduled backups enabled")
+				return errors.New("PITR backup can be enabled only if there is no other scheduled backups enabled")
 			}
 		}
 	case models.Snapshot:
@@ -493,14 +500,14 @@ func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID, sche
 		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
 			Disabled:  pointer.ToBool(false),
 			ServiceID: serviceID,
-			Mode:      models.Incremental,
+			Mode:      models.PITR,
 		})
 		if err != nil {
 			return err
 		}
 
 		if len(tasks) != 0 {
-			return errors.New("snapshot backup can be enabled it there is no enabled incremental backup")
+			return errors.New("snapshot backup can be enabled it there is no enabled PITR backup")
 		}
 	}
 

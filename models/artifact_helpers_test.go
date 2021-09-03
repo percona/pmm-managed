@@ -274,7 +274,7 @@ func TestArtifactValidation(t *testing.T) {
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.PendingBackupStatus,
 			},
-			errorMsg: "backup mode shouldn't be empty: invalid argument",
+			errorMsg: "invalid backup mode '': invalid argument",
 		},
 		{
 			name: "invalid data model",
@@ -313,7 +313,7 @@ func TestArtifactValidation(t *testing.T) {
 				Status:     models.PendingBackupStatus,
 				Mode:       models.BackupMode("invalid"),
 			},
-			errorMsg: "unknown backup mode: invalid: invalid argument",
+			errorMsg: "invalid backup mode 'invalid': invalid argument",
 		},
 	}
 
