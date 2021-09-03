@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -104,6 +105,9 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			}
 			jobType = models.MongoDBBackupJob
 
+			if err = checkMongoBackupPreconditions(tx.Querier, svc, params.Mode, params.ScheduleID); err != nil {
+				return err
+			}
 			// For incremental backups we can reuse same artifact entity, at least for MongoDB.
 			artifact, err = models.FindArtifactByName(tx.Querier, name)
 			if err != nil && status.Code(err) != codes.NotFound {
@@ -174,6 +178,28 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 	}
 
 	return artifact.ID, nil
+}
+
+func checkMongoBackupPreconditions(q *reform.Querier, service *models.Service, mode models.BackupMode, scheduleID string) error {
+	tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
+		Disabled:  pointer.ToBool(false),
+		ServiceID: service.ServiceID,
+		Mode:      models.Incremental,
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(tasks) != 0 {
+		for _, task := range tasks {
+			if task.ID != scheduleID {
+				return status.Errorf(codes.FailedPrecondition, "Can't perform backup because service %s has configured scheduled "+
+					"incremental backups. Please disable them if you want to perform manual backup.", service.ServiceName)
+			}
+		}
+	}
+
+	return nil
 }
 
 type prepareRestoreJobParams struct {
