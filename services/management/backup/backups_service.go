@@ -187,7 +187,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			StartAt:        t,
 		})
 		if err != nil {
-			return status.Errorf(codes.InvalidArgument, "Couldn't schedule backup: %v", err)
+			return err
 		}
 
 		id = scheduledTask.ID
