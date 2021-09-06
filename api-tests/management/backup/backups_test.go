@@ -86,12 +86,13 @@ func TestScheduleBackup(t *testing.T) {
 			CronExpression: "0 1 1 1 1",
 			Name:           "testing",
 			Description:    "testing",
+			Mode:           pointer.ToString(backups.ScheduleBackupBodyModeSNAPSHOT),
 			Enabled:        false,
 		},
 		Context: pmmapitests.Context,
 	})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEmpty(t, backupRes.Payload.ScheduledBackupID)
 
 	body := backups.ChangeScheduledBackupBody{
@@ -105,15 +106,14 @@ func TestScheduleBackup(t *testing.T) {
 		Body:    body,
 		Context: pmmapitests.Context,
 	})
-
-	assert.NoError(t, err)
-	assert.NotNil(t, changeRes)
+	require.NoError(t, err)
+	assert.NotEmpty(t, changeRes)
 
 	listRes, err := client.ListScheduledBackups(&backups.ListScheduledBackupsParams{
 		Context: pmmapitests.Context,
 	})
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
 	var backup *backups.ScheduledBackupsItems0
 	for _, b := range listRes.Payload.ScheduledBackups {
 		if b.ScheduledBackupID == backupRes.Payload.ScheduledBackupID {
@@ -121,7 +121,6 @@ func TestScheduleBackup(t *testing.T) {
 			break
 		}
 	}
-
 	require.NotNil(t, backup)
 
 	// Assert change
@@ -136,7 +135,7 @@ func TestScheduleBackup(t *testing.T) {
 		},
 		Context: pmmapitests.Context,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	find := func(id string, backups []*backups.ScheduledBackupsItems0) *backups.ScheduledBackupsItems0 {
 		for _, b := range backups {
@@ -149,8 +148,8 @@ func TestScheduleBackup(t *testing.T) {
 	listRes, err = client.ListScheduledBackups(&backups.ListScheduledBackupsParams{
 		Context: pmmapitests.Context,
 	})
-	assert.NoError(t, err)
-	require.NotNil(t, listRes)
+	require.NoError(t, err)
+	assert.NotEmpty(t, listRes)
 
 	deleted := find(backupRes.Payload.ScheduledBackupID, listRes.Payload.ScheduledBackups)
 	assert.Nil(t, deleted, "scheduled backup %s is not deleted", backupRes.Payload.ScheduledBackupID)
