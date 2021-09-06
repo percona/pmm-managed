@@ -198,12 +198,6 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
-type installedComponentsVersion struct {
-	kuberentesClusterName string
-	pxcOperatorVersion    string
-	psmdbOperatorVersion  string
-}
-
 func (c componentsService) installedOperatorsVersion(ctx context.Context, wg *sync.WaitGroup, responseCh chan installedComponentsVersion, kuberentesCluster *models.KubernetesCluster) {
 	defer wg.Done()
 	resp, err := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kuberentesCluster.KubeConfig)

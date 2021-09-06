@@ -71,8 +71,6 @@ type dbaasClient interface {
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
-	// GetLatestOperatorVersion returns latest operators versions available based on given params.
-	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
 	// GetNextDatabaseVersion returns version that is a direct successor of currently installed version.
 	GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error)
 	// GetVersionServiceURL version service used by version service client.

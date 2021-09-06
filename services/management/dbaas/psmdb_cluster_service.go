@@ -86,7 +86,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 	if err != nil {
 		return nil, err
 	}
-	operatorVersion := checkResponse.Operators.Psmdb.Version
+	operatorVersion := checkResponse.Operators.PsmdbOperatorVersion
 
 	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {

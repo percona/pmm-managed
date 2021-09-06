@@ -77,7 +77,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 	if err != nil {
 		return nil, err
 	}
-	operatorVersion := checkResponse.Operators.Xtradb.Version
+	operatorVersion := checkResponse.Operators.XtradbOperatorVersion
 
 	clusters := make([]*dbaasv1beta1.ListXtraDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
