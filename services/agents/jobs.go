@@ -346,7 +346,7 @@ func (s *JobsService) StartMongoDBBackupJob(
 		Address:    dbConfig.Address,
 		Port:       int32(dbConfig.Port),
 		Socket:     dbConfig.Socket,
-		EnablePitr: mode == models.Incremental,
+		EnablePitr: mode == models.PITR,
 	}
 
 	switch {
