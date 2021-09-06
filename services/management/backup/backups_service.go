@@ -306,7 +306,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Enabled != nil {
 			params.Disable = pointer.ToBool(!req.Enabled.Value)
 			if scheduledTask.Type == models.ScheduledMongoDBBackupTask && !req.Enabled.Value {
-				disablePITR = data.Mode == models.Incremental
+				disablePITR = data.Mode == models.PITR
 			}
 		}
 
