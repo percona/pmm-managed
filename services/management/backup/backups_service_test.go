@@ -162,7 +162,6 @@ func TestScheduledBackups(t *testing.T) {
 		task, err := models.CreateScheduledTask(db.Querier, models.CreateScheduledTaskParams{
 			CronExpression: "* * * * *",
 			Type:           models.ScheduledMySQLBackupTask,
-			Data:           models.ScheduledTaskData{},
 		})
 		require.NoError(t, err)
 
