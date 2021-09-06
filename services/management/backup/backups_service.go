@@ -131,7 +131,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		return nil, err
 	}
 
-	errTx := s.db.InTransaction(func(tx *reform.TX) error {
+	errTx := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
@@ -164,10 +164,6 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		case models.MongoDBServiceType:
 			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT && req.Mode != backupv1beta1.BackupMode_PITR {
 				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mongoDB: %s", req.Mode.String())
-			}
-			if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, svc.ServiceID, "", mode); err != nil {
-				return status.Errorf(codes.FailedPrecondition, "Can't create scheduled backup for "+
-					"service %s: %v", svc.ServiceName, err)
 			}
 			backupParams.DataModel = models.LogicalDataModel
 			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
@@ -265,7 +261,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	var serviceID string
 
 	errTx := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduledBackupId)
+		scheduledTask, err := models.FindScheduledTaskByID(tx.Querier, req.ScheduledBackupId)
 		if err != nil {
 			return err
 		}
@@ -309,17 +305,8 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 
 		if req.Enabled != nil {
 			params.Disable = pointer.ToBool(!req.Enabled.Value)
-
-			if scheduledTask.Type == models.ScheduledMongoDBBackupTask {
-				if req.Enabled.Value {
-					// check mongoDB specific requirements before enabling scheduled backups
-					if err = checkScheduledMongoDBBackupPreconditions(tx.Querier, serviceID, scheduledTask.ID, data.Mode); err != nil {
-						return status.Errorf(codes.FailedPrecondition, err.Error())
-					}
-				} else {
-					// on mongoDB incremental backup disabling switch-off PITR
-					disablePITR = data.Mode == models.Incremental
-				}
+			if scheduledTask.Type == models.ScheduledMongoDBBackupTask && !req.Enabled.Value {
+				disablePITR = data.Mode == models.Incremental
 			}
 		}
 
@@ -355,7 +342,7 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 		// nothing
 	case models.ScheduledMongoDBBackupTask:
 		// for enabled incremental mongoDB backups switch-off PITR
-		disablePITR = task.Data.MongoDBBackupTask.Mode == models.Incremental && !task.Disabled
+		disablePITR = task.Data.MongoDBBackupTask.Mode == models.PITR && !task.Disabled
 	default:
 		return nil, errors.Errorf("non-backup task: %s", task.Type)
 	}
@@ -476,42 +463,6 @@ func convertModelToBackupMode(mode models.BackupMode) (backupv1beta1.BackupMode,
 	default:
 		return 0, errors.Errorf("unknown backup mode: %s", mode)
 	}
-}
-
-func checkScheduledMongoDBBackupPreconditions(q *reform.Querier, serviceID, scheduleID string, mode models.BackupMode) error {
-	switch mode {
-	case models.PITR:
-		// PITR backup can be enabled only if there is no other scheduled backups.
-		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
-			Disabled:  pointer.ToBool(false),
-			ServiceID: serviceID,
-		})
-		if err != nil {
-			return err
-		}
-
-		for _, task := range tasks {
-			if task.ID != scheduleID {
-				return errors.New("PITR backup can be enabled only if there is no other scheduled backups enabled")
-			}
-		}
-	case models.Snapshot:
-		// Snapshot backup can be enabled it there is no enabled incremental backup.
-		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
-			Disabled:  pointer.ToBool(false),
-			ServiceID: serviceID,
-			Mode:      models.PITR,
-		})
-		if err != nil {
-			return err
-		}
-
-		if len(tasks) != 0 {
-			return errors.New("snapshot backup can be enabled it there is no enabled PITR backup")
-		}
-	}
-
-	return nil
 }
 
 // Check interfaces.

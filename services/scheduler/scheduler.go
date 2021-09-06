@@ -18,8 +18,12 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
 
@@ -81,9 +85,12 @@ type AddParams struct {
 // Add adds task to scheduler and save it to DB.
 func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
-	var err error
+	errTx := s.db.InTransactionContext(s.db.Querier.Context(), &sql.TxOptions{Isolation: sql.LevelSerializable}, func(tx *reform.TX) error {
+		var err error
+		if err = checkPreconditions(tx.Querier, task.Data(), !params.Disabled, ""); err != nil {
+			return err
+		}
 
-	err = s.db.InTransaction(func(tx *reform.TX) error {
 		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
 			CronExpression: params.CronExpression,
 			StartAt:        params.StartAt,
@@ -95,7 +102,7 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			return err
 		}
 
-		if err := s.addDBTask(scheduledTask); err != nil {
+		if err = s.addDBTask(scheduledTask); err != nil {
 			return err
 		}
 
@@ -120,7 +127,7 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 
 		return nil
 	})
-	return scheduledTask, err
+	return scheduledTask, errTx
 }
 
 // Remove stops task specified by id and removes it from DB and scheduler.
@@ -151,8 +158,12 @@ func (s *Service) Remove(id string) error {
 
 // Update changes scheduled task in DB and re-add it to scheduler.
 func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) error {
-	return s.db.InTransaction(func(tx *reform.TX) error {
-		dbTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
+	return s.db.InTransactionContext(s.db.Querier.Context(), &sql.TxOptions{Isolation: sql.LevelSerializable}, func(tx *reform.TX) error {
+		if err := checkPreconditions(tx.Querier, params.Data, !pointer.GetBool(params.Disable), id); err != nil {
+			return err
+		}
+
+		scheduledTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
 		if err != nil {
 			return err
 		}
@@ -162,7 +173,7 @@ func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) err
 		_ = s.scheduler.RemoveByTag(id)
 		s.mx.Unlock()
 
-		return s.addDBTask(dbTask)
+		return s.addDBTask(scheduledTask)
 	})
 }
 
@@ -329,4 +340,52 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 
 	task.SetID(dbTask.ID)
 	return task, nil
+}
+
+func checkPreconditions(q *reform.Querier, data *models.ScheduledTaskData, enabled bool, scheduledTaskID string) error {
+	switch {
+	case data.MySQLBackupTask != nil:
+	case data.MongoDBBackupTask != nil:
+		data := data.MongoDBBackupTask
+		if enabled {
+			return checkMongoDBBackupPreconditions(q, data.Mode, data.ServiceID, scheduledTaskID)
+		}
+	}
+	return nil
+}
+
+func checkMongoDBBackupPreconditions(q *reform.Querier, mode models.BackupMode, serviceID, scheduleID string) error {
+	switch mode {
+	case models.PITR:
+		// PITR backup can be enabled only if there is no other scheduled backups.
+		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
+			Disabled:  pointer.ToBool(false),
+			ServiceID: serviceID,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, task := range tasks {
+			if task.ID != scheduleID {
+				return status.Error(codes.FailedPrecondition, "Scheduled PITR backup can be enabled only if there is no other scheduled backups enabled.")
+			}
+		}
+	case models.Snapshot:
+		// Snapshot backup can be enabled it there is no enabled PITR backup.
+		tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
+			Disabled:  pointer.ToBool(false),
+			ServiceID: serviceID,
+			Mode:      models.PITR,
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(tasks) != 0 {
+			return status.Error(codes.FailedPrecondition, "Scheduled snapshot backup can be enabled only if there is no enabled PITR backup.")
+		}
+	}
+
+	return nil
 }

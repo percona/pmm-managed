@@ -63,7 +63,6 @@ type PerformBackupParams struct {
 
 // PerformBackup starts on-demand backup.
 func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams) (string, error) {
-	var err error
 	var artifact *models.Artifact
 	var location *models.BackupLocation
 	var svc *models.Service
@@ -71,6 +70,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		var err error
 		svc, err = models.FindServiceByID(tx.Querier, params.ServiceID)
 		if err != nil {
 			return err
@@ -89,29 +89,34 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 		var jobType models.JobType
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
+			jobType = models.MySQLBackupJob
+
 			if params.DataModel != models.PhysicalDataModel {
 				return errors.New("the only supported data model for mySQL is physical")
 			}
 			if params.Mode != models.Snapshot {
 				return errors.New("the only supported backup mode for mySQL is snapshot")
 			}
-			jobType = models.MySQLBackupJob
 		case models.MongoDBServiceType:
+			jobType = models.MongoDBBackupJob
+
 			if params.DataModel != models.LogicalDataModel {
 				return errors.New("the only supported data model for mongoDB is logical")
 			}
 			if params.Mode != models.Snapshot && params.Mode != models.PITR {
 				return errors.New("the only supported backups mode for mongoDB is snapshot and PITR")
 			}
-			jobType = models.MongoDBBackupJob
 
-			if err = checkMongoBackupPreconditions(tx.Querier, svc, params.Mode, params.ScheduleID); err != nil {
+			if err = checkMongoBackupPreconditions(tx.Querier, svc, params.ScheduleID); err != nil {
 				return err
 			}
-			// For incremental backups we can reuse same artifact entity, at least for MongoDB.
-			artifact, err = models.FindArtifactByName(tx.Querier, name)
-			if err != nil && status.Code(err) != codes.NotFound {
-				return err
+
+			// For PITR backups reuse existing artifact if it's present.
+			if params.Mode == models.PITR {
+				artifact, err = models.FindArtifactByName(tx.Querier, name)
+				if err != nil && status.Code(err) != codes.NotFound {
+					return err
+				}
 			}
 
 		case models.PostgreSQLServiceType,
@@ -144,8 +149,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			}
 		}
 
-		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType, params.Mode, params.Retries, params.RetryInterval)
-		if err != nil {
+		if job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, jobType, params.Mode, params.Retries, params.RetryInterval); err != nil {
 			return err
 		}
 		return nil
@@ -160,6 +164,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 		S3Config:        location.S3Config,
 	}
 
+	var err error
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
 		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig)
@@ -180,22 +185,20 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 	return artifact.ID, nil
 }
 
-func checkMongoBackupPreconditions(q *reform.Querier, service *models.Service, mode models.BackupMode, scheduleID string) error {
+func checkMongoBackupPreconditions(q *reform.Querier, service *models.Service, scheduleID string) error {
 	tasks, err := models.FindScheduledTasks(q, models.ScheduledTasksFilter{
 		Disabled:  pointer.ToBool(false),
 		ServiceID: service.ServiceID,
-		Mode:      models.Incremental,
+		Mode:      models.PITR,
 	})
 	if err != nil {
 		return err
 	}
 
-	if len(tasks) != 0 {
-		for _, task := range tasks {
-			if task.ID != scheduleID {
-				return status.Errorf(codes.FailedPrecondition, "Can't perform backup because service %s has configured scheduled "+
-					"incremental backups. Please disable them if you want to perform manual backup.", service.ServiceName)
-			}
+	for _, task := range tasks {
+		if task.ID != scheduleID {
+			return status.Errorf(codes.FailedPrecondition, "Can't perform backup because service %s has configured scheduled "+
+				"PITR backups. Please disable them if you want to perform other backup.", service.ServiceName)
 		}
 	}
 
@@ -312,7 +315,7 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 		if len(agents) == 0 {
 			return errors.Errorf("cannot find pmm agent for service %s", serviceID)
 		}
-		pmmAgentID := agents[0].AgentID
+		pmmAgentID = agents[0].AgentID
 		res, err = models.CreateActionResult(s.db.Querier, pmmAgentID)
 		if err != nil {
 			return err

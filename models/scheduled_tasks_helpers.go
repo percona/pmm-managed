@@ -127,7 +127,7 @@ type CreateScheduledTaskParams struct {
 	StartAt        time.Time
 	NextRun        time.Time
 	Type           ScheduledTaskType
-	Data           ScheduledTaskData
+	Data           *ScheduledTaskData
 	Disabled       bool
 }
 
@@ -164,7 +164,7 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 		StartAt:        params.StartAt,
 		NextRun:        params.NextRun,
 		Type:           params.Type,
-		Data:           &params.Data,
+		Data:           params.Data,
 	}
 	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)

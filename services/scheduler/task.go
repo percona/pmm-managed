@@ -28,7 +28,7 @@ import (
 type Task interface {
 	Run(ctx context.Context) error
 	Type() models.ScheduledTaskType
-	Data() models.ScheduledTaskData
+	Data() *models.ScheduledTaskData
 	ID() string
 	SetID(string)
 }
@@ -92,8 +92,8 @@ func (t *mySQLBackupTask) Type() models.ScheduledTaskType {
 	return models.ScheduledMySQLBackupTask
 }
 
-func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
-	return models.ScheduledTaskData{
+func (t *mySQLBackupTask) Data() *models.ScheduledTaskData {
+	return &models.ScheduledTaskData{
 		MySQLBackupTask: &models.MySQLBackupTaskData{
 			CommonBackupTaskData: models.CommonBackupTaskData{
 				ServiceID:     t.ServiceID,
@@ -143,8 +143,8 @@ func (t *mongoBackupTask) Type() models.ScheduledTaskType {
 	return models.ScheduledMongoDBBackupTask
 }
 
-func (t *mongoBackupTask) Data() models.ScheduledTaskData {
-	return models.ScheduledTaskData{
+func (t *mongoBackupTask) Data() *models.ScheduledTaskData {
+	return &models.ScheduledTaskData{
 		MongoDBBackupTask: &models.MongoBackupTaskData{
 			CommonBackupTaskData: models.CommonBackupTaskData{
 				ServiceID:     t.ServiceID,
