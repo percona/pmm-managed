@@ -601,8 +601,8 @@ var databaseSchema = [][]string{
 		`CREATE TABLE job_logs (
 			job_id VARCHAR NOT NULL,
 			chunk_id INTEGER NOT NULL,
-			message BYTEA NOT NULL,
-			PRIMARY KEY (job_id),
+			message TEXT NOT NULL,
+			created_at TIMESTAMP NOT NULL,
 			FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE,
 			UNIQUE (job_id, chunk_id)
 		)`,

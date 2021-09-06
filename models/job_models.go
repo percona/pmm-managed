@@ -148,25 +148,16 @@ func (r *Job) AfterFind() error {
 // JobLog stores chunk of logs from job.
 //reform:job_logs
 type JobLog struct {
-	JobID     string    `reform:"id,pk"`
+	JobID     string    `reform:"job_id"`
 	ChunkID   int       `reform:"chunk_id"`
-	Message   []byte    `reform:"message"`
+	Message   string    `reform:"message"`
 	CreatedAt time.Time `reform:"created_at"`
-	UpdatedAt time.Time `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 func (r *JobLog) BeforeInsert() error {
 	now := Now()
 	r.CreatedAt = now
-	r.UpdatedAt = now
-
-	return nil
-}
-
-// BeforeUpdate implements reform.BeforeUpdater interface.
-func (r *JobLog) BeforeUpdate() error {
-	r.UpdatedAt = Now()
 
 	return nil
 }
@@ -174,7 +165,6 @@ func (r *JobLog) BeforeUpdate() error {
 // AfterFind implements reform.AfterFinder interface.
 func (r *JobLog) AfterFind() error {
 	r.CreatedAt = r.CreatedAt.UTC()
-	r.UpdatedAt = r.UpdatedAt.UTC()
 
 	return nil
 }
@@ -185,6 +175,5 @@ var (
 	_ reform.BeforeUpdater  = (*Job)(nil)
 	_ reform.AfterFinder    = (*Job)(nil)
 	_ reform.BeforeInserter = (*JobLog)(nil)
-	_ reform.BeforeUpdater  = (*JobLog)(nil)
 	_ reform.AfterFinder    = (*JobLog)(nil)
 )

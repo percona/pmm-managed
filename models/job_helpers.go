@@ -91,19 +91,20 @@ func CleanupOldJobs(q *reform.Querier, olderThan time.Time) error {
 	_, err := q.DeleteFrom(JobTable, " WHERE updated_at <= $1", olderThan)
 	return err
 }
+
 // CreateJobLogParams are params for creating a new job jog.
 type CreateJobLogParams struct {
-	JobID string
+	JobID   string
 	ChunkID int
-	Message []byte
+	Message string
 }
 
 // CreateJobLog inserts new chunk log.
 func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error) {
 	log := &JobLog{
-		JobID:     params.JobID,
-		ChunkID:   params.ChunkID,
-		Message:   params.Message,
+		JobID:   params.JobID,
+		ChunkID: params.ChunkID,
+		Message: params.Message,
 	}
 	if err := q.Insert(log); err != nil {
 		return nil, errors.WithStack(err)

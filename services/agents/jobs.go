@@ -285,6 +285,20 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 	return err
 }
 
+func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.JobProgress) {
+	switch result := progress.Result.(type) {
+	case *agentpb.JobProgress_Logs_:
+		_, err := models.CreateJobLog(s.db.Querier, models.CreateJobLogParams{
+			JobID:   progress.JobId,
+			ChunkID: int(result.Logs.ChunkId),
+			Message: string(result.Logs.Message),
+		})
+		if err != nil {
+			s.l.WithError(err).Errorf("failed to create log for job %s [chunk: %d]", progress.JobId, result.Logs.ChunkId)
+		}
+	}
+}
+
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
 func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time.Duration, name string, dbConfig *models.DBConfig, locationConfig *models.BackupLocationConfig) error {
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{

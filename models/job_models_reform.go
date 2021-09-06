@@ -181,72 +181,59 @@ var (
 	_ fmt.Stringer  = (*Job)(nil)
 )
 
-type jobLogTableType struct {
+type jobLogViewType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *jobLogTableType) Schema() string {
+func (v *jobLogViewType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("job_logs").
-func (v *jobLogTableType) Name() string {
+func (v *jobLogViewType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *jobLogTableType) Columns() []string {
+func (v *jobLogViewType) Columns() []string {
 	return []string{
-		"id",
+		"job_id",
 		"chunk_id",
 		"message",
 		"created_at",
-		"updated_at",
 	}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *jobLogTableType) NewStruct() reform.Struct {
+func (v *jobLogViewType) NewStruct() reform.Struct {
 	return new(JobLog)
 }
 
-// NewRecord makes a new record for that table.
-func (v *jobLogTableType) NewRecord() reform.Record {
-	return new(JobLog)
-}
-
-// PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *jobLogTableType) PKColumnIndex() uint {
-	return uint(v.s.PKFieldIndex)
-}
-
-// JobLogTable represents job_logs view or table in SQL database.
-var JobLogTable = &jobLogTableType{
+// JobLogView represents job_logs view or table in SQL database.
+var JobLogView = &jobLogViewType{
 	s: parse.StructInfo{
 		Type:    "JobLog",
 		SQLName: "job_logs",
 		Fields: []parse.FieldInfo{
-			{Name: "JobID", Type: "string", Column: "id"},
+			{Name: "JobID", Type: "string", Column: "job_id"},
 			{Name: "ChunkID", Type: "int", Column: "chunk_id"},
-			{Name: "Message", Type: "[]uint8", Column: "message"},
+			{Name: "Message", Type: "string", Column: "message"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
-			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
-		PKFieldIndex: 0,
+		PKFieldIndex: -1,
 	},
 	z: new(JobLog).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s JobLog) String() string {
-	res := make([]string, 5)
+	res := make([]string, 4)
 	res[0] = "JobID: " + reform.Inspect(s.JobID, true)
 	res[1] = "ChunkID: " + reform.Inspect(s.ChunkID, true)
 	res[2] = "Message: " + reform.Inspect(s.Message, true)
 	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -258,7 +245,6 @@ func (s *JobLog) Values() []interface{} {
 		s.ChunkID,
 		s.Message,
 		s.CreatedAt,
-		s.UpdatedAt,
 	}
 }
 
@@ -270,54 +256,22 @@ func (s *JobLog) Pointers() []interface{} {
 		&s.ChunkID,
 		&s.Message,
 		&s.CreatedAt,
-		&s.UpdatedAt,
 	}
 }
 
 // View returns View object for that struct.
 func (s *JobLog) View() reform.View {
-	return JobLogTable
-}
-
-// Table returns Table object for that record.
-func (s *JobLog) Table() reform.Table {
-	return JobLogTable
-}
-
-// PKValue returns a value of primary key for that record.
-// Returned interface{} value is never untyped nil.
-func (s *JobLog) PKValue() interface{} {
-	return s.JobID
-}
-
-// PKPointer returns a pointer to primary key field for that record.
-// Returned interface{} value is never untyped nil.
-func (s *JobLog) PKPointer() interface{} {
-	return &s.JobID
-}
-
-// HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *JobLog) HasPK() bool {
-	return s.JobID != JobLogTable.z[JobLogTable.s.PKFieldIndex]
-}
-
-// SetPK sets record primary key, if possible.
-//
-// Deprecated: prefer direct field assignment where possible: s.JobID = pk.
-func (s *JobLog) SetPK(pk interface{}) {
-	reform.SetPK(s, pk)
+	return JobLogView
 }
 
 // check interfaces
 var (
-	_ reform.View   = JobLogTable
+	_ reform.View   = JobLogView
 	_ reform.Struct = (*JobLog)(nil)
-	_ reform.Table  = JobLogTable
-	_ reform.Record = (*JobLog)(nil)
 	_ fmt.Stringer  = (*JobLog)(nil)
 )
 
 func init() {
 	parse.AssertUpToDate(&JobTable.s, new(Job))
-	parse.AssertUpToDate(&JobLogTable.s, new(JobLog))
+	parse.AssertUpToDate(&JobLogView.s, new(JobLog))
 }
