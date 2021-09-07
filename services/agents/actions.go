@@ -412,7 +412,6 @@ func (s *ActionsService) StartPTSummaryAction(ctx context.Context, id, pmmAgentI
 }
 
 // StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
-// The function returns nil if ok, otherwise an error code
 func (s *ActionsService) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	actionRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -436,7 +435,6 @@ func (s *ActionsService) StartPTPgSummaryAction(ctx context.Context, id, pmmAgen
 }
 
 // StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
-// The function returns nil if ok, otherwise an error code
 func (s *ActionsService) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
@@ -489,7 +487,6 @@ func (s *ActionsService) StartPTMySQLSummaryAction(ctx context.Context, id, pmmA
 }
 
 // StartPBMSwitchPITRActions starts pbm-switch-pitr action on the pmm-agent.
-// The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPBMSwitchPITRActions(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,

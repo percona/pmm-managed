@@ -148,7 +148,7 @@ func FindArtifactByName(q *reform.Querier, name string) (*Artifact, error) {
 	case nil:
 		return artifact, nil
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Artifact with name %q not found.", name)
+		return nil, errors.Wrapf(ErrNotFound, "artifact with name %q not found.", name)
 	default:
 		return nil, errors.WithStack(err)
 	}

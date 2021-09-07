@@ -114,7 +114,7 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 			// For PITR backups reuse existing artifact if it's present.
 			if params.Mode == models.PITR {
 				artifact, err = models.FindArtifactByName(tx.Querier, name)
-				if err != nil && status.Code(err) != codes.NotFound {
+				if err != nil && !errors.Is(err, models.ErrNotFound) {
 					return err
 				}
 			}
@@ -292,13 +292,13 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 // SwitchMongoPITR switches Point-in-Time recovery feature for mongoDB with given serviceID.
 func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error {
 	var res *models.ActionResult
-	var pmmAgentID, DSN string
+	var pmmAgentID, dsn string
 	var agent *models.Agent
 	var service *models.Service
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		var err error
-		service, err = models.FindServiceByID(s.db.Querier, serviceID)
+		service, err = models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
 			return err
 		}
@@ -308,7 +308,7 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 				"given service id: %s, service type: %s", serviceID, service.ServiceType)
 		}
 
-		agents, err := models.FindPMMAgentsForService(s.db.Querier, serviceID)
+		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
 		if err != nil {
 			return err
 		}
@@ -316,12 +316,12 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 			return errors.Errorf("cannot find pmm agent for service %s", serviceID)
 		}
 		pmmAgentID = agents[0].AgentID
-		res, err = models.CreateActionResult(s.db.Querier, pmmAgentID)
+		res, err = models.CreateActionResult(tx.Querier, pmmAgentID)
 		if err != nil {
 			return err
 		}
 
-		DSN, agent, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, serviceID, pmmAgentID, "")
+		dsn, agent, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, "")
 		if err != nil {
 			return err
 		}
@@ -335,7 +335,7 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 		ctx,
 		res.ID,
 		pmmAgentID,
-		DSN,
+		dsn,
 		agent.Files(),
 		agent.TemplateDelimiters(service),
 		enabled)

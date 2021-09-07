@@ -157,13 +157,13 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
 			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT {
-				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mySQL: %s", req.Mode.String())
+				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for MySQL: %s", req.Mode.String())
 			}
 			backupParams.DataModel = models.PhysicalDataModel
 			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
 		case models.MongoDBServiceType:
 			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT && req.Mode != backupv1beta1.BackupMode_PITR {
-				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for mongoDB: %s", req.Mode.String())
+				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for MongoDB: %s", req.Mode.String())
 			}
 			backupParams.DataModel = models.LogicalDataModel
 			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
