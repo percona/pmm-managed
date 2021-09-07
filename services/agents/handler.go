@@ -179,7 +179,7 @@ func (h *Handler) updateAgentStatusForChildren(ctx context.Context, agentID stri
 			return errors.Wrap(err, "failed to get pmm-agent's child agents")
 		}
 		for _, agent := range agents {
-			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, uint32(*agent.ListenPort)); err != nil {
+			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, uint32(pointer.GetUint16(agent.ListenPort))); err != nil {
 				return errors.Wrap(err, "failed to update agent's status")
 			}
 		}
