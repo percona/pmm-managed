@@ -327,8 +327,49 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 }
 
 // GetLogs returns logs for artifact.
-func (s *BackupsService) GetLogs(ctx context.Context, request *backupv1beta1.GetLogsRequest) (*backupv1beta1.GetLogsResponse, error) {
-	panic("implement me")
+func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogsRequest) (*backupv1beta1.GetLogsResponse, error) {
+	jobs, err := models.FindJobs(s.db.Querier, models.JobsFilter{
+		ArtifactID: req.ArtifactId,
+		Types: []models.JobType{
+			models.MySQLBackupJob,
+			models.MongoDBBackupJob,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(jobs) == 0 {
+		return nil, errors.New("job related to artifact was not found")
+	}
+	if len(jobs) > 1 {
+		s.l.Warnf("artifact %s appear in more than one job", req.ArtifactId)
+	}
+
+	filter := models.JobLogsFilter{
+		JobID:       jobs[0].ID,
+		FromChunkID: int(req.FromChunk),
+	}
+	if req.Limit > 0 {
+		filter.Limit = pointer.ToInt(int(req.Limit))
+	}
+
+	jobLogs, err := models.FindJobLogs(s.db.Querier, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	logs := make([]*backupv1beta1.LogChunk, len(jobLogs))
+	for i := range jobLogs {
+		logs[i] = &backupv1beta1.LogChunk{
+			ChunkId:   uint32(jobLogs[i].ChunkID),
+			Message:   jobLogs[i].Message,
+			LastChunk: jobLogs[i].LastChunk,
+		}
+	}
+
+	return &backupv1beta1.GetLogsResponse{
+		Logs: logs,
+	}, nil
 }
 
 func convertTaskToScheduledBackup(task *models.ScheduledTask,
