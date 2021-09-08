@@ -62,11 +62,11 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
 	if req.Retries > maxRetriesAttempts {
-		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
 	}
 
 	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
@@ -106,11 +106,11 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 	var id string
 
 	if req.Retries > maxRetriesAttempts {
-		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
@@ -256,13 +256,13 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 	if req.Retries != nil {
 		if req.Retries.Value > maxRetriesAttempts {
-			return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+			return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
 		}
 		data.Retries = req.Retries.Value
 	}
 	if req.RetryInterval != nil {
 		if req.RetryInterval.AsDuration() > maxRetryInterval {
-			return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+			return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
 		}
 		data.RetryInterval = req.RetryInterval.AsDuration()
 	}
@@ -339,7 +339,7 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 		return nil, err
 	}
 	if len(jobs) == 0 {
-		return nil, errors.New("job related to artifact was not found")
+		return nil, status.Error(codes.NotFound, "job related to artifact was not found")
 	}
 	if len(jobs) > 1 {
 		s.l.Warnf("artifact %s appear in more than one job", req.ArtifactId)
