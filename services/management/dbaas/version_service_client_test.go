@@ -258,11 +258,7 @@ func TestOperatorVersionGetting(t *testing.T) {
 func TestGetNextDatabaseVersion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	response := &VersionServiceResponse{
-		Versions: []struct {
-			Product        string `json:"product"`
-			ProductVersion string `json:"operator"`
-			Matrix         matrix `json:"matrix"`
-		}{
+		Versions: []Version{
 			{
 				ProductVersion: "1.8.0",
 				Product:        pxcOperator,
@@ -287,7 +283,7 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 			},
 		},
 	}
-	c, cleanup := newFakeVersionService(response, "5899")
+	c, cleanup := newFakeVersionService(response, "5899", pxcOperator, psmdbOperator)
 	t.Cleanup(func() { cleanup(t); cancel() })
 	t.Run("Update available", func(t *testing.T) {
 		t.Parallel()
