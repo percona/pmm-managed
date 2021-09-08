@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -49,7 +48,6 @@ import (
 
 const (
 	templatesDir = "/srv/ia/templates"
-	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 )
 
 // templateInfo represents alerting rule template information from various sources.
@@ -98,10 +96,9 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 		templates:         make(map[string]templateInfo),
 	}
 
-	// TODO: same code exists in check service, move it to a better place.
-	if k := os.Getenv(envPublicKey); k != "" {
-		s.publicKeys = strings.Split(k, ",")
+	if k := envvars.GetPublicKeys(); k != nil {
 		l.Warnf("Public keys changed to %q.", k)
+		s.publicKeys = k
 	}
 
 	return s, nil

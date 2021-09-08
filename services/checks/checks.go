@@ -50,7 +50,6 @@ const (
 	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envCheckFile         = "PERCONA_TEST_CHECKS_FILE"
 	envResendInterval    = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 	envDisableStartDelay = "PERCONA_TEST_CHECKS_DISABLE_START_DELAY"
@@ -149,10 +148,9 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		}, []string{"service_type", "check_type"}),
 	}
 
-	// TODO: same code exists in templates service, move it to a better place.
-	if k := os.Getenv(envPublicKey); k != "" {
-		s.publicKeys = strings.Split(k, ",")
+	if k := envvars.GetPublicKeys(); k != nil {
 		l.Warnf("Public keys changed to %q.", k)
+		s.publicKeys = k
 	}
 	if d, _ := strconv.ParseBool(os.Getenv(envDisableStartDelay)); d {
 		l.Warn("Start delay disabled.")
