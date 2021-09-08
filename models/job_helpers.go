@@ -111,3 +111,48 @@ func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error)
 	}
 	return log, nil
 }
+
+// JobLogsFilter represents filter for job logs.
+type JobLogsFilter struct {
+	JobID       string
+	FromChunkID int
+	Limit       *int
+}
+
+// FindJobLogs returns logs that belongs to job.
+func FindJobLogs(q *reform.Querier, filters JobLogsFilter) ([]*JobLog, error) {
+	args := []interface{}{
+		filters.JobID,
+		filters.FromChunkID,
+	}
+	tail := "WHERE job_id = $1 AND chunk_id >= $2 ORDER BY chunk_id"
+	if filters.Limit != nil {
+		tail += " LIMIT $3"
+		args = append(args, *filters.Limit)
+	}
+	rows, err := q.SelectAllFrom(JobLogView, tail, args...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select artifacts")
+	}
+
+	logs := make([]*JobLog, 0, len(rows))
+	for _, r := range rows {
+		logs = append(logs, r.(*JobLog))
+	}
+	return logs, nil
+}
+
+// SetJobLogLastChunk sets last chunk of job log.
+func SetJobLogLastChunk(q *reform.Querier, jobID string) (*JobLog, error) {
+	var jobLog JobLog
+	err := q.SelectOneTo(&jobLog, "WHERE job_id = $1 ORDER BY chunk_id DESC LIMIT 1", jobID)
+	if err != nil {
+		return nil, err
+	}
+	_, err = q.Exec("UPDATE job_logs SET last_chunk = True WHERE job_id = $1 AND chunk_id = $2", jobLog.JobID, jobLog.ChunkID)
+	if err != nil {
+		return nil, err
+	}
+	jobLog.LastChunk = true
+	return &jobLog, nil
+}

@@ -202,6 +202,7 @@ func (v *jobLogViewType) Columns() []string {
 		"job_id",
 		"chunk_id",
 		"message",
+		"last_chunk",
 		"created_at",
 	}
 }
@@ -220,6 +221,7 @@ var JobLogView = &jobLogViewType{
 			{Name: "JobID", Type: "string", Column: "job_id"},
 			{Name: "ChunkID", Type: "int", Column: "chunk_id"},
 			{Name: "Message", Type: "string", Column: "message"},
+			{Name: "LastChunk", Type: "bool", Column: "last_chunk"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 		},
 		PKFieldIndex: -1,
@@ -229,11 +231,12 @@ var JobLogView = &jobLogViewType{
 
 // String returns a string representation of this struct or record.
 func (s JobLog) String() string {
-	res := make([]string, 4)
+	res := make([]string, 5)
 	res[0] = "JobID: " + reform.Inspect(s.JobID, true)
 	res[1] = "ChunkID: " + reform.Inspect(s.ChunkID, true)
 	res[2] = "Message: " + reform.Inspect(s.Message, true)
-	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[3] = "LastChunk: " + reform.Inspect(s.LastChunk, true)
+	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -244,6 +247,7 @@ func (s *JobLog) Values() []interface{} {
 		s.JobID,
 		s.ChunkID,
 		s.Message,
+		s.LastChunk,
 		s.CreatedAt,
 	}
 }
@@ -255,6 +259,7 @@ func (s *JobLog) Pointers() []interface{} {
 		&s.JobID,
 		&s.ChunkID,
 		&s.Message,
+		&s.LastChunk,
 		&s.CreatedAt,
 	}
 }

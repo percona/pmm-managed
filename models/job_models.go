@@ -151,6 +151,7 @@ type JobLog struct {
 	JobID     string    `reform:"job_id"`
 	ChunkID   int       `reform:"chunk_id"`
 	Message   string    `reform:"message"`
+	LastChunk bool      `reform:"last_chunk"`
 	CreatedAt time.Time `reform:"created_at"`
 }
 

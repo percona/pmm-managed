@@ -602,6 +602,7 @@ var databaseSchema = [][]string{
 			job_id VARCHAR NOT NULL,
 			chunk_id INTEGER NOT NULL,
 			message TEXT NOT NULL,
+			last_chunk BOOLEAN NOT NULL,
 			created_at TIMESTAMP NOT NULL,
 			FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE,
 			UNIQUE (job_id, chunk_id)

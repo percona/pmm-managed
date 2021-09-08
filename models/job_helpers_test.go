@@ -1,0 +1,167 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package models_test
+
+import (
+	"testing"
+	"time"
+
+	"github.com/AlekSi/pointer"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/testdb"
+)
+
+func TestJobLogs(t *testing.T) {
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, tx.Rollback())
+		require.NoError(t, sqlDB.Close())
+	})
+
+	job1, err := models.CreateJob(tx.Querier, models.CreateJobParams{
+		PMMAgentID: "pmmagent",
+		Type:       models.MongoDBBackupJob,
+		Data:       &models.JobData{},
+	})
+	require.NoError(t, err)
+
+	job2, err := models.CreateJob(tx.Querier, models.CreateJobParams{
+		PMMAgentID: "pmmagent",
+		Type:       models.MongoDBBackupJob,
+		Data:       &models.JobData{},
+	})
+	require.NoError(t, err)
+
+	createRequests := []models.CreateJobLogParams{
+		{
+			JobID:   job1.ID,
+			ChunkID: 0,
+			Message: "some log",
+		},
+		{
+			JobID:   job1.ID,
+			ChunkID: 1,
+			Message: "another log",
+		},
+		{
+			JobID:   job2.ID,
+			ChunkID: 0,
+			Message: "some log",
+		},
+	}
+
+	t.Run("create", func(t *testing.T) {
+		for _, req := range createRequests {
+			log, err := models.CreateJobLog(tx.Querier, req)
+			assert.NoError(t, err)
+			assert.Equal(t, req.JobID, log.JobID)
+			assert.Equal(t, req.ChunkID, log.ChunkID)
+			assert.Equal(t, req.Message, log.Message)
+			assert.False(t, log.LastChunk)
+		}
+	})
+
+	t.Run("set last chunk", func(t *testing.T) {
+		log, err := models.SetJobLogLastChunk(tx.Querier, job1.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, job1.ID, log.JobID)
+		assert.Equal(t, createRequests[1].ChunkID, log.ChunkID)
+		assert.True(t, log.LastChunk)
+	})
+
+	t.Run("find", func(t *testing.T) {
+		type expectLog struct {
+			JobID   string
+			ChunkID int
+		}
+		type testCase struct {
+			Filters models.JobLogsFilter
+			Expect  []expectLog
+		}
+		testCases := []testCase{
+			{
+				Filters: models.JobLogsFilter{
+					JobID: job1.ID,
+				},
+				Expect: []expectLog{
+					{
+						JobID:   job1.ID,
+						ChunkID: 0,
+					},
+					{
+						JobID:   job1.ID,
+						ChunkID: 1,
+					},
+				},
+			},
+			{
+				Filters: models.JobLogsFilter{
+					JobID: job1.ID,
+					Limit: pointer.ToInt(1),
+				},
+				Expect: []expectLog{
+					{
+						JobID:   job1.ID,
+						ChunkID: 0,
+					},
+				},
+			},
+			{
+				Filters: models.JobLogsFilter{
+					JobID:       job1.ID,
+					FromChunkID: 1,
+					Limit:       pointer.ToInt(1),
+				},
+				Expect: []expectLog{
+					{
+						JobID:   job1.ID,
+						ChunkID: 1,
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			logs, err := models.FindJobLogs(tx.Querier, tc.Filters)
+			assert.NoError(t, err)
+			require.Len(t, logs, len(tc.Expect))
+			for i := range logs {
+				assert.Equal(t, tc.Expect[i].JobID, logs[i].JobID)
+				assert.Equal(t, tc.Expect[i].ChunkID, logs[i].ChunkID)
+			}
+		}
+	})
+
+	t.Run("delete job", func(t *testing.T) {
+		require.NoError(t, models.CleanupOldJobs(tx.Querier, time.Now()))
+		for _, jobID := range []string{job1.ID, job2.ID} {
+			logs, err := models.FindJobLogs(tx.Querier, models.JobLogsFilter{
+				JobID: jobID,
+			})
+			assert.NoError(t, err)
+			assert.Len(t, logs, 0)
+		}
+	})
+}
