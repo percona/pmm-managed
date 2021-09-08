@@ -17,6 +17,8 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,6 +43,56 @@ func FindJobByID(q *reform.Querier, id string) (*Job, error) {
 	default:
 		return nil, errors.WithStack(err)
 	}
+}
+
+// JobsFilter represents filter for jobs.
+type JobsFilter struct {
+	ArtifactID string
+	Types      []JobType
+}
+
+// FindJobs returns logs satisfying filters.
+func FindJobs(q *reform.Querier, filters JobsFilter) ([]*Job, error) {
+	var args []interface{}
+	var andConds []string
+	idx := 1
+	if len(filters.Types) > 0 {
+		p := strings.Join(q.Placeholders(idx, len(filters.Types)), ", ")
+		for _, fType := range filters.Types {
+			args = append(args, fType)
+		}
+		idx += len(filters.Types)
+		andConds = append(andConds, fmt.Sprintf("type IN (%s)", p))
+	}
+
+	crossJoin := false
+	if filters.ArtifactID != "" {
+		crossJoin = true
+		andConds = append(andConds, "value ->> 'artifact_id' = "+q.Placeholder(idx))
+		args = append(args, filters.ArtifactID)
+	}
+
+	var tail strings.Builder
+	if crossJoin {
+		tail.WriteString("CROSS JOIN jsonb_each(data) ")
+	}
+
+	if len(andConds) > 0 {
+		tail.WriteString("WHERE ")
+		tail.WriteString(strings.Join(andConds, " AND "))
+		tail.WriteRune(' ')
+	}
+	tail.WriteString("ORDER BY created_at DESC")
+
+	structs, err := q.SelectAllFrom(JobTable, tail.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	jobs := make([]*Job, len(structs))
+	for i, s := range structs {
+		jobs[i] = s.(*Job)
+	}
+	return jobs, nil
 }
 
 // CreateJobParams are params for creating a new job.

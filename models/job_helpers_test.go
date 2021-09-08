@@ -17,6 +17,8 @@
 package models_test
 
 import (
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -30,6 +32,100 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
+func TestJobs(t *testing.T) {
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, tx.Rollback())
+		require.NoError(t, sqlDB.Close())
+	})
+
+	t.Run("create", func(t *testing.T) {
+		createJobParams := models.CreateJobParams{
+			PMMAgentID: "agentid",
+			Type:       models.MongoDBBackupJob,
+			Data: &models.JobData{
+				MongoDBBackup: &models.MongoDBBackupJobData{
+					ServiceID:  "svc",
+					ArtifactID: "artifactid",
+				},
+			},
+			Timeout:  time.Second,
+			Interval: time.Second,
+			Retries:  3,
+		}
+		job, err := models.CreateJob(tx.Querier, createJobParams)
+		assert.NoError(t, err)
+		assert.Equal(t, createJobParams.PMMAgentID, job.PMMAgentID)
+		assert.Equal(t, createJobParams.Type, job.Type)
+		assert.Equal(t, createJobParams.Timeout, job.Timeout)
+		assert.Equal(t, createJobParams.Interval, job.Interval)
+		assert.Equal(t, createJobParams.Retries, job.Retries)
+		require.NotNil(t, job.Data.MongoDBBackup)
+		assert.Equal(t, createJobParams.Data.MongoDBBackup.ServiceID, job.Data.MongoDBBackup.ServiceID)
+		assert.Equal(t, createJobParams.Data.MongoDBBackup.ArtifactID, job.Data.MongoDBBackup.ArtifactID)
+
+		job, err = models.CreateJob(tx.Querier, models.CreateJobParams{Type: "unknown"})
+		assert.EqualError(t, err, "unknown job type: unknown")
+	})
+
+	t.Run("find", func(t *testing.T) {
+		findTX, err := db.Begin()
+		require.NoError(t, err)
+		defer findTX.Rollback()
+
+		const jobsCount = 3
+		jobs := make([]*models.Job, 0, jobsCount)
+		for i := 0; i < jobsCount; i++ {
+			id := strconv.Itoa(i)
+			job, err := models.CreateJob(findTX.Querier, models.CreateJobParams{
+				PMMAgentID: "agentid",
+				Type:       models.MongoDBBackupJob,
+				Data: &models.JobData{
+					MongoDBBackup: &models.MongoDBBackupJobData{
+						ServiceID:  "svc_" + id,
+						ArtifactID: "artifact_" + id,
+					},
+				},
+			})
+			require.NoError(t, err)
+			jobs = append(jobs, job)
+		}
+
+		type testCase struct {
+			Filters models.JobsFilter
+			Expect  []string
+		}
+
+		testCases := []testCase{
+			{
+				Filters: models.JobsFilter{},
+				Expect:  []string{jobs[0].ID, jobs[1].ID, jobs[2].ID},
+			},
+			{
+				Filters: models.JobsFilter{
+					ArtifactID: jobs[0].Data.MongoDBBackup.ArtifactID,
+				},
+				Expect: []string{jobs[0].ID},
+			},
+		}
+
+		for _, tc := range testCases {
+			jobs, err := models.FindJobs(findTX.Querier, tc.Filters)
+			assert.NoError(t, err)
+			ids := make([]string, len(jobs))
+			for i := range jobs {
+				ids[i] = jobs[i].ID
+			}
+			sort.Strings(tc.Expect)
+			sort.Strings(ids)
+			assert.Equal(t, tc.Expect, ids)
+		}
+	})
+
+}
 func TestJobLogs(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
