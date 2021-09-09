@@ -685,14 +685,12 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		var countDatabases int
 		err = db.QueryRow(`SELECT COUNT(*) FROM pg_database WHERE datname = $1`, databaseName).Scan(&countDatabases)
 		if err != nil {
-			fmt.Println("SELECT COUNT(*)")
 			return nil, errors.WithStack(err)
 		}
 
 		if countDatabases == 0 {
 			_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
 			if err != nil {
-				fmt.Println("CREATE DATABASE")
 				return nil, errors.WithStack(err)
 			}
 		}
@@ -700,20 +698,17 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		var countRoles int
 		err = db.QueryRow(`SELECT COUNT(*) FROM pg_roles WHERE rolname=$1`, roleName).Scan(&countRoles)
 		if err != nil {
-			fmt.Println("SELECT COUNT(*)")
 			return nil, errors.WithStack(err)
 		}
 
 		if countRoles == 0 {
 			_, err = db.Exec(fmt.Sprintf(`CREATE USER "%s" LOGIN PASSWORD '%s'`, roleName, params.Password))
 			if err != nil {
-				fmt.Println("CREATE USER")
 				return nil, errors.WithStack(err)
 			}
 
 			_, err = db.Exec(`GRANT ALL PRIVILEGES ON DATABASE $1 TO $2`, databaseName, roleName)
 			if err != nil {
-				fmt.Println("GRANT ALL")
 				return nil, errors.WithStack(err)
 			}
 		}
