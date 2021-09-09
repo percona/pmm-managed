@@ -675,7 +675,6 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		if params.Logf != nil {
 			params.Logf("Creating database %s and role %s", databaseName, roleName)
 		}
-		
 		// we use empty password/db and postgres user for creating database
 		db, err := OpenDB(params.Addr, "", "postgres", "")
 		if err != nil {
