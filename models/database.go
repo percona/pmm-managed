@@ -644,7 +644,7 @@ const (
 // SetupDBParams represents SetupDB parameters.
 type SetupDBParams struct {
 	Logf             reform.Printf
-	Addr             string
+	Address          string
 	Name             string
 	Username         string
 	Password         string
@@ -676,7 +676,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 			params.Logf("Creating database %s and role %s", databaseName, roleName)
 		}
 		// we use empty password/db and postgres user for creating database
-		db, err := OpenDB(params.Addr, "", "postgres", "")
+		db, err := OpenDB(params.Address, "", "postgres", "")
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

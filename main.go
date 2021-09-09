@@ -423,7 +423,7 @@ func runDebugServer(ctx context.Context) {
 type setupDeps struct {
 	sqlDB        *sql.DB
 	dbName       string
-	dbAddr       string
+	dbAddress    string
 	dbUsername   string
 	dbPassword   string
 	supervisord  *supervisord.Service
@@ -440,7 +440,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	db, err := models.SetupDB(deps.sqlDB, &models.SetupDBParams{
 		Logf:          deps.l.Debugf,
 		Name:          deps.dbName,
-		Addr:          deps.dbAddr,
+		Address:       deps.dbAddress,
 		Username:      deps.dbUsername,
 		Password:      deps.dbPassword,
 		SetupFixtures: models.SetupFixtures,
@@ -719,7 +719,7 @@ func main() {
 	deps := &setupDeps{
 		sqlDB:        sqlDB,
 		dbName:       *postgresDBNameF,
-		dbAddr:       *postgresAddrF,
+		dbAddress:    *postgresAddrF,
 		dbUsername:   *postgresDBUsernameF,
 		dbPassword:   *postgresDBPasswordF,
 		supervisord:  supervisord,
