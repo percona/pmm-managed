@@ -644,7 +644,7 @@ const (
 // SetupDBParams represents SetupDB parameters.
 type SetupDBParams struct {
 	Logf             reform.Printf
-	Addr         	 string
+	Addr             string
 	Name             string
 	Username         string
 	Password         string
@@ -666,14 +666,18 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	}
 	var currentVersion int
 	errDB := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" { // invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+
+	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" {
+		// invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
 		var databaseName = params.Name
 		var roleName = params.Username
 
 		if params.Logf != nil {
 			params.Logf("Creating database %s and role %s", databaseName, roleName)
 		}
-		db, err := OpenDB(params.Addr, "", "postgres", "") // we use empty password/db and postgres user for creating database
+		
+		// we use empty password/db and postgres user for creating database
+		db, err := OpenDB(params.Addr, "", "postgres", "")
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
