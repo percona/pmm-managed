@@ -644,6 +644,8 @@ const (
 // SetupDBParams represents SetupDB parameters.
 type SetupDBParams struct {
 	Logf             reform.Printf
+	Addr         	 string
+	Name             string
 	Username         string
 	Password         string
 	SetupFixtures    SetupFixturesMode
@@ -665,13 +667,13 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	var currentVersion int
 	errDB := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
 	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" { // invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
-		var databaseName = params.Username
+		var databaseName = params.Name
 		var roleName = params.Username
 
 		if params.Logf != nil {
 			params.Logf("Creating database %s and role %s", databaseName, roleName)
 		}
-		db, err := OpenDB("127.0.0.1:5432", "", "postgres", "")
+		db, err := OpenDB(params.Addr, "", "postgres", "") // we use empty password/db and postgres user for creating database
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -680,12 +682,14 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		var countDatabases int
 		err = db.QueryRow(`SELECT COUNT(*) FROM pg_database WHERE datname = $1`, databaseName).Scan(&countDatabases)
 		if err != nil {
+			fmt.Println("SELECT COUNT(*)")
 			return nil, errors.WithStack(err)
 		}
 
 		if countDatabases == 0 {
 			_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
 			if err != nil {
+				fmt.Println("CREATE DATABASE")
 				return nil, errors.WithStack(err)
 			}
 		}
@@ -693,17 +697,20 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		var countRoles int
 		err = db.QueryRow(`SELECT COUNT(*) FROM pg_roles WHERE rolname=$1`, roleName).Scan(&countRoles)
 		if err != nil {
+			fmt.Println("SELECT COUNT(*)")
 			return nil, errors.WithStack(err)
 		}
 
 		if countRoles == 0 {
-			_, err = db.Exec(fmt.Sprintf(`CREATE USER "%s" LOGIN PASSWORD 'md5da757ec3e22c6d86a2bb8e70307fa937'`, roleName))
+			_, err = db.Exec(fmt.Sprintf(`CREATE USER "%s" LOGIN PASSWORD '%s'`, roleName, params.Password))
 			if err != nil {
+				fmt.Println("CREATE USER")
 				return nil, errors.WithStack(err)
 			}
 
 			_, err = db.Exec(`GRANT ALL PRIVILEGES ON DATABASE $1 TO $2`, databaseName, roleName)
 			if err != nil {
+				fmt.Println("GRANT ALL")
 				return nil, errors.WithStack(err)
 			}
 		}
