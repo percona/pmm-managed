@@ -251,7 +251,7 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 }
 
 // GetNextDatabaseVersion returns version that is a direct successor of currently installed version.
-// It returns empty string if update is not available or error occured.
+// It returns empty string if update is not available or error occurred.
 func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error) {
 	// Get dependencies of operator type at given version.
 	params := componentsParams{
@@ -338,7 +338,7 @@ func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operator
 	return
 }
 
-// next direct successor of given installed version, retuns nil if there is none.
+// next direct successor of given installed version, returns nil if there is none.
 // An error is returned if any of given version can't be parsed. It's nil otherwise.
 func next(versions []string, installedVersion string) (*goversion.Version, error) {
 	if len(versions) == 0 {

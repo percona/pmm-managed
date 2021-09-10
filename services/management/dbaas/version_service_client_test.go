@@ -256,6 +256,7 @@ func TestOperatorVersionGetting(t *testing.T) {
 }
 
 func TestGetNextDatabaseVersion(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	response := &VersionServiceResponse{
 		Versions: []Version{
@@ -264,9 +265,9 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 				Product:        pxcOperator,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
-						"5.7.26-31.37":   componentVersion{},
-						"5.7.29-31.43":   componentVersion{},
-						"5.7.31-31.45.2": componentVersion{},
+						"5.7.26-31.37":   {},
+						"5.7.29-31.43":   {},
+						"5.7.31-31.45.2": {},
 					},
 				},
 			},
@@ -275,9 +276,9 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 				Product:        psmdbOperator,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
-						"3.6.19-7.0":  componentVersion{},
-						"3.6.18-5.0":  componentVersion{},
-						"3.6.23-13.0": componentVersion{},
+						"3.6.19-7.0":  {},
+						"3.6.18-5.0":  {},
+						"3.6.23-13.0": {},
 					},
 				},
 			},
