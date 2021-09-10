@@ -278,35 +278,21 @@ func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, opera
 		return "", errors.Errorf("%q operator not supported", operatorType)
 	}
 
-	// Get versions greater than currently installed one.
-	var greaterThanCurrent []*goversion.Version
-	installed, err := goversion.NewVersion(installedDBVersion)
+	// Convert slice of version structs to slice of strings so it can be used in generic function next.
+	stringVersions := make([]string, 0, len(versions))
+	for version := range versions {
+		stringVersions = append(stringVersions, version)
+	}
+
+	// Get direct successor of installed version.
+	nextVersion, err := next(stringVersions, installedDBVersion)
 	if err != nil {
 		return "", err
 	}
-	for version := range versions {
-		v, err := goversion.NewVersion(version)
-		if err != nil {
-			return "", err
-		}
-		if v.GreaterThan(installed) {
-			greaterThanCurrent = append(greaterThanCurrent, v)
-		}
-	}
-
-	if len(greaterThanCurrent) == 0 {
-		// No update available.
+	if nextVersion == nil {
 		return "", nil
 	}
-	// TODO OPTIMISE THIS THE SAME WAY AS THE NEXT OPERATOR VERSION GETTING
-	// Find lowest version.
-	lowestVersion := greaterThanCurrent[0]
-	for i := 1; i < len(greaterThanCurrent); i++ {
-		if greaterThanCurrent[i].LessThan(lowestVersion) {
-			lowestVersion = greaterThanCurrent[i]
-		}
-	}
-	return lowestVersion.String(), nil
+	return nextVersion.String(), nil
 }
 
 // GetVersionServiceURL returns base URL for version service currently used
@@ -339,14 +325,22 @@ func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operator
 		return
 	}
 
+	// Convert slice of version structs to slice of strings so it can be used in generic function next.
+	versions := make([]string, 0, len(matrix.Versions))
+	for _, version := range matrix.Versions {
+		versions = append(versions, version.ProductVersion)
+	}
+
 	// Find next versions if installed.
 	if installedVersion != "" {
-		return next(matrix.Versions, installedVersion)
+		return next(versions, installedVersion)
 	}
 	return
 }
 
-func next(versions []Version, installedVersion string) (*goversion.Version, error) {
+// next direct successor of given installed version, retuns nil if there is none.
+// An error is returned if any of given version can't be parsed. It's nil otherwise.
+func next(versions []string, installedVersion string) (*goversion.Version, error) {
 	if len(versions) == 0 {
 		return nil, errNoVersionsFound
 	}
@@ -358,7 +352,7 @@ func next(versions []Version, installedVersion string) (*goversion.Version, erro
 	}
 
 	for _, version := range versions {
-		v, err := goversion.NewVersion(version.ProductVersion)
+		v, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
 		}
