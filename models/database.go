@@ -601,6 +601,13 @@ var databaseSchema = [][]string{
 		`ALTER TABLE artifacts
       ADD COLUMN mode VARCHAR NOT NULL CHECK (mode <> '') DEFAULT 'snapshot'`,
 		`ALTER TABLE artifacts ALTER COLUMN mode DROP DEFAULT`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mysql_backup, data_model}', '"physical"') WHERE type = 'mongodb_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mysql_backup, mode}', '"snapshot"') WHERE type = 'mongodb_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mongodb_backup, data_model}', '"logical"') WHERE type = 'mongodb_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mongodb_backup, mode}', '"snapshot"') WHERE type = 'mongodb_backup'`,
+		`UPDATE jobs SET data = jsonb_set(data::jsonb, '{mongo_db_backup, mode}', '"snapshot"') WHERE type = 'mongodb_backup'`,
+		`UPDATE jobs SET data = data - 'mongo_db_backup' || jsonb_build_object('mongodb_backup', data->'mongo_db_backup') WHERE type = 'mongodb_backup';`,
+		`UPDATE jobs SET data = data - 'mongo_db_restore_backup' || jsonb_build_object('mongodb_restore_backup', data->'mongo_db_restore_backup') WHERE type = 'mongodb_restore_backup';`,
 	},
 }
 

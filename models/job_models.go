@@ -95,8 +95,8 @@ type MongoDBRestoreBackupJobData struct {
 type JobData struct {
 	MySQLBackup          *MySQLBackupJobData          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobData   `json:"mysql_restore_backup,omitempty"`
-	MongoDBBackup        *MongoDBBackupJobData        `json:"mongo_db_backup,omitempty"`
-	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongo_db_restore_backup,omitempty"`
+	MongoDBBackup        *MongoDBBackupJobData        `json:"mongodb_backup,omitempty"`
+	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongodb_restore_backup,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
