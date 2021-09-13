@@ -142,7 +142,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			return err
 		}
 
-		backupParams := scheduler.CommonBackupTaskParams{
+		backupParams := &scheduler.BackupTaskParams{
 			ServiceID:     req.ServiceId,
 			LocationID:    req.LocationId,
 			Name:          req.Name,
@@ -156,24 +156,24 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT {
-				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for MySQL: %s", req.Mode.String())
-			}
 			backupParams.DataModel = models.PhysicalDataModel
-			task = scheduler.NewMySQLBackupTask(s.backupService, backupParams)
-		case models.MongoDBServiceType:
-			if req.Mode != backupv1beta1.BackupMode_SNAPSHOT && req.Mode != backupv1beta1.BackupMode_PITR {
-				return status.Errorf(codes.Unimplemented, "unimplemented backup mode for MongoDB: %s", req.Mode.String())
+			task, err = scheduler.NewMySQLBackupTask(backupParams)
+			if err != nil {
+				return status.Errorf(codes.InvalidArgument, "Can't create mySQL backup task: %v", err)
 			}
+		case models.MongoDBServiceType:
 			backupParams.DataModel = models.LogicalDataModel
-			task = scheduler.NewMongoBackupTask(s.backupService, backupParams)
+			task, err = scheduler.NewMongoDBBackupTask(backupParams)
+			if err != nil {
+				return status.Errorf(codes.InvalidArgument, "Can't create mongoDB backup task: %v", err)
+			}
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
 			models.ExternalServiceType:
-			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
+			return status.Errorf(codes.Unimplemented, "Unimplemented service: %s.", svc.ServiceType)
 		default:
-			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
+			return status.Errorf(codes.Unknown, "Unknown service: %s.", svc.ServiceType)
 		}
 
 		t := req.StartTime.AsTime()

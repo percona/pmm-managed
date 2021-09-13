@@ -20,17 +20,18 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/backup"
 )
 
 // Task represents task which will be run inside scheduler.
 type Task interface {
-	Run(ctx context.Context) error
+	Run(ctx context.Context, scheduler *Service) error
+	ID() string
 	Type() models.ScheduledTaskType
 	Data() *models.ScheduledTaskData
-	ID() string
-	SetID(string)
 }
 
 // common implementation for all tasks.
@@ -42,12 +43,8 @@ func (c *common) ID() string {
 	return c.id
 }
 
-func (c *common) SetID(id string) {
-	c.id = id
-}
-
-// CommonBackupTaskParams contains common fields for all backup tasks.
-type CommonBackupTaskParams struct {
+// BackupTaskParams contains common fields for all backup tasks.
+type BackupTaskParams struct {
 	ServiceID     string
 	LocationID    string
 	Name          string
@@ -59,23 +56,56 @@ type CommonBackupTaskParams struct {
 	RetryInterval time.Duration
 }
 
+func (p *BackupTaskParams) Validate() error {
+	if p.Name == "" {
+		return errors.New("backup name can't be empty")
+	}
+
+	if p.ServiceID == "" {
+		return errors.New("service id can't be empty")
+	}
+
+	if p.LocationID == "" {
+		return errors.New("location id can't be empty")
+	}
+
+	if err := p.DataModel.Validate(); err != nil {
+		return err
+	}
+
+	if err := p.Mode.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type mySQLBackupTask struct {
-	*common
-	backupService backupService
-	CommonBackupTaskParams
+	common
+	*BackupTaskParams
 }
 
 // NewMySQLBackupTask create new task for mysql backup.
-func NewMySQLBackupTask(backupService backupService, params CommonBackupTaskParams) Task {
-	return &mySQLBackupTask{
-		common:                 &common{},
-		backupService:          backupService,
-		CommonBackupTaskParams: params,
+func NewMySQLBackupTask(params *BackupTaskParams) (Task, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
 	}
+
+	if params.Mode != models.Snapshot {
+		return nil, errors.Errorf("unsupported backup mode for mySQL: %s", params.Mode)
+	}
+
+	if params.DataModel != models.PhysicalDataModel {
+		return nil, errors.Errorf("unsupported backup data model for mySQL: %s", params.DataModel)
+	}
+
+	return &mySQLBackupTask{
+		BackupTaskParams: params,
+	}, nil
 }
 
-func (t *mySQLBackupTask) Run(ctx context.Context) error {
-	_, err := t.backupService.PerformBackup(ctx, backup.PerformBackupParams{
+func (t *mySQLBackupTask) Run(ctx context.Context, scheduler *Service) error {
+	_, err := scheduler.backupService.PerformBackup(ctx, backup.PerformBackupParams{
 		ServiceID:     t.ServiceID,
 		LocationID:    t.LocationID,
 		Name:          t.Name,
@@ -110,23 +140,32 @@ func (t *mySQLBackupTask) Data() *models.ScheduledTaskData {
 	}
 }
 
-type mongoBackupTask struct {
-	*common
-	backupService backupService
-	CommonBackupTaskParams
+type mongoDBBackupTask struct {
+	common
+	*BackupTaskParams
 }
 
-// NewMongoBackupTask create new task for mongo backup.
-func NewMongoBackupTask(backupService backupService, params CommonBackupTaskParams) Task {
-	return &mongoBackupTask{
-		common:                 &common{},
-		backupService:          backupService,
-		CommonBackupTaskParams: params,
+// NewMongoDBBackupTask create new task for mongo backup.
+func NewMongoDBBackupTask(params *BackupTaskParams) (Task, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
 	}
+
+	if params.Mode != models.Snapshot && params.Mode != models.PITR {
+		return nil, errors.Errorf("unsupported backup mode for mongoDB: %s", params.Mode)
+	}
+
+	if params.DataModel != models.LogicalDataModel {
+		return nil, errors.Errorf("unsupported backup data model for mongoDB: %s", params.DataModel)
+	}
+
+	return &mongoDBBackupTask{
+		BackupTaskParams: params,
+	}, nil
 }
 
-func (t *mongoBackupTask) Run(ctx context.Context) error {
-	_, err := t.backupService.PerformBackup(ctx, backup.PerformBackupParams{
+func (t *mongoDBBackupTask) Run(ctx context.Context, scheduler *Service) error {
+	_, err := scheduler.backupService.PerformBackup(ctx, backup.PerformBackupParams{
 		ServiceID:     t.ServiceID,
 		LocationID:    t.LocationID,
 		Name:          t.Name,
@@ -139,11 +178,11 @@ func (t *mongoBackupTask) Run(ctx context.Context) error {
 	return err
 }
 
-func (t *mongoBackupTask) Type() models.ScheduledTaskType {
+func (t *mongoDBBackupTask) Type() models.ScheduledTaskType {
 	return models.ScheduledMongoDBBackupTask
 }
 
-func (t *mongoBackupTask) Data() *models.ScheduledTaskData {
+func (t *mongoDBBackupTask) Data() *models.ScheduledTaskData {
 	return &models.ScheduledTaskData{
 		MongoDBBackupTask: &models.MongoBackupTaskData{
 			CommonBackupTaskData: models.CommonBackupTaskData{

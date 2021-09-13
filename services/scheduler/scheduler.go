@@ -256,7 +256,7 @@ func (s *Service) wrapTask(task Task, id string) func() {
 			l.Errorf("failed to change running state: %v", err)
 		}
 
-		taskErr := task.Run(ctx)
+		taskErr := task.Run(ctx, s)
 		if taskErr != nil {
 			l.Error(taskErr)
 		}
@@ -308,37 +308,45 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	switch dbTask.Type {
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
-		params := CommonBackupTaskParams{
-			ServiceID:     data.ServiceID,
-			LocationID:    data.LocationID,
-			Name:          data.Name,
-			Description:   data.Description,
-			DataModel:     data.DataModel,
-			Mode:          data.Mode,
-			Retention:     data.Retention,
-			Retries:       data.Retries,
-			RetryInterval: data.RetryInterval,
+		task = &mySQLBackupTask{
+			common: common{
+				id: dbTask.ID,
+			},
+			BackupTaskParams: &BackupTaskParams{
+				ServiceID:     data.ServiceID,
+				LocationID:    data.LocationID,
+				Name:          data.Name,
+				Description:   data.Description,
+				DataModel:     data.DataModel,
+				Mode:          data.Mode,
+				Retention:     data.Retention,
+				Retries:       data.Retries,
+				RetryInterval: data.RetryInterval,
+			},
 		}
-		task = NewMySQLBackupTask(s.backupService, params)
 	case models.ScheduledMongoDBBackupTask:
 		data := dbTask.Data.MongoDBBackupTask
-		params := CommonBackupTaskParams{
-			ServiceID:     data.ServiceID,
-			LocationID:    data.LocationID,
-			Name:          data.Name,
-			Description:   data.Description,
-			DataModel:     data.DataModel,
-			Mode:          data.Mode,
-			Retention:     data.Retention,
-			Retries:       data.Retries,
-			RetryInterval: data.RetryInterval,
+		task = &mongoDBBackupTask{
+			common: common{
+				id: dbTask.ID,
+			},
+			BackupTaskParams: &BackupTaskParams{
+				ServiceID:     data.ServiceID,
+				LocationID:    data.LocationID,
+				Name:          data.Name,
+				Description:   data.Description,
+				DataModel:     data.DataModel,
+				Mode:          data.Mode,
+				Retention:     data.Retention,
+				Retries:       data.Retries,
+				RetryInterval: data.RetryInterval,
+			},
 		}
-		task = NewMongoBackupTask(s.backupService, params)
+
 	default:
-		return task, errors.Errorf("unknown task type: %s", dbTask.Type)
+		return nil, errors.Errorf("unknown task type: %s", dbTask.Type)
 	}
 
-	task.SetID(dbTask.ID)
 	return task, nil
 }
 

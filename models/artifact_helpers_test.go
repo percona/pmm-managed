@@ -265,16 +265,30 @@ func TestArtifactValidation(t *testing.T) {
 			errorMsg: "service_id shouldn't be empty: invalid argument",
 		},
 		{
-			name: "mode missing",
+			name: "empty backup mode",
 			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				Vendor:     "MySQL",
 				LocationID: "location_id",
 				ServiceID:  "service_id",
+				Mode:       "",
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.PendingBackupStatus,
 			},
-			errorMsg: "invalid backup mode '': invalid argument",
+			errorMsg: "empty backup mode: invalid argument",
+		},
+		{
+			name: "empty data model",
+			params: models.CreateArtifactParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  "",
+				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
+			},
+			errorMsg: "empty data model: invalid argument",
 		},
 		{
 			name: "invalid data model",

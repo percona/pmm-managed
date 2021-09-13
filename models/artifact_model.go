@@ -39,6 +39,8 @@ func (dm DataModel) Validate() error {
 	switch dm {
 	case PhysicalDataModel:
 	case LogicalDataModel:
+	case "":
+		return errors.Wrap(ErrInvalidArgument, "empty data model")
 	default:
 		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", dm)
 	}
@@ -107,6 +109,8 @@ func (m BackupMode) Validate() error {
 	case Snapshot:
 	case Incremental:
 	case PITR:
+	case "":
+		return errors.Wrapf(ErrInvalidArgument, "empty backup mode")
 	default:
 		return errors.Wrapf(ErrInvalidArgument, "invalid backup mode '%s'", m)
 	}
