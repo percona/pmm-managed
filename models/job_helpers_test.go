@@ -179,14 +179,6 @@ func TestJobLogs(t *testing.T) {
 		}
 	})
 
-	t.Run("set last chunk", func(t *testing.T) {
-		log, err := models.SetJobLogLastChunk(tx.Querier, job1.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, job1.ID, log.JobID)
-		assert.Equal(t, createRequests[1].ChunkID, log.ChunkID)
-		assert.True(t, log.LastChunk)
-	})
-
 	t.Run("find", func(t *testing.T) {
 		type expectLog struct {
 			JobID   string
