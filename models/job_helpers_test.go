@@ -67,7 +67,7 @@ func TestJobs(t *testing.T) {
 		assert.Equal(t, createJobParams.Data.MongoDBBackup.ServiceID, job.Data.MongoDBBackup.ServiceID)
 		assert.Equal(t, createJobParams.Data.MongoDBBackup.ArtifactID, job.Data.MongoDBBackup.ArtifactID)
 
-		job, err = models.CreateJob(tx.Querier, models.CreateJobParams{Type: "unknown"})
+		_, err = models.CreateJob(tx.Querier, models.CreateJobParams{Type: "unknown"})
 		assert.EqualError(t, err, "unknown job type: unknown")
 	})
 
