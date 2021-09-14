@@ -226,36 +226,36 @@ func TestGetLogs(t *testing.T) {
 	}
 
 	type testCase struct {
-		fromChunk uint32
-		limit     uint32
-		expect    []uint32
+		offset uint32
+		limit  uint32
+		expect []uint32
 	}
 	testCases := []testCase{
 		{
 			expect: []uint32{0, 1, 2, 3, 4},
 		},
 		{
-			fromChunk: 3,
-			expect:    []uint32{3, 4},
+			offset: 3,
+			expect: []uint32{3, 4},
 		},
 		{
 			limit:  2,
 			expect: []uint32{0, 1},
 		},
 		{
-			fromChunk: 1,
-			limit:     3,
-			expect:    []uint32{1, 2, 3},
+			offset: 1,
+			limit:  3,
+			expect: []uint32{1, 2, 3},
 		},
 		{
-			fromChunk: 5,
-			expect:    []uint32{},
+			offset: 5,
+			expect: []uint32{},
 		},
 	}
 	for _, tc := range testCases {
 		logs, err := backupSvc.GetLogs(ctx, &backupv1beta1.GetLogsRequest{
 			ArtifactId: "artifact",
-			FromChunk:  tc.fromChunk,
+			Offset:     tc.offset,
 			Limit:      tc.limit,
 		})
 		assert.NoError(t, err)

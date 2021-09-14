@@ -346,8 +346,8 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 	}
 
 	filter := models.JobLogsFilter{
-		JobID:       jobs[0].ID,
-		FromChunkID: int(req.FromChunk),
+		JobID:  jobs[0].ID,
+		Offset: int(req.Offset),
 	}
 	if req.Limit > 0 {
 		filter.Limit = pointer.ToInt(int(req.Limit))
@@ -358,18 +358,21 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 		return nil, err
 	}
 
-	logs := make([]*backupv1beta1.LogChunk, len(jobLogs))
+	res := &backupv1beta1.GetLogsResponse{
+		Logs: make([]*backupv1beta1.LogChunk, len(jobLogs)),
+	}
 	for i := range jobLogs {
-		logs[i] = &backupv1beta1.LogChunk{
-			ChunkId:   uint32(jobLogs[i].ChunkID),
-			Message:   jobLogs[i].Message,
-			LastChunk: jobLogs[i].LastChunk,
+		res.Logs[i] = &backupv1beta1.LogChunk{
+			ChunkId: uint32(jobLogs[i].ChunkID),
+			Message: jobLogs[i].Message,
+			Time:    timestamppb.New(jobLogs[i].Time),
+		}
+		if jobLogs[i].LastChunk {
+			res.End = true
 		}
 	}
 
-	return &backupv1beta1.GetLogsResponse{
-		Logs: logs,
-	}, nil
+	return res, nil
 }
 
 func convertTaskToScheduledBackup(task *models.ScheduledTask,

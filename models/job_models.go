@@ -152,20 +152,20 @@ type JobLog struct {
 	ChunkID   int       `reform:"chunk_id"`
 	Message   string    `reform:"message"`
 	LastChunk bool      `reform:"last_chunk"`
-	CreatedAt time.Time `reform:"created_at"`
+	Time      time.Time `reform:"time"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 func (r *JobLog) BeforeInsert() error {
 	now := Now()
-	r.CreatedAt = now
+	r.Time = now
 
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
 func (r *JobLog) AfterFind() error {
-	r.CreatedAt = r.CreatedAt.UTC()
+	r.Time = r.Time.UTC()
 
 	return nil
 }

@@ -288,17 +288,11 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.JobProgress) {
 	switch result := progress.Result.(type) {
 	case *agentpb.JobProgress_Logs_:
-		if result.Logs.Done {
-			_, err := models.SetJobLogLastChunk(s.db.Querier, progress.JobId)
-			if err != nil {
-				s.l.WithError(err).Errorf("failed to set last chunk for job log: %s", progress.JobId)
-			}
-			return
-		}
 		_, err := models.CreateJobLog(s.db.Querier, models.CreateJobLogParams{
-			JobID:   progress.JobId,
-			ChunkID: int(result.Logs.ChunkId),
-			Message: string(result.Logs.Message),
+			JobID:     progress.JobId,
+			ChunkID:   int(result.Logs.ChunkId),
+			Message:   result.Logs.Message,
+			LastChunk: result.Logs.Done,
 		})
 		if err != nil {
 			s.l.WithError(err).Errorf("failed to create log for job %s [chunk: %d]", progress.JobId, result.Logs.ChunkId)

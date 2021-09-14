@@ -226,9 +226,9 @@ func TestJobLogs(t *testing.T) {
 			},
 			{
 				Filters: models.JobLogsFilter{
-					JobID:       job1.ID,
-					FromChunkID: 1,
-					Limit:       pointer.ToInt(1),
+					JobID:  job1.ID,
+					Offset: 1,
+					Limit:  pointer.ToInt(1),
 				},
 				Expect: []expectLog{
 					{

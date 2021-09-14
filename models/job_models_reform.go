@@ -203,7 +203,7 @@ func (v *jobLogViewType) Columns() []string {
 		"chunk_id",
 		"message",
 		"last_chunk",
-		"created_at",
+		"time",
 	}
 }
 
@@ -222,7 +222,7 @@ var JobLogView = &jobLogViewType{
 			{Name: "ChunkID", Type: "int", Column: "chunk_id"},
 			{Name: "Message", Type: "string", Column: "message"},
 			{Name: "LastChunk", Type: "bool", Column: "last_chunk"},
-			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
+			{Name: "Time", Type: "time.Time", Column: "time"},
 		},
 		PKFieldIndex: -1,
 	},
@@ -236,7 +236,7 @@ func (s JobLog) String() string {
 	res[1] = "ChunkID: " + reform.Inspect(s.ChunkID, true)
 	res[2] = "Message: " + reform.Inspect(s.Message, true)
 	res[3] = "LastChunk: " + reform.Inspect(s.LastChunk, true)
-	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[4] = "Time: " + reform.Inspect(s.Time, true)
 	return strings.Join(res, ", ")
 }
 
@@ -248,7 +248,7 @@ func (s *JobLog) Values() []interface{} {
 		s.ChunkID,
 		s.Message,
 		s.LastChunk,
-		s.CreatedAt,
+		s.Time,
 	}
 }
 
@@ -260,7 +260,7 @@ func (s *JobLog) Pointers() []interface{} {
 		&s.ChunkID,
 		&s.Message,
 		&s.LastChunk,
-		&s.CreatedAt,
+		&s.Time,
 	}
 }
 

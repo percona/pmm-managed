@@ -146,17 +146,21 @@ func CleanupOldJobs(q *reform.Querier, olderThan time.Time) error {
 
 // CreateJobLogParams are params for creating a new job jog.
 type CreateJobLogParams struct {
-	JobID   string
-	ChunkID int
-	Message string
+	JobID     string
+	ChunkID   int
+	Message   string
+	Time      time.Time
+	LastChunk bool
 }
 
 // CreateJobLog inserts new chunk log.
 func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error) {
 	log := &JobLog{
-		JobID:   params.JobID,
-		ChunkID: params.ChunkID,
-		Message: params.Message,
+		JobID:     params.JobID,
+		ChunkID:   params.ChunkID,
+		Message:   params.Message,
+		Time:      params.Time,
+		LastChunk: params.LastChunk,
 	}
 	if err := q.Insert(log); err != nil {
 		return nil, errors.WithStack(err)
@@ -166,16 +170,16 @@ func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error)
 
 // JobLogsFilter represents filter for job logs.
 type JobLogsFilter struct {
-	JobID       string
-	FromChunkID int
-	Limit       *int
+	JobID  string
+	Offset int
+	Limit  *int
 }
 
 // FindJobLogs returns logs that belongs to job.
 func FindJobLogs(q *reform.Querier, filters JobLogsFilter) ([]*JobLog, error) {
 	args := []interface{}{
 		filters.JobID,
-		filters.FromChunkID,
+		filters.Offset,
 	}
 	tail := "WHERE job_id = $1 AND chunk_id >= $2 ORDER BY chunk_id"
 	if filters.Limit != nil {
@@ -192,19 +196,4 @@ func FindJobLogs(q *reform.Querier, filters JobLogsFilter) ([]*JobLog, error) {
 		logs = append(logs, r.(*JobLog))
 	}
 	return logs, nil
-}
-
-// SetJobLogLastChunk sets last chunk of job log.
-func SetJobLogLastChunk(q *reform.Querier, jobID string) (*JobLog, error) {
-	var jobLog JobLog
-	err := q.SelectOneTo(&jobLog, "WHERE job_id = $1 ORDER BY chunk_id DESC LIMIT 1", jobID)
-	if err != nil {
-		return nil, err
-	}
-	_, err = q.Exec("UPDATE job_logs SET last_chunk = True WHERE job_id = $1 AND chunk_id = $2", jobLog.JobID, jobLog.ChunkID)
-	if err != nil {
-		return nil, err
-	}
-	jobLog.LastChunk = true
-	return &jobLog, nil
 }
