@@ -136,9 +136,9 @@ func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, e
 	case "ami":
 		return serverpb.DistributionMethod_AMI, events.DistributionMethod_AMI, "ami"
 	case "azure":
-		return serverpb.DistributionMethod_AZURE, events.DistributionMethod_AZURE, "ovf"
+		return serverpb.DistributionMethod_AZURE, events.DistributionMethod_AZURE, "azure"
 	case "digitalocean":
-		return serverpb.DistributionMethod_DO, events.DistributionMethod_DO, "ami"
+		return serverpb.DistributionMethod_DO, events.DistributionMethod_DO, "digitalocean"
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
 		if b, err = ioutil.ReadFile("/proc/version"); err != nil {
 			l.Debugf("Failed to read /proc/version: %s", err)
