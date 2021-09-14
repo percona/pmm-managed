@@ -56,6 +56,7 @@ type BackupTaskParams struct {
 	RetryInterval time.Duration
 }
 
+// Validate checks backup task parameters for correctness.
 func (p *BackupTaskParams) Validate() error {
 	if p.Name == "" {
 		return errors.New("backup name can't be empty")
@@ -73,11 +74,7 @@ func (p *BackupTaskParams) Validate() error {
 		return err
 	}
 
-	if err := p.Mode.Validate(); err != nil {
-		return err
-	}
-
-	return nil
+	return p.Mode.Validate()
 }
 
 type mySQLBackupTask struct {
