@@ -359,17 +359,18 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 	}
 
 	res := &backupv1beta1.GetLogsResponse{
-		Logs: make([]*backupv1beta1.LogChunk, len(jobLogs)),
+		Logs: make([]*backupv1beta1.LogChunk, 0, len(jobLogs)),
 	}
-	for i := range jobLogs {
-		res.Logs[i] = &backupv1beta1.LogChunk{
-			ChunkId: uint32(jobLogs[i].ChunkID),
-			Message: jobLogs[i].Message,
-			Time:    timestamppb.New(jobLogs[i].Time),
-		}
-		if jobLogs[i].LastChunk {
+	for _, log := range jobLogs {
+		if log.LastChunk {
 			res.End = true
+			break
 		}
+		res.Logs = append(res.Logs, &backupv1beta1.LogChunk{
+			ChunkId: uint32(log.ChunkID),
+			Message: log.Message,
+			Time:    timestamppb.New(log.Time),
+		})
 	}
 
 	return res, nil
