@@ -250,9 +250,9 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 	return latestPXCOperator, latestPSMDBOperator, err
 }
 
-// GetNextDatabaseVersion returns version that is a direct successor of currently installed version.
+// GetNextDatabaseImage returns image of the version that is a direct successor of currently installed version.
 // It returns empty string if update is not available or error occurred.
-func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error) {
+func (c *VersionServiceClient) GetNextDatabaseImage(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error) {
 	// Get dependencies of operator type at given version.
 	params := componentsParams{
 		product:        operatorType,
@@ -292,7 +292,7 @@ func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, opera
 	if nextVersion == nil {
 		return "", nil
 	}
-	return nextVersion.String(), nil
+	return versions[nextVersion.String()].ImagePath, nil
 }
 
 // GetVersionServiceURL returns base URL for version service currently used

@@ -134,12 +134,12 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			}
 			currentDBVersion := imageAndTag[1]
 
-			nextVersion, err := s.versionServiceClient.GetNextDatabaseVersion(ctx, pxcOperator, operatorVersion, currentDBVersion)
+			nextVersionImage, err := s.versionServiceClient.GetNextDatabaseImage(ctx, pxcOperator, operatorVersion, currentDBVersion)
 			if err != nil {
 				return nil, err
 			}
-			cluster.AvalableVersion = nextVersion
-			cluster.InstalledVersion = currentDBVersion
+			cluster.AvalableImage = nextVersionImage
+			cluster.InstalledImage = c.Params.Pxc.Image
 		}
 
 		clusters[i] = &cluster

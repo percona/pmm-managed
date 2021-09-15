@@ -127,12 +127,12 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			}
 			currentDBVersion := imageAndTag[1]
 
-			nextVersion, err := s.versionServiceClient.GetNextDatabaseVersion(ctx, psmdbOperator, operatorVersion, currentDBVersion)
+			nextVersionImage, err := s.versionServiceClient.GetNextDatabaseImage(ctx, psmdbOperator, operatorVersion, currentDBVersion)
 			if err != nil {
 				return nil, err
 			}
-			cluster.AvalableVersion = nextVersion
-			cluster.InstalledVersion = currentDBVersion
+			cluster.AvalableImage = nextVersionImage
+			cluster.InstalledImage = c.Params.Image
 		}
 
 		clusters[i] = &cluster
