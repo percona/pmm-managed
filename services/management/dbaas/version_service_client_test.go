@@ -255,6 +255,11 @@ func TestOperatorVersionGetting(t *testing.T) {
 	})
 }
 
+const (
+	pxcImage   = "percona/percona-xtradb-cluster"
+	psmdbImage = "percona/percona-server-mongodb"
+)
+
 func TestGetNextDatabaseVersion(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
@@ -265,9 +270,9 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 				Product:        pxcOperator,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
-						"5.7.26-31.37":   {},
-						"5.7.29-31.43":   {},
-						"5.7.31-31.45.2": {},
+						"5.7.26-31.37":   {ImagePath: pxcImage + ":5.7.26-31.37"},
+						"5.7.29-31.43":   {ImagePath: pxcImage + ":5.7.29-31.43"},
+						"5.7.31-31.45.2": {ImagePath: pxcImage + ":5.7.31-31.45.2"},
 					},
 				},
 			},
@@ -276,9 +281,9 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 				Product:        psmdbOperator,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
-						"3.6.19-7.0":  {},
-						"3.6.18-5.0":  {},
-						"3.6.23-13.0": {},
+						"3.6.19-7.0":  {ImagePath: psmdbImage + ":3.6.19-7.0"},
+						"3.6.18-5.0":  {ImagePath: psmdbImage + ":3.6.18-5.0"},
+						"3.6.23-13.0": {ImagePath: psmdbImage + ":3.6.23-13.0"},
 					},
 				},
 			},
@@ -288,33 +293,32 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 	t.Cleanup(func() { cleanup(t); cancel() })
 	t.Run("Update available", func(t *testing.T) {
 		t.Parallel()
-		nextVersion, err := c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.7.26-31.37")
+		nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.26-31.37")
 		require.NoError(t, err)
-		assert.Equal(t, "5.7.29-31.43", nextVersion)
+		assert.Equal(t, pxcImage+":5.7.29-31.43", nextVersionImage)
 
-		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "3.6.19-7.0")
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.19-7.0")
 		require.NoError(t, err)
-		assert.Equal(t, "3.6.23-13.0", nextVersion)
+		assert.Equal(t, psmdbImage+":3.6.23-13.0", nextVersionImage)
 
 		// older than supported version of database
-		nextVersion, err = c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.0.0")
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.0.0")
 		require.NoError(t, err)
-		assert.Equal(t, "5.7.26-31.37", nextVersion)
+		assert.Equal(t, pxcImage+":5.7.26-31.37", nextVersionImage)
 	})
 	t.Run("Update not available", func(t *testing.T) {
 		t.Parallel()
-		nextVersion, err := c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.7.31-31.45.2")
+		nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.31-31.45.2")
 		require.NoError(t, err)
-		assert.Equal(t, "", nextVersion)
+		assert.Equal(t, "", nextVersionImage)
 
-		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "3.6.23-13.0")
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.23-13.0")
 		require.NoError(t, err)
-		assert.Equal(t, "", nextVersion)
+		assert.Equal(t, "", nextVersionImage)
 
 		// more up to date than is supported
-		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "4.0.0")
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "4.0.0")
 		require.NoError(t, err)
-		assert.Equal(t, "", nextVersion)
-
+		assert.Equal(t, "", nextVersionImage)
 	})
 }
