@@ -138,7 +138,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			if err != nil {
 				return nil, err
 			}
-			cluster.AvalableImage = nextVersionImage
+			cluster.AvailableImage = nextVersionImage
 			cluster.InstalledImage = c.Params.Pxc.Image
 		}
 

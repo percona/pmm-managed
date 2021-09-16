@@ -131,7 +131,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			if err != nil {
 				return nil, err
 			}
-			cluster.AvalableImage = nextVersionImage
+			cluster.AvailableImage = nextVersionImage
 			cluster.InstalledImage = c.Params.Image
 		}
 
