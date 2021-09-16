@@ -14,8 +14,8 @@ type mockVersionService struct {
 	mock.Mock
 }
 
-// GetNextDatabaseVersion provides a mock function with given fields: ctx, operatorType, operatorVersion, installedDBVersion
-func (_m *mockVersionService) GetNextDatabaseVersion(ctx context.Context, operatorType string, operatorVersion string, installedDBVersion string) (string, error) {
+// GetNextDatabaseImage provides a mock function with given fields: ctx, operatorType, operatorVersion, installedDBVersion
+func (_m *mockVersionService) GetNextDatabaseImage(ctx context.Context, operatorType string, operatorVersion string, installedDBVersion string) (string, error) {
 	ret := _m.Called(ctx, operatorType, operatorVersion, installedDBVersion)
 
 	var r0 string
