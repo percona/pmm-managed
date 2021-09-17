@@ -62,11 +62,11 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
 	if req.Retries > maxRetriesAttempts {
-		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retries %d.", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retry interval %s.", maxRetryInterval)
 	}
 
 	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
@@ -106,11 +106,11 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 	var id string
 
 	if req.Retries > maxRetriesAttempts {
-		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retries %d.", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retry interval %s.", maxRetryInterval)
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
@@ -339,14 +339,14 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 		return nil, err
 	}
 	if len(jobs) == 0 {
-		return nil, status.Error(codes.NotFound, "job related to artifact was not found")
+		return nil, status.Error(codes.NotFound, "Job related to artifact was not found.")
 	}
 	if len(jobs) > 1 {
 		s.l.Warnf("artifact %s appear in more than one job", req.ArtifactId)
 	}
 
 	filter := models.JobLogsFilter{
-		JobID:  jobs[0].ID,
+		JobID:  jobs[len(jobs)-1].ID,
 		Offset: int(req.Offset),
 	}
 	if req.Limit > 0 {
@@ -368,7 +368,7 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 		}
 		res.Logs = append(res.Logs, &backupv1beta1.LogChunk{
 			ChunkId: uint32(log.ChunkID),
-			Message: log.Message,
+			Data:    log.Data,
 			Time:    timestamppb.New(log.Time),
 		})
 	}

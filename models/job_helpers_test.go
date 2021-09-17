@@ -57,7 +57,7 @@ func TestJobs(t *testing.T) {
 			Retries:  3,
 		}
 		job, err := models.CreateJob(tx.Querier, createJobParams)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, createJobParams.PMMAgentID, job.PMMAgentID)
 		assert.Equal(t, createJobParams.Type, job.Type)
 		assert.Equal(t, createJobParams.Timeout, job.Timeout)
@@ -171,7 +171,7 @@ func TestJobLogs(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		for _, req := range createRequests {
 			log, err := models.CreateJobLog(tx.Querier, req)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, req.JobID, log.JobID)
 			assert.Equal(t, req.ChunkID, log.ChunkID)
 			assert.Equal(t, req.Message, log.Message)
@@ -185,11 +185,13 @@ func TestJobLogs(t *testing.T) {
 			ChunkID int
 		}
 		type testCase struct {
+			Name    string
 			Filters models.JobLogsFilter
 			Expect  []expectLog
 		}
 		testCases := []testCase{
 			{
+				Name: "job filter",
 				Filters: models.JobLogsFilter{
 					JobID: job1.ID,
 				},
@@ -205,6 +207,7 @@ func TestJobLogs(t *testing.T) {
 				},
 			},
 			{
+				Name: "job filter and limit",
 				Filters: models.JobLogsFilter{
 					JobID: job1.ID,
 					Limit: pointer.ToInt(1),
@@ -217,6 +220,7 @@ func TestJobLogs(t *testing.T) {
 				},
 			},
 			{
+				Name: "job filter. limit and offset",
 				Filters: models.JobLogsFilter{
 					JobID:  job1.ID,
 					Offset: 1,
@@ -232,13 +236,18 @@ func TestJobLogs(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			logs, err := models.FindJobLogs(tx.Querier, tc.Filters)
-			assert.NoError(t, err)
-			require.Len(t, logs, len(tc.Expect))
-			for i := range logs {
-				assert.Equal(t, tc.Expect[i].JobID, logs[i].JobID)
-				assert.Equal(t, tc.Expect[i].ChunkID, logs[i].ChunkID)
-			}
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+				logs, err := models.FindJobLogs(tx.Querier, tc.Filters)
+				require.NoError(t, err)
+				require.Len(t, logs, len(tc.Expect))
+				for i := range logs {
+					assert.Equal(t, tc.Expect[i].JobID, logs[i].JobID)
+					assert.Equal(t, tc.Expect[i].ChunkID, logs[i].ChunkID)
+				}
+			})
+
 		}
 	})
 

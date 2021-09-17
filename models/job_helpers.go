@@ -28,6 +28,10 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+const (
+	defaultLimit = 50
+)
+
 // FindJobByID finds Job by ID.
 func FindJobByID(q *reform.Querier, id string) (*Job, error) {
 	if id == "" {
@@ -148,7 +152,7 @@ func CleanupOldJobs(q *reform.Querier, olderThan time.Time) error {
 type CreateJobLogParams struct {
 	JobID     string
 	ChunkID   int
-	Message   string
+	Data      string
 	Time      time.Time
 	LastChunk bool
 }
@@ -158,7 +162,7 @@ func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error)
 	log := &JobLog{
 		JobID:     params.JobID,
 		ChunkID:   params.ChunkID,
-		Message:   params.Message,
+		Data:      params.Data,
 		Time:      params.Time,
 		LastChunk: params.LastChunk,
 	}
@@ -177,15 +181,17 @@ type JobLogsFilter struct {
 
 // FindJobLogs returns logs that belongs to job.
 func FindJobLogs(q *reform.Querier, filters JobLogsFilter) ([]*JobLog, error) {
+	limit := defaultLimit
+	tail := "WHERE job_id = $1 AND chunk_id >= $2 ORDER BY chunk_id LIMIT $3"
+	if filters.Limit != nil {
+		limit = *filters.Limit
+	}
 	args := []interface{}{
 		filters.JobID,
 		filters.Offset,
+		limit,
 	}
-	tail := "WHERE job_id = $1 AND chunk_id >= $2 ORDER BY chunk_id"
-	if filters.Limit != nil {
-		tail += " LIMIT $3"
-		args = append(args, *filters.Limit)
-	}
+
 	rows, err := q.SelectAllFrom(JobLogView, tail, args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select artifacts")

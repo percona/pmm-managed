@@ -291,7 +291,7 @@ func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.J
 		_, err := models.CreateJobLog(s.db.Querier, models.CreateJobLogParams{
 			JobID:     progress.JobId,
 			ChunkID:   int(result.Logs.ChunkId),
-			Message:   result.Logs.Message,
+			Data:      result.Logs.Data,
 			LastChunk: result.Logs.Done,
 		})
 		if err != nil {

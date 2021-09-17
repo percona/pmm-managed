@@ -150,7 +150,7 @@ func (r *Job) AfterFind() error {
 type JobLog struct {
 	JobID     string    `reform:"job_id"`
 	ChunkID   int       `reform:"chunk_id"`
-	Message   string    `reform:"message"`
+	Data      string    `reform:"data"`
 	LastChunk bool      `reform:"last_chunk"`
 	Time      time.Time `reform:"time"`
 }
