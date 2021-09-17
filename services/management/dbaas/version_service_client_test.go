@@ -261,7 +261,6 @@ const (
 )
 
 func TestGetNextDatabaseVersion(t *testing.T) {
-	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	response := &VersionServiceResponse{
 		Versions: []Version{
@@ -291,36 +290,34 @@ func TestGetNextDatabaseVersion(t *testing.T) {
 	}
 	c, cleanup := newFakeVersionService(response, "5899", pxcOperator, psmdbOperator)
 	t.Cleanup(func() { cleanup(t); cancel() })
-	t.Run("Group update availability tests", func(t *testing.T) {
-		t.Run("Update available", func(t *testing.T) {
-			t.Parallel()
-			nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.26-31.37")
-			require.NoError(t, err)
-			assert.Equal(t, pxcImage+":5.7.29-31.43", nextVersionImage)
+	t.Run("Update available", func(t *testing.T) {
+		t.Parallel()
+		nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.26-31.37")
+		require.NoError(t, err)
+		assert.Equal(t, pxcImage+":5.7.29-31.43", nextVersionImage)
 
-			nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.19-7.0")
-			require.NoError(t, err)
-			assert.Equal(t, psmdbImage+":3.6.23-13.0", nextVersionImage)
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.19-7.0")
+		require.NoError(t, err)
+		assert.Equal(t, psmdbImage+":3.6.23-13.0", nextVersionImage)
 
-			// older than supported version of database
-			nextVersionImage, err = c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.0.0")
-			require.NoError(t, err)
-			assert.Equal(t, pxcImage+":5.7.26-31.37", nextVersionImage)
-		})
-		t.Run("Update not available", func(t *testing.T) {
-			t.Parallel()
-			nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.31-31.45.2")
-			require.NoError(t, err)
-			assert.Equal(t, "", nextVersionImage)
+		// older than supported version of database
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.0.0")
+		require.NoError(t, err)
+		assert.Equal(t, pxcImage+":5.7.26-31.37", nextVersionImage)
+	})
+	t.Run("Update not available", func(t *testing.T) {
+		t.Parallel()
+		nextVersionImage, err := c.GetNextDatabaseImage(ctx, pxcOperator, "1.8.0", "5.7.31-31.45.2")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersionImage)
 
-			nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.23-13.0")
-			require.NoError(t, err)
-			assert.Equal(t, "", nextVersionImage)
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "3.6.23-13.0")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersionImage)
 
-			// more up to date than is supported
-			nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "4.0.0")
-			require.NoError(t, err)
-			assert.Equal(t, "", nextVersionImage)
-		})
+		// more up to date than is supported
+		nextVersionImage, err = c.GetNextDatabaseImage(ctx, psmdbOperator, "1.8.0", "4.0.0")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersionImage)
 	})
 }
