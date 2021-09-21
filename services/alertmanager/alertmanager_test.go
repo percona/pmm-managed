@@ -19,6 +19,7 @@ package alertmanager
 import (
 	"bytes"
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"text/template"
@@ -129,6 +130,23 @@ templates: []
 		})
 		require.NoError(t, err)
 
+		tlsConfig := &models.TLSConfig{
+			CAFileContent:   "cafilecontent",
+			CertFileContent: "certfilecontent",
+			KeyFileContent:  "keyfilecontent",
+		}
+		channel4, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
+			Summary: "channel4",
+			WebHookConfig: &models.WebHookConfig{
+				URL: "https://example.com",
+				HTTPConfig: &models.HTTPConfig{
+					TLSConfig: tlsConfig,
+				},
+			},
+			Disabled: false,
+		})
+		require.NoError(t, err)
+
 		_, err = models.CreateTemplate(db.Querier, &models.CreateTemplateParams{
 			Template: &alert.Template{
 				Name:    "test_template",
@@ -194,7 +212,7 @@ templates: []
 				Key:  "service_name",
 				Val:  "mysql2",
 			}},
-			ChannelIDs: []string{channel1.ID, channel2.ID, channel3.ID},
+			ChannelIDs: []string{channel1.ID, channel2.ID, channel3.ID, channel4.ID},
 		})
 		require.NoError(t, err)
 
@@ -255,6 +273,31 @@ templates: []
 		require.NoError(t, err)
 
 		actual := marshalAndValidate(t, svc, svc.loadBaseConfig())
+		convertedTLSConfig := convertTLSConfig(channel4.ID, tlsConfig)
+
+		tlsFileContents := []struct {
+			file    string
+			content string
+		}{
+			{
+				file:    convertedTLSConfig.CAFile,
+				content: "cafilecontent",
+			},
+			{
+				file:    convertedTLSConfig.CertFile,
+				content: "certfilecontent",
+			},
+			{
+				file:    convertedTLSConfig.KeyFile,
+				content: "keyfilecontent",
+			},
+		}
+		for _, f := range tlsFileContents {
+			actualContent, err := os.ReadFile(f.file)
+			require.NoError(t, err)
+			assert.Equal(t, f.content, string(actualContent))
+		}
+
 		expected := strings.TrimSpace(`
 # Managed by pmm-managed. DO NOT EDIT.
 ---
@@ -278,7 +321,7 @@ route:
             rule_id: {{ .rule1ID }}
             service_name: mysql1
           continue: false
-        - receiver: {{ .channel1ID }} + {{ .channel2ID }}
+        - receiver: {{ .channel1ID }} + {{ .channel2ID }} + {{ .channel4ID }}
           match:
             rule_id: {{ .rule2ID }}
             service_name: mysql2
@@ -300,19 +343,42 @@ receivers:
       pagerduty_configs:
         - send_resolved: false
           routing_key: ms-pagerduty-dev
+    - name: {{ .channel1ID }} + {{ .channel2ID }} + {{ .channel4ID }}
+      email_configs:
+        - send_resolved: false
+          to: test@test.test
+        - send_resolved: false
+          to: test2@test.test
+      pagerduty_configs:
+        - send_resolved: false
+          routing_key: ms-pagerduty-dev
+      webhook_configs:
+        - send_resolved: false
+          http_config:
+            tls_config:
+                ca_file: {{ .channel4CAFile }}
+                cert_file: {{ .channel4CertFile }}
+                key_file: {{ .channel4KeyFile }}
+                insecure_skip_verify: false
+          url: https://example.com
+          max_alerts: 0
 templates: []
 `) + "\n"
 		tmpl, err := template.New("").Parse(expected)
 		require.NoError(t, err)
 		var b bytes.Buffer
 		err = tmpl.Execute(&b, map[string]string{
-			"rule1ID":    rule1.ID,
-			"rule2ID":    rule2.ID,
-			"rule3ID":    rule3.ID,
-			"rule4ID":    rule4.ID,
-			"channel1ID": channel1.ID,
-			"channel2ID": channel2.ID,
-			"channel3ID": channel3.ID,
+			"rule1ID":          rule1.ID,
+			"rule2ID":          rule2.ID,
+			"rule3ID":          rule3.ID,
+			"rule4ID":          rule4.ID,
+			"channel1ID":       channel1.ID,
+			"channel2ID":       channel2.ID,
+			"channel3ID":       channel3.ID,
+			"channel4ID":       channel4.ID,
+			"channel4CAFile":   tlsFileContents[0].file,
+			"channel4CertFile": tlsFileContents[1].file,
+			"channel4KeyFile":  tlsFileContents[2].file,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, b.String(), actual, "actual:\n%s", actual)

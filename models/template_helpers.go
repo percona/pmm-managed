@@ -245,7 +245,7 @@ func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
 
 			p.FloatParam = &fp
 		default:
-			return nil, errors.Errorf("Unknown parameter type %s", param.Type)
+			return nil, errors.Errorf("unknown parameter type %s", param.Type)
 		}
 
 		res = append(res, p)

@@ -19,10 +19,14 @@ package alertmanager
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -54,6 +58,7 @@ const (
 	configurationUpdateTimeout = 3 * time.Second
 
 	alertmanagerDir     = "/srv/alertmanager"
+	alertmanagerCertDir = "/srv/alertmanager/cert"
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	dirPerm             = os.FileMode(0o775)
 
@@ -87,11 +92,10 @@ func New(db *reform.DB) *Service {
 // It is needed because Alertmanager was added to PMM
 // with invalid configuration file (it will fail with "no route provided in config" error).
 func (svc *Service) GenerateBaseConfigs() {
-	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
-	}
-	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
+	for _, dirPath := range []string{alertmanagerDir, alertmanagerDataDir, alertmanagerCertDir} {
+		if err := dir.CreateDataDir(dirPath, "pmm", "pmm", dirPerm); err != nil {
+			svc.l.Error(err)
+		}
 	}
 
 	defaultBase := strings.TrimSpace(`
@@ -328,6 +332,97 @@ func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 	return nil
 }
 
+func convertTLSConfig(id string, tls *models.TLSConfig) promconfig.TLSConfig {
+	hashedIDBytes := sha256.Sum256([]byte(id))
+	hashedID := hex.EncodeToString(hashedIDBytes[:])
+
+	caFile := tls.CAFile
+	if tls.CAFileContent != "" {
+		caFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.ca", hashedID))
+	}
+	certFile := tls.CertFile
+	if tls.CertFileContent != "" {
+		certFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.crt", hashedID))
+	}
+	keyFile := tls.KeyFile
+	if tls.KeyFileContent != "" {
+		keyFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.key", hashedID))
+	}
+	return promconfig.TLSConfig{
+		CAFile:             caFile,
+		CertFile:           certFile,
+		KeyFile:            keyFile,
+		ServerName:         tls.ServerName,
+		InsecureSkipVerify: tls.InsecureSkipVerify,
+	}
+}
+
+// recreateTLSConfigFiles cleanups old tls config files and creates new ones using content from the DB.
+func (svc *Service) recreateTLSConfigFiles(chanMap map[string]*models.Channel) error {
+	des, err := os.ReadDir(alertmanagerCertDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to list alertmanager certificates directory")
+	}
+	for _, de := range des {
+		if de.IsDir() {
+			continue
+		}
+
+		if err := os.Remove(path.Join(alertmanagerCertDir, de.Name())); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	fi, err := os.Stat(alertmanagerCertDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, c := range chanMap {
+		webhookConfig := c.WebHookConfig
+		if webhookConfig == nil {
+			continue
+		}
+
+		httpConfig := webhookConfig.HTTPConfig
+		if httpConfig == nil {
+			continue
+		}
+
+		tlsConfig := httpConfig.TLSConfig
+		if tlsConfig == nil {
+			continue
+		}
+
+		convertedTLSConfig := convertTLSConfig(c.ID, tlsConfig)
+		for _, c := range []struct {
+			path    string
+			content string
+		}{
+			{
+				path:    convertedTLSConfig.CAFile,
+				content: tlsConfig.CAFileContent,
+			},
+			{
+				path:    convertedTLSConfig.CertFile,
+				content: tlsConfig.CertFileContent,
+			},
+			{
+				path:    convertedTLSConfig.KeyFile,
+				content: tlsConfig.KeyFileContent,
+			},
+		} {
+			if c.content != "" {
+				if err := ioutil.WriteFile(c.path, []byte(c.content), fi.Mode()); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // populateConfig adds configuration from the database to cfg.
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	var settings *models.Settings
@@ -352,7 +447,15 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return nil
 	})
 	if e != nil {
-		return errors.Errorf("Failed to fetch items from database: %s", e)
+		return errors.Errorf("failed to fetch items from database: %s", e)
+	}
+
+	chanMap := make(map[string]*models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ID] = ch
+	}
+	if err := svc.recreateTLSConfigFiles(chanMap); err != nil {
+		return err
 	}
 
 	if cfg.Global == nil {
@@ -409,10 +512,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
 	}
-	chanMap := make(map[string]*models.Channel, len(channels))
-	for _, ch := range channels {
-		chanMap[ch.ID] = ch
-	}
+
 	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
 		// skip rules with 0 notification channels
@@ -538,13 +638,8 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						}
 					}
 					if channel.WebHookConfig.HTTPConfig.TLSConfig != nil {
-						webhookConfig.HTTPConfig.TLSConfig = promconfig.TLSConfig{
-							CAFile:             channel.WebHookConfig.HTTPConfig.TLSConfig.CaFile,
-							CertFile:           channel.WebHookConfig.HTTPConfig.TLSConfig.CertFile,
-							KeyFile:            channel.WebHookConfig.HTTPConfig.TLSConfig.KeyFile,
-							ServerName:         channel.WebHookConfig.HTTPConfig.TLSConfig.ServerName,
-							InsecureSkipVerify: channel.WebHookConfig.HTTPConfig.TLSConfig.InsecureSkipVerify,
-						}
+						webhookConfig.HTTPConfig.TLSConfig = convertTLSConfig(channel.ID,
+							channel.WebHookConfig.HTTPConfig.TLSConfig)
 					}
 				}
 
