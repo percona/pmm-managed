@@ -359,7 +359,7 @@ func TestDeleteTemplate(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete a rule template "%s" when it's being used by a rule.`, "Test summary")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, "Test summary")
 
 		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
 			Body: templates.ListTemplatesBody{

@@ -151,7 +151,7 @@ func TestNotificationChannels(t *testing.T) {
 		_ = createRule(t, q, channel.ID, templateName)
 
 		err = models.RemoveChannel(q, channel.ID)
-		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete a channel "%s" when it's being used by a rule.`, channel.Summary), err)
+		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" channel when it's being used by a rule.`, channel.Summary), err)
 
 		cs, err := models.FindChannels(q)
 		require.NoError(t, err)

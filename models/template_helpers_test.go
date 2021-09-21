@@ -201,7 +201,7 @@ func TestRuleTemplates(t *testing.T) {
 		_ = createRule(t, q, channelID, templateName)
 
 		err = models.RemoveTemplate(q, templateName)
-		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete a rule template "%s" when it's being used by a rule.`, template.Summary), err)
+		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary), err)
 
 		templates, err := models.FindTemplates(q)
 		require.NoError(t, err)

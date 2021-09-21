@@ -352,7 +352,7 @@ func RemoveChannel(q *reform.Querier, id string) error {
 	}
 
 	if inUse {
-		return status.Errorf(codes.FailedPrecondition, `You can't delete a channel "%s" when it's being used by a rule.`, channel.Summary)
+		return status.Errorf(codes.FailedPrecondition, `You can't delete the "%s" channel when it's being used by a rule.`, channel.Summary)
 	}
 
 	if err = q.Delete(&Channel{ID: id}); err != nil {

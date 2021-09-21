@@ -212,7 +212,7 @@ func TestRemoveChannel(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete a channel "%s" when it's being used by a rule.`, body.Summary)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete the "%s" channel when it's being used by a rule.`, body.Summary)
 
 		resp, err := client.ListChannels(&channels.ListChannelsParams{
 			Context: pmmapitests.Context,
