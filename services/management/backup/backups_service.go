@@ -369,7 +369,6 @@ func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogs
 		res.Logs = append(res.Logs, &backupv1beta1.LogChunk{
 			ChunkId: uint32(log.ChunkID),
 			Data:    log.Data,
-			Time:    timestamppb.New(log.Time),
 		})
 	}
 

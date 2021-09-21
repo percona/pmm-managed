@@ -154,17 +154,17 @@ func TestJobLogs(t *testing.T) {
 		{
 			JobID:   job1.ID,
 			ChunkID: 0,
-			Message: "some log",
+			Data:    "some log",
 		},
 		{
 			JobID:   job1.ID,
 			ChunkID: 1,
-			Message: "another log",
+			Data:    "another log",
 		},
 		{
 			JobID:   job2.ID,
 			ChunkID: 0,
-			Message: "some log",
+			Data:    "some log",
 		},
 	}
 
@@ -174,7 +174,7 @@ func TestJobLogs(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, req.JobID, log.JobID)
 			assert.Equal(t, req.ChunkID, log.ChunkID)
-			assert.Equal(t, req.Message, log.Message)
+			assert.Equal(t, req.Data, log.Data)
 			assert.False(t, log.LastChunk)
 		}
 	})

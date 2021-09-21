@@ -220,7 +220,7 @@ func TestGetLogs(t *testing.T) {
 		_, err = models.CreateJobLog(db.Querier, models.CreateJobLogParams{
 			JobID:   job.ID,
 			ChunkID: chunkID,
-			Message: "not important",
+			Data:    "not important",
 		})
 		assert.NoError(t, err)
 	}

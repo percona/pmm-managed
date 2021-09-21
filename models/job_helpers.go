@@ -153,7 +153,6 @@ type CreateJobLogParams struct {
 	JobID     string
 	ChunkID   int
 	Data      string
-	Time      time.Time
 	LastChunk bool
 }
 
@@ -163,7 +162,6 @@ func CreateJobLog(q *reform.Querier, params CreateJobLogParams) (*JobLog, error)
 		JobID:     params.JobID,
 		ChunkID:   params.ChunkID,
 		Data:      params.Data,
-		Time:      params.Time,
 		LastChunk: params.LastChunk,
 	}
 	if err := q.Insert(log); err != nil {
