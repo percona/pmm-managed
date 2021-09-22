@@ -247,7 +247,6 @@ func TestJobLogs(t *testing.T) {
 					assert.Equal(t, tc.Expect[i].ChunkID, logs[i].ChunkID)
 				}
 			})
-
 		}
 	})
 
