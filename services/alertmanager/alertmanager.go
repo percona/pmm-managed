@@ -362,14 +362,7 @@ func convertTLSConfig(id string, tls *models.TLSConfig) promconfig.TLSConfig {
 	}
 }
 
-// recreateTLSConfigFiles cleanups old tls config files and creates new ones for each channel using the content
-// from CAFileContent, CertFileContent, KeyFileContent if it is set.
-func (svc *Service) recreateTLSConfigFiles(chanMap map[string]*models.Channel) error {
-	fi, err := os.Stat(alertmanagerCertDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
+func cleanupTLSConfigFiles() error {
 	des, err := os.ReadDir(alertmanagerCertDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to list alertmanager certificates directory")
@@ -384,16 +377,38 @@ func (svc *Service) recreateTLSConfigFiles(chanMap map[string]*models.Channel) e
 		}
 	}
 
+	return nil
+}
+
+func tlsConfig(c *models.Channel) *models.TLSConfig {
+	if c.WebHookConfig != nil &&
+		c.WebHookConfig.HTTPConfig != nil &&
+		c.WebHookConfig.HTTPConfig.TLSConfig != nil {
+		return c.WebHookConfig.HTTPConfig.TLSConfig
+	}
+
+	return nil
+}
+
+// recreateTLSConfigFiles cleanups old tls config files and creates new ones for each channel using the content
+// from CAFileContent, CertFileContent, KeyFileContent if it is set.
+func recreateTLSConfigFiles(chanMap map[string]*models.Channel) error {
+	fi, err := os.Stat(alertmanagerCertDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := cleanupTLSConfigFiles(); err != nil {
+		return errors.WithStack(err)
+	}
+
 	for _, c := range chanMap {
-		if !(c.WebHookConfig != nil &&
-			c.WebHookConfig.HTTPConfig != nil &&
-			c.WebHookConfig.HTTPConfig.TLSConfig != nil) {
+		tlsConfig := tlsConfig(c)
+		if tlsConfig == nil {
 			continue
 		}
 
-		tlsConfig := c.WebHookConfig.HTTPConfig.TLSConfig
 		convertedTLSConfig := convertTLSConfig(c.ID, tlsConfig)
-
 		fileContentMap := map[string]string{
 			convertedTLSConfig.CAFile:   tlsConfig.CAFileContent,
 			convertedTLSConfig.CertFile: tlsConfig.CertFileContent,
@@ -444,7 +459,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	for _, ch := range channels {
 		chanMap[ch.ID] = ch
 	}
-	if err := svc.recreateTLSConfigFiles(chanMap); err != nil {
+	if err := recreateTLSConfigFiles(chanMap); err != nil {
 		return err
 	}
 
