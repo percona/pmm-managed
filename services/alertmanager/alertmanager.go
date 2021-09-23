@@ -332,6 +332,11 @@ func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 	return nil
 }
 
+// convertTLSConfig converts model TLSConfig to promconfig TLSConfig.
+// Resulting promconfig field
+//  - CAFile is set to corresponding model field if CAFileContent is not specified, `sha256(id).ca` otherwise.
+//  - CertFile is set to corresponding model field if CertFileContent is not specified, `sha256(id).crt` otherwise.
+//  - KeyFile is set to corresponding model field if KeyFileContent is not specified, `sha256(id).key` otherwise.
 func convertTLSConfig(id string, tls *models.TLSConfig) promconfig.TLSConfig {
 	hashedIDBytes := sha256.Sum256([]byte(id))
 	hashedID := hex.EncodeToString(hashedIDBytes[:])
@@ -357,8 +362,14 @@ func convertTLSConfig(id string, tls *models.TLSConfig) promconfig.TLSConfig {
 	}
 }
 
-// recreateTLSConfigFiles cleanups old tls config files and creates new ones using content from the DB.
+// recreateTLSConfigFiles cleanups old tls config files and creates new ones for each channel using the content
+// from CAFileContent, CertFileContent, KeyFileContent if it is set.
 func (svc *Service) recreateTLSConfigFiles(chanMap map[string]*models.Channel) error {
+	fi, err := os.Stat(alertmanagerCertDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	des, err := os.ReadDir(alertmanagerCertDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to list alertmanager certificates directory")
@@ -373,49 +384,28 @@ func (svc *Service) recreateTLSConfigFiles(chanMap map[string]*models.Channel) e
 		}
 	}
 
-	fi, err := os.Stat(alertmanagerCertDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
 	for _, c := range chanMap {
-		webhookConfig := c.WebHookConfig
-		if webhookConfig == nil {
+		if !(c.WebHookConfig != nil &&
+			c.WebHookConfig.HTTPConfig != nil &&
+			c.WebHookConfig.HTTPConfig.TLSConfig != nil) {
 			continue
 		}
 
-		httpConfig := webhookConfig.HTTPConfig
-		if httpConfig == nil {
-			continue
-		}
-
-		tlsConfig := httpConfig.TLSConfig
-		if tlsConfig == nil {
-			continue
-		}
-
+		tlsConfig := c.WebHookConfig.HTTPConfig.TLSConfig
 		convertedTLSConfig := convertTLSConfig(c.ID, tlsConfig)
-		for _, c := range []struct {
-			path    string
-			content string
-		}{
-			{
-				path:    convertedTLSConfig.CAFile,
-				content: tlsConfig.CAFileContent,
-			},
-			{
-				path:    convertedTLSConfig.CertFile,
-				content: tlsConfig.CertFileContent,
-			},
-			{
-				path:    convertedTLSConfig.KeyFile,
-				content: tlsConfig.KeyFileContent,
-			},
-		} {
-			if c.content != "" {
-				if err := ioutil.WriteFile(c.path, []byte(c.content), fi.Mode()); err != nil {
-					return errors.WithStack(err)
-				}
+
+		fileContentMap := map[string]string{
+			convertedTLSConfig.CAFile:   tlsConfig.CAFileContent,
+			convertedTLSConfig.CertFile: tlsConfig.CertFileContent,
+			convertedTLSConfig.KeyFile:  tlsConfig.KeyFileContent,
+		}
+		for filePath, content := range fileContentMap {
+			if filePath == "" || content == "" {
+				continue
+			}
+
+			if err := ioutil.WriteFile(filePath, []byte(content), fi.Mode()); err != nil {
+				return errors.WithStack(err)
 			}
 		}
 	}
