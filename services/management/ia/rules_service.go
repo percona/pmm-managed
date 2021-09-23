@@ -241,7 +241,7 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 func (s *RulesService) writeRuleFile(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
-		return errors.Errorf("failed to marshal rule %s", err)
+		return errors.Errorf("failed to marshal rule %v", err)
 	}
 	b = append([]byte("---\n"), b...)
 
@@ -253,7 +253,7 @@ func (s *RulesService) writeRuleFile(rule *ruleFile) error {
 	fileName := strings.TrimPrefix(alertRule.Alert, "/rule_id/")
 	path := s.rulesPath + "/" + fileName + ".yml"
 	if err = ioutil.WriteFile(path, b, 0o644); err != nil {
-		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
+		return errors.Errorf("failed to dump rule to file %s: %v", s.rulesPath, err)
 	}
 
 	return nil

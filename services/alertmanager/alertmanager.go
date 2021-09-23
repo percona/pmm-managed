@@ -447,7 +447,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return nil
 	})
 	if e != nil {
-		return errors.Errorf("failed to fetch items from database: %s", e)
+		return errors.Errorf("failed to fetch items from database: %v", e)
 	}
 
 	chanMap := make(map[string]*models.Channel, len(channels))
