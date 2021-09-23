@@ -420,7 +420,7 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Disabled: false,
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = both CAFile and CAFileContent shouldn't be set at the same time",
+			errorMsg: "rpc error: code = InvalidArgument desc = Fields CAFile and CAFileContent shouldn't be set at the same time.",
 		},
 		{
 			name: "both CertFile and CertFileContent are set",
@@ -437,7 +437,7 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Disabled: false,
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = both CertFile and CertFileContent shouldn't be set at the same time",
+			errorMsg: "rpc error: code = InvalidArgument desc = Fields CertFile and CertFileContent shouldn't be set at the same time.",
 		},
 		{
 			name: "both KeyFile and KeyFileContent are set",
@@ -454,7 +454,7 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Disabled: false,
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = both KeyFile and KeyFileContent shouldn't be set at the same time",
+			errorMsg: "rpc error: code = InvalidArgument desc = Fields KeyFile and KeyFileContent shouldn't be set at the same time.",
 		},
 	}
 
