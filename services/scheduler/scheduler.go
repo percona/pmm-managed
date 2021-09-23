@@ -85,6 +85,8 @@ type AddParams struct {
 // Add adds task to scheduler and save it to DB.
 func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
+
+	// This transaction is valid only with serializable isolation level. On lower isolation levels it can produce anomalies.
 	errTx := s.db.InTransactionContext(s.db.Querier.Context(), &sql.TxOptions{Isolation: sql.LevelSerializable}, func(tx *reform.TX) error {
 		var err error
 		if err = checkPreconditions(tx.Querier, task.Data(), !params.Disabled, ""); err != nil {
@@ -376,7 +378,7 @@ func checkMongoDBBackupPreconditions(q *reform.Querier, mode models.BackupMode, 
 
 		for _, task := range tasks {
 			if task.ID != scheduleID {
-				return status.Error(codes.FailedPrecondition, "Scheduled PITR backup can be enabled only if there is no other scheduled backups enabled.")
+				return status.Error(codes.FailedPrecondition, "A scheduled PITR backup can be enabled only if there  no other scheduled backups.")
 			}
 		}
 	case models.Snapshot:
@@ -391,7 +393,7 @@ func checkMongoDBBackupPreconditions(q *reform.Querier, mode models.BackupMode, 
 		}
 
 		if len(tasks) != 0 {
-			return status.Error(codes.FailedPrecondition, "Scheduled snapshot backup can be enabled only if there is no enabled PITR backup.")
+			return status.Error(codes.FailedPrecondition, "A scheduled snapshot backup can be enabled only if there are no enabled PITR backup.")
 		}
 	}
 

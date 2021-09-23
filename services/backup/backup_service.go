@@ -197,8 +197,8 @@ func checkMongoBackupPreconditions(q *reform.Querier, service *models.Service, s
 
 	for _, task := range tasks {
 		if task.ID != scheduleID {
-			return status.Errorf(codes.FailedPrecondition, "Can't perform backup because service %s has configured scheduled "+
-				"PITR backups. Please disable them if you want to perform other backup.", service.ServiceName)
+			return status.Errorf(codes.FailedPrecondition, "Can't make a backup because service %s already has "+
+				"scheduled PITR backups. Please disable them if you want to make another backup.", service.ServiceName)
 		}
 	}
 
@@ -304,8 +304,8 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 		}
 
 		if service.ServiceType != models.MongoDBServiceType {
-			return errors.Errorf("Point-in-Time recovery feature available only for mongoDB services,"+
-				"given service id: %s, service type: %s", serviceID, service.ServiceType)
+			return errors.Errorf("Point-in-Time recovery feature is only available for mongoDB services,"+
+				"current service id: %s, service type: %s", serviceID, service.ServiceType)
 		}
 
 		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
