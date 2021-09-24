@@ -19,6 +19,7 @@ package backup
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -519,11 +520,13 @@ func (s *Service) findArtifactCompatibleServices(
 			s.l.Debugf("skip incompatible service id %q: artifact version %q != db version %q\"", sv.ServiceID,
 				artifactDBVersion, serviceDBVersion,
 			)
+			fmt.Println("SKIP1", artifactDBVersion, serviceDBVersion, svs)
 			continue
 		}
 
 		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
 			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
+			fmt.Println("SKIP2")
 			continue
 		}
 
