@@ -291,7 +291,6 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 
 // SwitchMongoPITR switches Point-in-Time recovery feature for mongoDB with given serviceID.
 func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error {
-	var res *models.ActionResult
 	var pmmAgentID, dsn string
 	var agent *models.Agent
 	var service *models.Service
@@ -316,10 +315,6 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 			return errors.Errorf("cannot find pmm agent for service %s", serviceID)
 		}
 		pmmAgentID = agents[0].AgentID
-		res, err = models.CreateActionResult(tx.Querier, pmmAgentID)
-		if err != nil {
-			return err
-		}
 
 		dsn, agent, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, "")
 		if err != nil {
@@ -331,9 +326,7 @@ func (s *Service) SwitchMongoPITR(ctx context.Context, serviceID string, enabled
 		return errTX
 	}
 
-	return s.agentsRegistry.StartPBMSwitchPITRActions(
-		ctx,
-		res.ID,
+	return s.agentsRegistry.PBMSwitchPITR(
 		pmmAgentID,
 		dsn,
 		agent.Files(),

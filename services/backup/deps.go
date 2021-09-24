@@ -77,5 +77,5 @@ type removalService interface {
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle
 type agentsRegistry interface {
-	StartPBMSwitchPITRActions(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error
+	PBMSwitchPITR(pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error
 }
