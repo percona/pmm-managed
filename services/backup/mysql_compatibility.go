@@ -40,26 +40,8 @@ func init() {
 		{
 			mysqlMinVersion:      "5.5",
 			mysqlMaxVersion:      "5.8",
-			xtrabackupMinVersion: "2.4",
+			xtrabackupMinVersion: "2.4.18", // https://jira.percona.com/browse/PXB-1978
 			xtrabackupMaxVersion: "2.5",
-		},
-		// Percona XtraBackup 8.0.4 is based on MySQL 8.0.13 and fully supports Percona Server for MySQL 8.0 series and MySQL 8.0 series.
-		// https://www.percona.com/doc/percona-xtrabackup/8.0/release-notes/8.0/8.0.4.html
-		{
-			mysqlMinVersion:      "8.0",
-			mysqlMaxVersion:      "8.0.14",
-			xtrabackupMinVersion: "8.0.4",
-			xtrabackupMaxVersion: "8.0.5",
-		},
-		// Percona XtraBackup 8.0.5 introduces the support of undo tablespaces created using
-		// the new syntax (CREATE UNDO TABLESPACE) available since MySQL 8.0.14.
-		// Percona XtraBackup also supports the binary log encryption introduced in MySQL 8.0.14.
-		// https://www.percona.com/doc/percona-xtrabackup/8.0/release-notes/8.0/8.0.5.html
-		{
-			mysqlMinVersion:      "8.0",
-			mysqlMaxVersion:      "8.0.15",
-			xtrabackupMinVersion: "8.0.5",
-			xtrabackupMaxVersion: "8.0.6",
 		},
 		// In version 8.0.6, Percona XtraBackup introduces the support of the MyRocks storage engine
 		// with Percona Server for MySQL version 8.0.15-6 or higher.
@@ -73,19 +55,13 @@ func init() {
 		// Percona XtraBackup 8.0.12 now supports backup and restore processing for all versions of MySQL;
 		// previous versions of Percona XtraBackup will not work with MySQL 8.0.20 and higher.
 		// https://www.percona.com/doc/percona-xtrabackup/8.0/release-notes/8.0/8.0.12.html
-		{
-			mysqlMinVersion:      "8.0",
-			mysqlMaxVersion:      "8.0.21",
-			xtrabackupMinVersion: "8.0.12",
-			xtrabackupMaxVersion: "8.0.13",
-		},
 		// Percona XtraBackup 8.0.13 supports backup and restore processing for all versions of MySQL
 		// and has been tested with the latest MySQL 8.0.20.
 		// https://www.percona.com/doc/percona-xtrabackup/8.0/release-notes/8.0/8.0.13.html
 		{
 			mysqlMinVersion:      "8.0",
 			mysqlMaxVersion:      "8.0.21",
-			xtrabackupMinVersion: "8.0.13",
+			xtrabackupMinVersion: "8.0.12",
 			xtrabackupMaxVersion: "8.0.14",
 		},
 		// Percona XtraBackup 8.0.14 supports backup and restore processing for all versions of MySQL
@@ -117,6 +93,12 @@ func init() {
 			mysqlMaxVersion:      "8.0.26",
 			xtrabackupMinVersion: "8.0.25",
 			xtrabackupMaxVersion: "8.0.26",
+		},
+		{
+			mysqlMinVersion:      "8.0",
+			mysqlMaxVersion:      "8.0.27",
+			xtrabackupMinVersion: "8.0.26",
+			xtrabackupMaxVersion: "8.0.27",
 		},
 	}
 

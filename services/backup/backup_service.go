@@ -514,16 +514,16 @@ func (s *Service) findArtifactCompatibleServices(
 	compatibleServiceIDs := make([]string, 0, len(svs))
 	for _, sv := range svs {
 		svm := softwareVersionsMap(sv.SoftwareVersions)
-		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
-			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
-			continue
-		}
-
 		serviceDBVersion := svm[models.MysqldSoftwareName]
 		if artifactDBVersion != serviceDBVersion {
 			s.l.Debugf("skip incompatible service id %q: artifact version %q != db version %q\"", sv.ServiceID,
 				artifactDBVersion, serviceDBVersion,
 			)
+			continue
+		}
+
+		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
+			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
 			continue
 		}
 
