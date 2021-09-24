@@ -31,6 +31,7 @@ func (v *artifactTableType) Columns() []string {
 		"id",
 		"name",
 		"vendor",
+		"db_version",
 		"location_id",
 		"service_id",
 		"data_model",
@@ -67,6 +68,7 @@ var ArtifactTable = &artifactTableType{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},
 			{Name: "Vendor", Type: "string", Column: "vendor"},
+			{Name: "DBVersion", Type: "string", Column: "db_version"},
 			{Name: "LocationID", Type: "string", Column: "location_id"},
 			{Name: "ServiceID", Type: "string", Column: "service_id"},
 			{Name: "DataModel", Type: "DataModel", Column: "data_model"},
@@ -84,19 +86,20 @@ var ArtifactTable = &artifactTableType{
 
 // String returns a string representation of this struct or record.
 func (s Artifact) String() string {
-	res := make([]string, 12)
+	res := make([]string, 13)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Name: " + reform.Inspect(s.Name, true)
 	res[2] = "Vendor: " + reform.Inspect(s.Vendor, true)
-	res[3] = "LocationID: " + reform.Inspect(s.LocationID, true)
-	res[4] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
-	res[5] = "DataModel: " + reform.Inspect(s.DataModel, true)
-	res[6] = "Mode: " + reform.Inspect(s.Mode, true)
-	res[7] = "Status: " + reform.Inspect(s.Status, true)
-	res[8] = "Type: " + reform.Inspect(s.Type, true)
-	res[9] = "ScheduleID: " + reform.Inspect(s.ScheduleID, true)
-	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[3] = "DBVersion: " + reform.Inspect(s.DBVersion, true)
+	res[4] = "LocationID: " + reform.Inspect(s.LocationID, true)
+	res[5] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
+	res[6] = "DataModel: " + reform.Inspect(s.DataModel, true)
+	res[7] = "Mode: " + reform.Inspect(s.Mode, true)
+	res[8] = "Status: " + reform.Inspect(s.Status, true)
+	res[9] = "Type: " + reform.Inspect(s.Type, true)
+	res[10] = "ScheduleID: " + reform.Inspect(s.ScheduleID, true)
+	res[11] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[12] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -107,6 +110,7 @@ func (s *Artifact) Values() []interface{} {
 		s.ID,
 		s.Name,
 		s.Vendor,
+		s.DBVersion,
 		s.LocationID,
 		s.ServiceID,
 		s.DataModel,
@@ -126,6 +130,7 @@ func (s *Artifact) Pointers() []interface{} {
 		&s.ID,
 		&s.Name,
 		&s.Vendor,
+		&s.DBVersion,
 		&s.LocationID,
 		&s.ServiceID,
 		&s.DataModel,

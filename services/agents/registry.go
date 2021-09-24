@@ -166,7 +166,6 @@ func (r *Registry) PBMSwitchPITR(pmmAgentID, dsn string, files map[string]string
 		Enabled: enabled,
 	}
 
-
 	_, err = agent.channel.SendAndWaitResponse(req)
 	return err
 }

@@ -3,8 +3,6 @@
 package backup
 
 import (
-	context "context"
-
 	mock "github.com/stretchr/testify/mock"
 
 	models "github.com/percona/pmm-managed/models"
@@ -15,13 +13,13 @@ type mockAgentsRegistry struct {
 	mock.Mock
 }
 
-// StartPBMSwitchPITRActions provides a mock function with given fields: ctx, id, pmmAgentID, dsn, files, tdp, enabled
-func (_m *mockAgentsRegistry) StartPBMSwitchPITRActions(ctx context.Context, id string, pmmAgentID string, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error {
-	ret := _m.Called(ctx, id, pmmAgentID, dsn, files, tdp, enabled)
+// PBMSwitchPITR provides a mock function with given fields: pmmAgentID, dsn, files, tdp, enabled
+func (_m *mockAgentsRegistry) PBMSwitchPITR(pmmAgentID string, dsn string, files map[string]string, tdp *models.DelimiterPair, enabled bool) error {
+	ret := _m.Called(pmmAgentID, dsn, files, tdp, enabled)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string, *models.DelimiterPair, bool) error); ok {
-		r0 = rf(ctx, id, pmmAgentID, dsn, files, tdp, enabled)
+	if rf, ok := ret.Get(0).(func(string, string, map[string]string, *models.DelimiterPair, bool) error); ok {
+		r0 = rf(pmmAgentID, dsn, files, tdp, enabled)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -39,6 +39,7 @@ type backupService interface {
 	PerformBackup(ctx context.Context, params backup.PerformBackupParams) (string, error)
 	RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error)
 	SwitchMongoPITR(ctx context.Context, serviceID string, enabled bool) error
+	FindArtifactCompatibleServices(ctx context.Context, artifactID string) ([]*models.Service, error)
 }
 
 // schedulerService is a subset of method of scheduler.Service used by this package.
