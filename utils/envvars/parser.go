@@ -34,6 +34,7 @@ import (
 const (
 	defaultSaaSHost = "check.percona.com:443"
 	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
+	envPublicKey    = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
 	envTestDbaas   = "PERCONA_TEST_DBAAS"
 	envEnableDbaas = "ENABLE_DBAAS"
@@ -82,6 +83,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PMM_DEBUG", "PMM_TRACE":
 			// skip cross-component environment variables that are already handled by kingpin
 			continue
+		case "PERCONA_TEST_VERSION_SERVICE_URL":
+			// skip pmm-managed environment variables that are already handled by kingpin
+			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
@@ -120,10 +124,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				// disable cache explicitly
 				envSettings.DisableVMCache = true
 			}
-
-		case "PERCONA_TEST_IA": // FIXME remove
-			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, "ENABLE_ALERTING"))
-			fallthrough
 		case "ENABLE_ALERTING":
 			envSettings.EnableAlerting, err = strconv.ParseBool(v)
 			if err != nil {
@@ -205,6 +205,15 @@ func GetSAASHost() (string, error) {
 
 	logrus.Infof("Using SaaS host %q.", host)
 	return host, nil
+}
+
+// GetPublicKeys returns public keys used to dowload checks from SaaS.
+func GetPublicKeys() []string {
+	if v := os.Getenv(envPublicKey); v != "" {
+		return strings.Split(v, ",")
+	}
+
+	return nil
 }
 
 // parseSAASHost parses, validates and returns SAAS host, otherwise returns error.

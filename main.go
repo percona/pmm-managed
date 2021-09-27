@@ -542,7 +542,8 @@ func main() {
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
 	dbaasControllerAPIAddrF := kingpin.Flag("dbaas-controller-api-addr", "DBaaS Controller gRPC API address").Default("127.0.0.1:20201").String()
 
-	versionServiceAPIURLF := kingpin.Flag("version-service-api-url", "Version Service API URL").Default("https://check.percona.com/versions/v1").String()
+	versionServiceAPIURLF := kingpin.Flag("version-service-api-url", "Version Service API URL").
+		Default("https://check.percona.com/versions/v1").Envar("PERCONA_TEST_VERSION_SERVICE_URL").String()
 
 	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
 	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
@@ -648,16 +649,19 @@ func main() {
 	}
 
 	// Integrated alerts services
-	templatesService := ia.NewTemplatesService(db)
+	templatesService, err := ia.NewTemplatesService(db)
+	if err != nil {
+		l.Fatalf("Could not create templates service: %s", err)
+	}
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
 	alertsService := ia.NewAlertsService(db, alertmanager, templatesService)
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
-	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	backupService := backup.NewService(db, jobsService)
-	schedulerService := scheduler.New(db, backupService)
 	versioner := agents.NewVersionerService(agentsRegistry)
+	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
+	backupService := backup.NewService(db, jobsService, versioner)
+	schedulerService := scheduler.New(db, backupService)
 	versionCache := versioncache.New(db, versioner)
 
 	serverParams := &server.Params{
@@ -752,19 +756,24 @@ func main() {
 	}
 
 	if settings.DBaaS.Enabled {
-		l.Debug("DBaaS is enabled - creating a DBaaS client.")
-		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
-		err := dbaasClient.Connect(ctx)
-		cancel()
+		err = supervisord.RestartSupervisedService("dbaas-controller")
 		if err != nil {
-			l.Fatalf("Failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
-		}
-		defer func() {
-			err := dbaasClient.Disconnect()
+			l.Errorf("Failed to restart dbaas-controller on startup: %v", err)
+		} else {
+			l.Debug("DBaaS is enabled - creating a DBaaS client.")
+			ctx, cancel := context.WithTimeout(ctx, time.Second*20)
+			err := dbaasClient.Connect(ctx)
+			cancel()
 			if err != nil {
-				l.Fatalf("Failed to disconnect from dbaas-controller API: %v", err)
+				l.Fatalf("Failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
 			}
-		}()
+			defer func() {
+				err := dbaasClient.Disconnect()
+				if err != nil {
+					l.Fatalf("Failed to disconnect from dbaas-controller API: %v", err)
+				}
+			}()
+		}
 	}
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
