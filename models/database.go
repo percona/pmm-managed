@@ -598,6 +598,10 @@ var databaseSchema = [][]string{
 		`,
 	},
 	46: {
+		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL DEFAULT ''`,
+		`ALTER TABLE artifacts ALTER COLUMN db_version DROP DEFAULT`,
+	},
+	47: {
 		`CREATE TABLE job_logs (
 			job_id VARCHAR NOT NULL,
 			chunk_id INTEGER NOT NULL,
