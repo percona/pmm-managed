@@ -2,7 +2,7 @@
 templates:
   - name: pmm_node_low_free_memory
     version: 1
-    summary: Node out of memory
+    summary: Memory available less than a threshold
     expr: |-
       node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
       * 100
