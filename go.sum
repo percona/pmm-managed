@@ -442,6 +442,8 @@ github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932 h1:EDe5KfOdE
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
 github.com/percona/pmm v0.0.0-20210923091340-9699ae7af84c h1:GBn34rj2nh4N11+M13lhN3wVTPucH1Cw+z5U4A6v5QI=
 github.com/percona/pmm v0.0.0-20210923091340-9699ae7af84c/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20210924194600-69f4e89019f5 h1:jsvqsS7EBpACjnmcmn/M7d5/UoxAfGVmxhrcYUJXS5o=
+github.com/percona/pmm v0.0.0-20210924194600-69f4e89019f5/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
