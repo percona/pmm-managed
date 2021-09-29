@@ -46,13 +46,6 @@ func TestCreateAlertRule(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	// Enable IA
-	settings, err := models.GetSettings(db)
-	require.NoError(t, err)
-	settings.IntegratedAlerting.Enabled = true
-	err = models.SaveSettings(db, settings)
-	require.NoError(t, err)
-
 	alertManager := new(mockAlertManager)
 	alertManager.On("RequestConfigurationUpdate").Return()
 	vmAlert := new(mockVmAlert)

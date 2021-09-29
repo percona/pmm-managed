@@ -270,7 +270,7 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 		UpDuration:         durationpb.New(time.Since(s.start)),
 		DistributionMethod: s.tDistributionMethod,
 		SttEnabled:         wrapperspb.Bool(settings.SaaS.STTEnabled),
-		IaEnabled:          wrapperspb.Bool(settings.IntegratedAlerting.Enabled),
+		IaEnabled:          wrapperspb.Bool(true),
 	}
 
 	if err = event.Validate(); err != nil {

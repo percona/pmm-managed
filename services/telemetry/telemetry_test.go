@@ -76,9 +76,7 @@ func TestMakeV2Payload(t *testing.T) {
 		SaaS: models.SaaS{
 			STTEnabled: true,
 		},
-		IntegratedAlerting: models.IntegratedAlerting{
-			Enabled: false,
-		},
+		IntegratedAlerting: models.IntegratedAlerting{},
 	})
 	require.NoError(t, err)
 	assert.NoError(t, r.Validate())
@@ -97,7 +95,7 @@ func TestMakeV2Payload(t *testing.T) {
 	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
 	assert.Equal(t, wrapperspb.Bool(true), uEv.SttEnabled)
-	assert.Equal(t, wrapperspb.Bool(false), uEv.IaEnabled)
+	assert.Equal(t, wrapperspb.Bool(true), uEv.IaEnabled)
 }
 
 func TestSendV2Request(t *testing.T) {
@@ -115,9 +113,7 @@ func TestSendV2Request(t *testing.T) {
 			SaaS: models.SaaS{
 				STTEnabled: true,
 			},
-			IntegratedAlerting: models.IntegratedAlerting{
-				Enabled: false,
-			},
+			IntegratedAlerting: models.IntegratedAlerting{},
 		})
 		require.NoError(t, err)
 
@@ -139,9 +135,7 @@ func TestSendV2Request(t *testing.T) {
 			SaaS: models.SaaS{
 				STTEnabled: true,
 			},
-			IntegratedAlerting: models.IntegratedAlerting{
-				Enabled: false,
-			},
+			IntegratedAlerting: models.IntegratedAlerting{},
 		})
 		require.NoError(t, err)
 

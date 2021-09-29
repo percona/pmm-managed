@@ -75,16 +75,6 @@ func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert
 	}
 }
 
-// Enabled returns if service is enabled and can be used.
-func (s *RulesService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		s.l.WithError(err).Error("can't get settings")
-		return false
-	}
-	return settings.IntegratedAlerting.Enabled
-}
-
 // TODO Move this and related types to https://github.com/percona/promconfig
 // https://jira.percona.com/browse/PMM-7069
 type ruleFile struct {

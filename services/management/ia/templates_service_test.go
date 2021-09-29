@@ -92,13 +92,6 @@ func TestTemplateValidation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	// Enable IA
-	settings, err := models.GetSettings(db)
-	require.NoError(t, err)
-	settings.IntegratedAlerting.Enabled = true
-	err = models.SaveSettings(db, settings)
-	require.NoError(t, err)
-
 	t.Run("create a template with missing param", func(t *testing.T) {
 		t.Parallel()
 

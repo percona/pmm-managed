@@ -34,9 +34,6 @@ import (
 	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
-// Note: Even though the IA services check for alerting enabled or disabled before returning results
-// we don't enable or disable IA explicit in our tests since it is enabled by default through
-// ENABLE_ALERTING env var.
 func TestRulesAPI(t *testing.T) {
 	rulesClient := client.Default.Rules
 	channelsClient := client.Default.Channels

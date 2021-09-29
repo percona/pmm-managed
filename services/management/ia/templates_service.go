@@ -104,16 +104,6 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 	return s, nil
 }
 
-// Enabled returns if service is enabled and can be used.
-func (s *TemplatesService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		s.l.WithError(err).Error("can't get settings")
-		return false
-	}
-	return settings.IntegratedAlerting.Enabled
-}
-
 func newParamTemplate() *template.Template {
 	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }

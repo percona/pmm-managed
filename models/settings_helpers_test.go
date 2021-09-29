@@ -98,14 +98,14 @@ func TestSettings(t *testing.T) {
 				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
 			}
 			settings, err := models.UpdateSettings(sqlDB, s)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
 
 			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{},
 			}
 			settings, err = models.UpdateSettings(sqlDB, s)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
 
 			settings = &models.Settings{AWSPartitions: []string{}}
@@ -173,7 +173,7 @@ func TestSettings(t *testing.T) {
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DisableUpdates: false,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.False(t, ns.Updates.Disabled)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -185,7 +185,7 @@ func TestSettings(t *testing.T) {
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DisableUpdates: true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, ns.Updates.Disabled)
 		})
 
@@ -195,7 +195,7 @@ func TestSettings(t *testing.T) {
 				EnableTelemetry: true,
 				DisableSTT:      true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
 			assert.False(t, ns.SaaS.STTEnabled)
 
@@ -222,7 +222,7 @@ func TestSettings(t *testing.T) {
 				EnableSTT:       true,
 				EnableTelemetry: true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
 			assert.True(t, ns.SaaS.STTEnabled)
 
@@ -236,7 +236,7 @@ func TestSettings(t *testing.T) {
 				DisableSTT:       true,
 				DisableTelemetry: true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, ns.Telemetry.Disabled)
 			assert.False(t, ns.SaaS.STTEnabled)
 
@@ -250,7 +250,7 @@ func TestSettings(t *testing.T) {
 				EnableTelemetry: true,
 				DisableSTT:      true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
 			assert.False(t, ns.SaaS.STTEnabled)
 		})
@@ -362,19 +362,16 @@ func TestSettings(t *testing.T) {
 			}
 			slackSettings := &models.SlackAlertingSettings{URL: gofakeit.URL()}
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				EnableAlerting:        true,
 				EmailAlertingSettings: emailSettings,
 				SlackAlertingSettings: slackSettings,
 			})
-			assert.NoError(t, err)
-			assert.True(t, ns.IntegratedAlerting.Enabled)
+			require.NoError(t, err)
 			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
 			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
 
 			// check that we don't lose settings on empty updates
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{})
-			assert.NoError(t, err)
-			assert.True(t, ns.IntegratedAlerting.Enabled)
+			require.NoError(t, err)
 			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
 			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
 
@@ -391,19 +388,11 @@ func TestSettings(t *testing.T) {
 			assert.EqualError(t, err, "Both slack_alerting_settings and remove_slack_alerting_settings are present.")
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				DisableAlerting:             true,
 				RemoveEmailAlertingSettings: true,
 				RemoveSlackAlertingSettings: true,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Empty(t, ns.IntegratedAlerting.EmailAlertingSettings)
-			assert.False(t, ns.IntegratedAlerting.Enabled)
-
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				DisableAlerting: true,
-				EnableAlerting:  true,
-			})
-			assert.EqualError(t, err, "Both enable_alerting and disable_alerting are present.")
 		})
 	})
 }
