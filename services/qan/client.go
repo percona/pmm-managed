@@ -511,5 +511,5 @@ func fillPostgreSQL(mb *qanpb.MetricsBucket, bp *agentpb.MetricsBucket_PostgreSQ
 
 	mb.TopQueryid = bp.TopQueryid
 	mb.ApplicationName = bp.ApplicationName
-	mb.PlanId = bp.PlanId
+	mb.Planid = bp.Planid
 }
