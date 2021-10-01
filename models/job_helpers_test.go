@@ -114,7 +114,7 @@ func TestJobs(t *testing.T) {
 
 		for _, tc := range testCases {
 			jobs, err := models.FindJobs(findTX.Querier, tc.Filters)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			ids := make([]string, len(jobs))
 			for i := range jobs {
 				ids[i] = jobs[i].ID

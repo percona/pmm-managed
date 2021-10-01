@@ -270,7 +270,7 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 				Status: models.ErrorRestoreStatus,
 			})
 	default:
-		// Don't do anything without explicit handling
+		return errors.Errorf("unknown job type %s", job.Type)
 	}
 
 	go func() {
@@ -297,6 +297,8 @@ func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.J
 		if err != nil {
 			s.l.WithError(err).Errorf("failed to create log for job %s [chunk: %d]", progress.JobId, result.Logs.ChunkId)
 		}
+	default:
+		s.l.Errorf("unexpected job progress type: %T", result)
 	}
 }
 
