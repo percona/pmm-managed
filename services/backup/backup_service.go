@@ -115,16 +115,16 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 	var job *models.Job
 	var config *models.DBConfig
 
+	name := params.Name
+	if params.Mode == models.Snapshot {
+		name = name + "_" + time.Now().Format(time.RFC3339)
+	}
+
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		var err error
 		svc, err = models.FindServiceByID(tx.Querier, params.ServiceID)
 		if err != nil {
 			return err
-		}
-
-		name := params.Name
-		if params.Mode == models.Snapshot {
-			name = name + "_" + time.Now().Format(time.RFC3339)
 		}
 
 		location, err = models.FindBackupLocationByID(tx.Querier, params.LocationID)
@@ -213,9 +213,9 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, name, config, locationConfig)
 	case models.MongoDBServiceType:
-		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, params.Name, config, params.Mode, locationConfig)
+		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, name, config, params.Mode, locationConfig)
 	case models.PostgreSQLServiceType,
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,
