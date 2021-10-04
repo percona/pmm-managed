@@ -36,3 +36,10 @@ func requireNoDuplicateFlags(t *testing.T, flags []string) {
 		s[name] = struct{}{}
 	}
 }
+
+func TestPathsBaseForDifferentVersions(t *testing.T) {
+	left := "{{"
+	right := "}}"
+	assert.Equal(t, "/usr/local/percona/pmm2", pathsBase("2.22.99", left, right))
+	assert.Equal(t, "{{ .paths_base }}", pathsBase("2.23.00", left, right))
+}
