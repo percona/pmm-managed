@@ -19,8 +19,9 @@ package agents
 import (
 	"github.com/AlekSi/pointer"
 
-	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm/version"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 type redactMode int
@@ -52,7 +53,7 @@ func redactWords(agent *models.Agent) []string {
 	return words
 }
 
-// pathsBase return hardcoded path base in case of unsupported PMM client othervise placeholder.
+// pathsBase returns paths base and in case of unsupported PMM client old hardcoded value.
 func pathsBase(ver, tdpLeft, tdpRight string) string {
 	pmmAgentVersion, err := version.Parse(ver)
 	if err != nil || pmmAgentVersion.Less(pmmAgentPathsBaseSupport) {
