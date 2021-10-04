@@ -31,7 +31,7 @@ const (
 	exposeSecrets
 )
 
-var pmmAgentPathsBaseSupport = version.MustParse("2.23.0")
+var pmmAgentPathsBaseSupport = version.MustParse("2.22.99")
 
 // redactWords returns words that should be redacted from given Agent logs/output.
 func redactWords(agent *models.Agent) []string {
