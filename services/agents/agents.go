@@ -20,6 +20,7 @@ import (
 	"github.com/AlekSi/pointer"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm/version"
 )
 
 type redactMode int
@@ -28,6 +29,8 @@ const (
 	redactSecrets redactMode = iota
 	exposeSecrets
 )
+
+var pmmAgentPathsBaseSupport = version.MustParse("2.23.0")
 
 // redactWords returns words that should be redacted from given Agent logs/output.
 func redactWords(agent *models.Agent) []string {
@@ -47,4 +50,14 @@ func redactWords(agent *models.Agent) []string {
 		}
 	}
 	return words
+}
+
+// pathsBase return hardcoded path base in case of unsupported PMM client othervise placeholder.
+func pathsBase(ver, tdpLeft, tdpRight string) string {
+	pmmAgentVersion, err := version.Parse(ver)
+	if err != nil || pmmAgentVersion.Less(pmmAgentPathsBaseSupport) {
+		return "/usr/local/percona/pmm2"
+	}
+
+	return tdpLeft + " .paths_base " + tdpRight
 }
