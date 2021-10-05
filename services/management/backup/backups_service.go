@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/api/inventorypb"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/scheduler"
 )
@@ -50,7 +52,11 @@ const (
 )
 
 // NewBackupsService creates new backups API service.
-func NewBackupsService(db *reform.DB, backupService backupService, scheduleService scheduleService) *BackupsService {
+func NewBackupsService(
+	db *reform.DB,
+	backupService backupService,
+	scheduleService scheduleService,
+) *BackupsService {
 	return &BackupsService{
 		l:               logrus.WithField("component", "management/backup/backups"),
 		db:              db,
@@ -62,11 +68,11 @@ func NewBackupsService(db *reform.DB, backupService backupService, scheduleServi
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
 	if req.Retries > maxRetriesAttempts {
-		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retries %d.", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retry interval %s.", maxRetryInterval)
 	}
 
 	artifactID, err := s.backupService.PerformBackup(ctx, backup.PerformBackupParams{
@@ -106,11 +112,11 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 	var id string
 
 	if req.Retries > maxRetriesAttempts {
-		return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retries %d.", maxRetriesAttempts)
 	}
 
 	if req.RetryInterval.AsDuration() > maxRetryInterval {
-		return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+		return nil, status.Errorf(codes.InvalidArgument, "Exceeded max retry interval %s.", maxRetryInterval)
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
@@ -207,14 +213,14 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 		return nil, err
 	}
 
-	services, err := models.FindServicesByIDs(s.db.Querier, serviceIDs)
+	svcs, err := models.FindServicesByIDs(s.db.Querier, serviceIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	scheduledBackups := make([]*backupv1beta1.ScheduledBackup, 0, len(tasks))
 	for _, task := range tasks {
-		scheduledBackup, err := convertTaskToScheduledBackup(task, services, locations)
+		scheduledBackup, err := convertTaskToScheduledBackup(task, svcs, locations)
 		if err != nil {
 			s.l.WithError(err).Warnf("convert task to scheduledBackup")
 			continue
@@ -256,13 +262,13 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 	if req.Retries != nil {
 		if req.Retries.Value > maxRetriesAttempts {
-			return nil, errors.Errorf("exceeded max retries %d", maxRetriesAttempts)
+			return nil, status.Errorf(codes.InvalidArgument, "exceeded max retries %d", maxRetriesAttempts)
 		}
 		data.Retries = req.Retries.Value
 	}
 	if req.RetryInterval != nil {
 		if req.RetryInterval.AsDuration() > maxRetryInterval {
-			return nil, errors.Errorf("exceeded max retry interval %s", maxRetryInterval)
+			return nil, status.Errorf(codes.InvalidArgument, "exceeded max retry interval %s", maxRetryInterval)
 		}
 		data.RetryInterval = req.RetryInterval.AsDuration()
 	}
@@ -324,6 +330,90 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil
+}
+
+// GetLogs returns logs for artifact.
+func (s *BackupsService) GetLogs(ctx context.Context, req *backupv1beta1.GetLogsRequest) (*backupv1beta1.GetLogsResponse, error) {
+	jobs, err := models.FindJobs(s.db.Querier, models.JobsFilter{
+		ArtifactID: req.ArtifactId,
+		Types: []models.JobType{
+			models.MySQLBackupJob,
+			models.MongoDBBackupJob,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(jobs) == 0 {
+		return nil, status.Error(codes.NotFound, "Job related to artifact was not found.")
+	}
+	if len(jobs) > 1 {
+		s.l.Warnf("artifact %s appear in more than one job", req.ArtifactId)
+	}
+
+	filter := models.JobLogsFilter{
+		JobID:  jobs[len(jobs)-1].ID,
+		Offset: int(req.Offset),
+	}
+	if req.Limit > 0 {
+		filter.Limit = pointer.ToInt(int(req.Limit))
+	}
+
+	jobLogs, err := models.FindJobLogs(s.db.Querier, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &backupv1beta1.GetLogsResponse{
+		Logs: make([]*backupv1beta1.LogChunk, 0, len(jobLogs)),
+	}
+	for _, log := range jobLogs {
+		if log.LastChunk {
+			res.End = true
+			break
+		}
+		res.Logs = append(res.Logs, &backupv1beta1.LogChunk{
+			ChunkId: uint32(log.ChunkID),
+			Data:    log.Data,
+		})
+	}
+
+	return res, nil
+}
+
+// ListArtifactCompatibleServices lists compatible service for restoring given artifact.
+func (s *BackupsService) ListArtifactCompatibleServices(
+	ctx context.Context,
+	req *backupv1beta1.ListArtifactCompatibleServicesRequest,
+) (*backupv1beta1.ListArtifactCompatibleServicesResponse, error) {
+	compatibleServices, err := s.backupService.FindArtifactCompatibleServices(ctx, req.ArtifactId)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &backupv1beta1.ListArtifactCompatibleServicesResponse{}
+	for _, service := range compatibleServices {
+		apiService, err := services.ToAPIService(service)
+		if err != nil {
+			return nil, err
+		}
+
+		switch s := apiService.(type) {
+		case *inventorypb.MySQLService:
+			res.Mysql = append(res.Mysql, s)
+		case *inventorypb.MongoDBService:
+			res.Mongodb = append(res.Mongodb, s)
+		case *inventorypb.PostgreSQLService,
+			*inventorypb.ProxySQLService,
+			*inventorypb.HAProxyService,
+			*inventorypb.ExternalService:
+			return nil, status.Errorf(codes.Unimplemented, "unimplemented service type %T", service)
+		default:
+			return nil, status.Errorf(codes.Internal, "unhandled inventory service type %T", service)
+		}
+	}
+
+	return res, nil
 }
 
 func convertTaskToScheduledBackup(task *models.ScheduledTask,
