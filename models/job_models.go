@@ -80,8 +80,9 @@ type MySQLRestoreBackupJobData struct {
 
 // MongoDBBackupJobData stores MongoDB job specific result data.
 type MongoDBBackupJobData struct {
-	ServiceID  string `json:"service_id"`
-	ArtifactID string `json:"artifact_id"`
+	ServiceID  string     `json:"service_id"`
+	ArtifactID string     `json:"artifact_id"`
+	Mode       BackupMode `json:"mode"`
 }
 
 // MongoDBRestoreBackupJobData stores MongoDB restore backup job specific result data.
@@ -94,8 +95,8 @@ type MongoDBRestoreBackupJobData struct {
 type JobData struct {
 	MySQLBackup          *MySQLBackupJobData          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobData   `json:"mysql_restore_backup,omitempty"`
-	MongoDBBackup        *MongoDBBackupJobData        `json:"mongo_db_backup,omitempty"`
-	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongo_db_restore_backup,omitempty"`
+	MongoDBBackup        *MongoDBBackupJobData        `json:"mongodb_backup,omitempty"`
+	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongodb_restore_backup,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -143,6 +144,15 @@ func (r *Job) AfterFind() error {
 	r.UpdatedAt = r.UpdatedAt.UTC()
 
 	return nil
+}
+
+// JobLog stores chunk of logs from job.
+//reform:job_logs
+type JobLog struct {
+	JobID     string `reform:"job_id"`
+	ChunkID   int    `reform:"chunk_id"`
+	Data      string `reform:"data"`
+	LastChunk bool   `reform:"last_chunk"`
 }
 
 // check interfaces.
