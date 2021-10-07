@@ -513,6 +513,15 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						SendResolved: channel.SlackConfig.SendResolved,
 					},
 					Channel: channel.SlackConfig.Channel,
+					Title:   `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}`,
+					Text: `{{ range .Alerts -}}
+*Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - ` + "`{{ .Labels.severity }}`" + `{{ end }}
+*Description:* {{ .Annotations.description }}
+*Details:*
+    {{ range .Labels.SortedPairs }} • *{{ .Name }}:* ` + "`{{ .Value }}`" + `
+    {{ end }}
+
+{{ end }}`,
 				})
 
 			case models.WebHook:
