@@ -362,22 +362,62 @@ func TestGenerateReceivers(t *testing.T) {
   slack_configs:
     - send_resolved: false
       channel: channel1
+      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+      text: |-
+        {{ range .Alerts -}}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `+"`{{ .Labels.severity }}`"+`{{ end }}
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+            {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `+"`{{ .Value }}`"+`
+            {{ end }}
+
+        {{ end }}
       short_fields: false
       link_names: false
 - name: 1+2
   slack_configs:
     - send_resolved: false
       channel: channel1
+      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+      text: |-
+        {{ range .Alerts -}}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `+"`{{ .Labels.severity }}`"+`{{ end }}
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+            {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `+"`{{ .Value }}`"+`
+            {{ end }}
+
+        {{ end }}
       short_fields: false
       link_names: false
     - send_resolved: false
       channel: channel2
+      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+      text: |-
+        {{ range .Alerts -}}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `+"`{{ .Labels.severity }}`"+`{{ end }}
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+            {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `+"`{{ .Value }}`"+`
+            {{ end }}
+
+        {{ end }}
       short_fields: false
       link_names: false
 - name: "2"
   slack_configs:
     - send_resolved: false
       channel: channel2
+      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+      text: |-
+        {{ range .Alerts -}}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `+"`{{ .Labels.severity }}`"+`{{ end }}
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+            {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `+"`{{ .Value }}`"+`
+            {{ end }}
+
+        {{ end }}
       short_fields: false
       link_names: false
 `) + "\n"
