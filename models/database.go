@@ -623,6 +623,10 @@ var databaseSchema = [][]string{
 		`UPDATE jobs SET data = data - 'mongo_db_backup' || jsonb_build_object('mongodb_backup', data->'mongo_db_backup') WHERE type = 'mongodb_backup';`,
 		`UPDATE jobs SET data = data - 'mongo_db_restore_backup' || jsonb_build_object('mongodb_restore_backup', data->'mongo_db_restore_backup') WHERE type = 'mongodb_restore_backup';`,
 	},
+	49: {
+		`ALTER TABLE services
+			ADD COLUMN partition_name VARCHAR NOT NULL DEFAULT ''`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
