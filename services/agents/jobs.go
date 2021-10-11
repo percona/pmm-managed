@@ -143,7 +143,8 @@ func (s *JobsService) RestartJob(ctx context.Context, jobID string) error {
 			return errors.WithStack(err)
 		}
 	case models.MongoDBBackupJob:
-		if err := s.StartMongoDBBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig, locationConfig); err != nil {
+		if err := s.StartMongoDBBackupJob(job.ID, job.PMMAgentID, job.Timeout, artifact.Name, dbConfig,
+			job.Data.MongoDBBackup.Mode, locationConfig); err != nil {
 			return errors.WithStack(err)
 		}
 	case models.MySQLRestoreBackupJob:
@@ -270,7 +271,7 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 				Status: models.ErrorRestoreStatus,
 			})
 	default:
-		// Don't do anything without explicit handling
+		return errors.Errorf("unknown job type %s", job.Type)
 	}
 
 	go func() {
@@ -283,6 +284,23 @@ func (s *JobsService) handleJobError(job *models.Job) error {
 	}()
 
 	return err
+}
+
+func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.JobProgress) {
+	switch result := progress.Result.(type) {
+	case *agentpb.JobProgress_Logs_:
+		_, err := models.CreateJobLog(s.db.Querier, models.CreateJobLogParams{
+			JobID:     progress.JobId,
+			ChunkID:   int(result.Logs.ChunkId),
+			Data:      result.Logs.Data,
+			LastChunk: result.Logs.Done,
+		})
+		if err != nil {
+			s.l.WithError(err).Errorf("failed to create log for job %s [chunk: %d]", progress.JobId, result.Logs.ChunkId)
+		}
+	default:
+		s.l.Errorf("unexpected job progress type: %T", result)
+	}
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
@@ -335,15 +353,17 @@ func (s *JobsService) StartMongoDBBackupJob(
 	timeout time.Duration,
 	name string,
 	dbConfig *models.DBConfig,
+	mode models.BackupMode,
 	locationConfig *models.BackupLocationConfig,
 ) error {
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
-		Name:     name,
-		User:     dbConfig.User,
-		Password: dbConfig.Password,
-		Address:  dbConfig.Address,
-		Port:     int32(dbConfig.Port),
-		Socket:   dbConfig.Socket,
+		Name:       name,
+		User:       dbConfig.User,
+		Password:   dbConfig.Password,
+		Address:    dbConfig.Address,
+		Port:       int32(dbConfig.Port),
+		Socket:     dbConfig.Socket,
+		EnablePitr: mode == models.PITR,
 	}
 
 	switch {
