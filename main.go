@@ -652,6 +652,7 @@ func main() {
 	if err != nil {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
+	// We should collect templates before rules service created, because it will regenerate rule files on startup.
 	templatesService.Collect(ctx)
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
 	alertsService := ia.NewAlertsService(db, alertmanager, templatesService)
