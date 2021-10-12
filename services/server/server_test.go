@@ -235,7 +235,7 @@ func TestServer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
-		assert.True(t, settings.Settings.AlertingEnabled)
+		assert.True(t, settings.Settings.AlertingEnabled) //nolint:staticcheck
 		assert.True(t, settings.Settings.AzurediscoverEnabled)
 	})
 }
