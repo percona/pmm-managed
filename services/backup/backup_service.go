@@ -19,6 +19,7 @@ package backup
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -30,6 +31,19 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
+)
+
+var (
+	// ErrIncompatibleService is returned when the service is incompatible for making a backup or restore.
+	ErrIncompatibleService = errors.New("incompatible service")
+	// ErrXtrabackupNotInstalled is returned if some xtrabackup component is missing.
+	ErrXtrabackupNotInstalled = errors.New("xtrabackup is not installed")
+	// ErrInvalidXtrabackup is returned if xtrabackup components have different version.
+	ErrInvalidXtrabackup = errors.New("invalid installation of the xtrabackup")
+	// ErrIncompatibleXtrabackup is returned if xtrabackup is not compatible with the MySQL.
+	ErrIncompatibleXtrabackup = errors.New("incompatible xtrabackup")
+	// ErrIncompatibleTargetMySQL is returned if target version of MySQL is not compatible for restoring selected artifact.
+	ErrIncompatibleTargetMySQL = errors.New("incompatible version of target mysql")
 )
 
 // Service represents core logic for db backup.
@@ -278,8 +292,8 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 
 		if params.ServiceType == models.MySQLServiceType && params.DBVersion != "" {
 			if params.DBVersion != dbVersion {
-				return errors.Errorf("incompatible service: artifact db version %q != db version %q",
-					params.DBVersion, dbVersion)
+				return fmt.Errorf("%w: incompatible service: artifact db version %q != db version %q",
+					ErrIncompatibleTargetMySQL, params.DBVersion, dbVersion)
 			}
 		}
 
@@ -622,16 +636,16 @@ func (s *Service) findArtifactCompatibleServices(
 	compatibleServiceIDs := make([]string, 0, len(svs))
 	for _, sv := range svs {
 		svm := softwareVersionsMap(sv.SoftwareVersions)
+		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
+			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
+			continue
+		}
+
 		serviceDBVersion := svm[models.MysqldSoftwareName]
 		if artifactDBVersion != serviceDBVersion {
 			s.l.Debugf("skip incompatible service id %q: artifact version %q != db version %q\"", sv.ServiceID,
 				artifactDBVersion, serviceDBVersion,
 			)
-			continue
-		}
-
-		if err := mySQLSoftwaresInstalledAndCompatible(svm); err != nil {
-			s.l.WithError(err).Debugf("skip incompatible service id %q", sv.ServiceID)
 			continue
 		}
 
@@ -667,12 +681,16 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 		models.QpressSoftwareName,
 	} {
 		if svm[name] == "" {
-			return errors.Errorf("software %q is not installed", name)
+			if name == models.XtrabackupSoftwareName || name == models.XbcloudSoftwareName {
+				return fmt.Errorf("%w: software %q is not installed", ErrXtrabackupNotInstalled, name)
+			}
+
+			return fmt.Errorf("%w: software %q is not installed", ErrIncompatibleService, name)
 		}
 	}
 
 	if svm[models.XtrabackupSoftwareName] != svm[models.XbcloudSoftwareName] {
-		return errors.Errorf("xtrabackup version %q != xbcloud version %q",
+		return fmt.Errorf("%w: xtrabackup version %q != xbcloud version %q", ErrInvalidXtrabackup,
 			svm[models.XtrabackupSoftwareName], svm[models.XbcloudSoftwareName])
 	}
 
@@ -681,8 +699,8 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 		return err
 	}
 	if !ok {
-		return errors.Errorf("mysql version %q is not compatible with xtrabackup version %q",
-			svm[models.MysqldSoftwareName], svm[models.XtrabackupSoftwareName])
+		return fmt.Errorf("%w: xtrabackup version %q is not compatible with mysql version %q",
+			ErrIncompatibleXtrabackup, svm[models.MysqldSoftwareName], svm[models.XtrabackupSoftwareName])
 	}
 
 	return nil
