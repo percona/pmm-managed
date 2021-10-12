@@ -525,7 +525,11 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						NotifierConfig: alertmanager.NotifierConfig{
 							SendResolved: channel.EmailConfig.SendResolved,
 						},
-						To: to,
+						To:   to,
+						HTML: emailTemplate,
+						Headers: map[string]string{
+							"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}`,
+						},
 					})
 				}
 
