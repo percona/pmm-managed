@@ -75,6 +75,11 @@ func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert
 	}
 }
 
+// Enabled returns if service is enabled and can be used.
+func (s *RulesService) Enabled() bool {
+	return true
+}
+
 // TODO Move this and related types to https://github.com/percona/promconfig
 // https://jira.percona.com/browse/PMM-7069
 type ruleFile struct {

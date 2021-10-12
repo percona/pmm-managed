@@ -43,6 +43,11 @@ func NewChannelsService(db *reform.DB, alertManager alertManager) *ChannelsServi
 	}
 }
 
+// Enabled returns if service is enabled and can be used.
+func (s *ChannelsService) Enabled() bool {
+	return true
+}
+
 // ListChannels returns list of available channels.
 func (s *ChannelsService) ListChannels(ctx context.Context, req *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
 	var pageIndex int

@@ -104,6 +104,11 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 	return s, nil
 }
 
+// Enabled returns if service is enabled and can be used.
+func (s *TemplatesService) Enabled() bool {
+	return true
+}
+
 func newParamTemplate() *template.Template {
 	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }

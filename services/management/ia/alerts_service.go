@@ -55,6 +55,11 @@ func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService
 	}
 }
 
+// Enabled returns if service is enabled and can be used.
+func (s *AlertsService) Enabled() bool {
+	return true
+}
+
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
 	alerts, err := s.alertManager.GetAlerts(ctx)
