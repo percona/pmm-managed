@@ -287,6 +287,8 @@ func TestRestoreBackup(t *testing.T) {
 		updatedArtifact, err := models.UpdateArtifact(db.Querier, artifact.ID, models.UpdateArtifactParams{
 			Status: models.BackupStatusPointer(models.PendingBackupStatus),
 		})
+		require.NoError(t, err)
+		require.NotNil(t, updatedArtifact)
 
 		mockedVersioner.On("GetVersions", *agent.PMMAgentID, softwares).Return(versions1, nil).Once()
 		restoreID, err := backupService.RestoreBackup(ctx, pointer.GetString(agent.ServiceID), artifact.ID)
