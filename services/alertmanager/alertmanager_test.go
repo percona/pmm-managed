@@ -373,21 +373,21 @@ func TestGenerateReceivers(t *testing.T) {
       title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
       text: |-
         {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`" + `{{ end }} {{ .Annotations.summary }}
+        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
         *Description:* {{ .Annotations.description }}
         *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* ` + "`{{ .Labels.node_name }}`" + `
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* ` + "`{{ .Labels.node_id }}`" + `
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* ` + "`{{ .Labels.service_name }}`" + `
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* ` + "`{{ .Labels.service_id }}`" + `
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* ` + "`{{ .Labels.service_type }}`" + `
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* ` + "`{{ .Labels.rule_id }}`" + `
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* ` + "`{{ .Labels.alertgroup }}`" + `
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* ` + "`{{ .Labels.template_name }}`" + `
-        {{ end }}{{ if .Labels.severity }}     • *severity:* ` + "`{{ .Labels.severity }}`" + `
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* ` + "`{{ .Labels.agent_id }}`" + `
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* ` + "`{{ .Labels.agent_type }}`" + `
-        {{ end }}{{ if .Labels.job }}     • *job:* ` + "`{{ .Labels.job }}`" + `
+        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
+        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
+        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
+        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
+        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
+        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
+        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
+        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
+        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
+        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
+        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
+        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
         {{ end }}
 
         {{ end }}
@@ -400,21 +400,21 @@ func TestGenerateReceivers(t *testing.T) {
       title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
       text: |-
         {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}` + "`{{ .Labels.severity | toUpper }}`" + `{{ end }} {{ .Annotations.summary }}
+        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
         *Description:* {{ .Annotations.description }}
         *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* ` + "`{{ .Labels.node_name }}`" + `
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* ` + "`{{ .Labels.node_id }}`" + `
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* ` + "`{{ .Labels.service_name }}`" + `
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* ` + "`{{ .Labels.service_id }}`" + `
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* ` + "`{{ .Labels.service_type }}`" + `
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* ` + "`{{ .Labels.rule_id }}`" + `
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* ` + "`{{ .Labels.alertgroup }}`" + `
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* ` + "`{{ .Labels.template_name }}`" + `
-        {{ end }}{{ if .Labels.severity }}     • *severity:* ` + "`{{ .Labels.severity }}`" + `
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* ` + "`{{ .Labels.agent_id }}`" + `
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* ` + "`{{ .Labels.agent_type }}`" + `
-        {{ end }}{{ if .Labels.job }}     • *job:* ` + "`{{ .Labels.job }}`" + `
+        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
+        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
+        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
+        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
+        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
+        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
+        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
+        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
+        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
+        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
+        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
+        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
         {{ end }}
 
         {{ end }}
@@ -425,21 +425,21 @@ func TestGenerateReceivers(t *testing.T) {
       title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
       text: |-
         {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}` + "`{{ .Labels.severity | toUpper }}`" + `{{ end }} {{ .Annotations.summary }}
+        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
         *Description:* {{ .Annotations.description }}
         *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* ` + "`{{ .Labels.node_name }}`" + `
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* ` + "`{{ .Labels.node_id }}`" + `
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* ` + "`{{ .Labels.service_name }}`" + `
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* ` + "`{{ .Labels.service_id }}`" + `
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* ` + "`{{ .Labels.service_type }}`" + `
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* ` + "`{{ .Labels.rule_id }}`" + `
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* ` + "`{{ .Labels.alertgroup }}`" + `
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* ` + "`{{ .Labels.template_name }}`" + `
-        {{ end }}{{ if .Labels.severity }}     • *severity:* ` + "`{{ .Labels.severity }}`" + `
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* ` + "`{{ .Labels.agent_id }}`" + `
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* ` + "`{{ .Labels.agent_type }}`" + `
-        {{ end }}{{ if .Labels.job }}     • *job:* ` + "`{{ .Labels.job }}`" + `
+        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
+        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
+        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
+        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
+        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
+        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
+        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
+        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
+        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
+        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
+        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
+        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
         {{ end }}
 
         {{ end }}
@@ -452,21 +452,21 @@ func TestGenerateReceivers(t *testing.T) {
       title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
       text: |-
         {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}` + "`{{ .Labels.severity | toUpper }}`" + `{{ end }} {{ .Annotations.summary }}
+        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
         *Description:* {{ .Annotations.description }}
         *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* ` + "`{{ .Labels.node_name }}`" + `
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* ` + "`{{ .Labels.node_id }}`" + `
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* ` + "`{{ .Labels.service_name }}`" + `
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* ` + "`{{ .Labels.service_id }}`" + `
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* ` + "`{{ .Labels.service_type }}`" + `
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* ` + "`{{ .Labels.rule_id }}`" + `
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* ` + "`{{ .Labels.alertgroup }}`" + `
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* ` + "`{{ .Labels.template_name }}`" + `
-        {{ end }}{{ if .Labels.severity }}     • *severity:* ` + "`{{ .Labels.severity }}`" + `
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* ` + "`{{ .Labels.agent_id }}`" + `
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* ` + "`{{ .Labels.agent_type }}`" + `
-        {{ end }}{{ if .Labels.job }}     • *job:* ` + "`{{ .Labels.job }}`" + `
+        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
+        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
+        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
+        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
+        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
+        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
+        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
+        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
+        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
+        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
+        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
+        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
         {{ end }}
 
         {{ end }}
