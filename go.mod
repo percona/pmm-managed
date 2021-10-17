@@ -39,7 +39,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20211017223243-a6f3f8f006ad
 	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
-	github.com/percona/pmm v0.0.0-20211017192349-e7143509da04
+	github.com/percona/pmm v0.0.0-20211017233723-756abbbc3032
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
