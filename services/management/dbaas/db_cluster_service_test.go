@@ -94,7 +94,9 @@ func TestDBClusterService(t *testing.T) {
 	ctx, db, dbaasClient, grafanaClient, teardown := setup(t)
 	defer teardown(t)
 
-	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, NewVersionServiceClient(versionServiceURL))
+	versionService := NewVersionServiceClient(versionServiceURL)
+
+	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, versionService)
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, dbKubeconfigTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
 			PxcOperatorVersion:   "",
@@ -114,7 +116,7 @@ func TestDBClusterService(t *testing.T) {
 	assert.NotNil(t, registerKubernetesClusterResponse)
 
 	t.Run("BasicListPXCClusters", func(t *testing.T) {
-		s := NewDBClusterService(db, dbaasClient, grafanaClient)
+		s := NewDBClusterService(db, dbaasClient, grafanaClient, versionService)
 		mockPXCResp := controllerv1beta1.ListPXCClustersResponse{
 			Clusters: []*controllerv1beta1.ListPXCClustersResponse_Cluster{
 				{
@@ -191,7 +193,7 @@ func TestDBClusterService(t *testing.T) {
 	})
 
 	t.Run("BasicDeletePXCCluster", func(t *testing.T) {
-		s := NewDBClusterService(db, dbaasClient, grafanaClient)
+		s := NewDBClusterService(db, dbaasClient, grafanaClient, versionService)
 		dbClusterName := "delete-pxc-test"
 		mockReq := controllerv1beta1.DeletePXCClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -214,7 +216,7 @@ func TestDBClusterService(t *testing.T) {
 	})
 
 	t.Run("BasicDeletePSMDBCluster", func(t *testing.T) {
-		s := NewDBClusterService(db, dbaasClient, grafanaClient)
+		s := NewDBClusterService(db, dbaasClient, grafanaClient, versionService)
 		dbClusterName := "delete-psmdb-test"
 		mockReq := controllerv1beta1.DeletePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{

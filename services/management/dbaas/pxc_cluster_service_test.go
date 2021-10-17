@@ -93,8 +93,9 @@ func TestPXCClusterService(t *testing.T) {
 
 	ctx, db, dbaasClient, grafanaClient, teardown := setup(t)
 	defer teardown(t)
+	versionService := NewVersionServiceClient(versionServiceURL)
 
-	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, NewVersionServiceClient(versionServiceURL))
+	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, versionService)
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, pxcKubeconfigTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
 			PxcOperatorVersion:   "",
@@ -112,53 +113,6 @@ func TestPXCClusterService(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, registerKubernetesClusterResponse)
-	versionService := NewVersionServiceClient(versionServiceURL)
-
-	t.Run("BasicListXtraDBClusters", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient, grafanaClient, versionService)
-		mockResp := controllerv1beta1.ListXtraDBClustersResponse{
-			Clusters: []*controllerv1beta1.ListXtraDBClustersResponse_Cluster{
-				{
-					Name: "first-pxc-test",
-					Params: &controllerv1beta1.XtraDBClusterParams{
-						ClusterSize: 5,
-						Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-							ComputeResources: &controllerv1beta1.ComputeResources{
-								CpuM:        3,
-								MemoryBytes: 256,
-							},
-							DiskSize: 1024 * 1024 * 1024,
-						},
-						Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-							ComputeResources: &controllerv1beta1.ComputeResources{
-								CpuM:        2,
-								MemoryBytes: 124,
-							},
-							DiskSize: 1024 * 1024 * 1024,
-						},
-					},
-					Operation: &controllerv1beta1.RunningOperation{
-						TotalSteps:    int32(15),
-						FinishedSteps: int32(15),
-					},
-				},
-			},
-		}
-
-		dbaasClient.On("ListXtraDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
-
-		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: pxcKubernetesClusterNameTest})
-		assert.NoError(t, err)
-		require.NotNil(t, resp.Clusters[0])
-		assert.Equal(t, resp.Clusters[0].Name, "first-pxc-test")
-		assert.Equal(t, int32(5), resp.Clusters[0].Params.ClusterSize)
-		assert.Equal(t, int32(3), resp.Clusters[0].Params.Pxc.ComputeResources.CpuM)
-		assert.Equal(t, int64(256), resp.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
-		assert.Equal(t, int32(2), resp.Clusters[0].Params.Proxysql.ComputeResources.CpuM)
-		assert.Equal(t, int64(124), resp.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
-		assert.Equal(t, int32(15), resp.Clusters[0].Operation.TotalSteps)
-		assert.Equal(t, int32(15), resp.Clusters[0].Operation.FinishedSteps)
-	})
 
 	//nolint:dupl
 	t.Run("BasicCreatePXCClusters", func(t *testing.T) {
@@ -397,28 +351,6 @@ func TestPXCClusterService(t *testing.T) {
 		}
 
 		_, err := s.RestartPXCCluster(ctx, &in)
-		assert.NoError(t, err)
-	})
-
-	t.Run("BasicDeleteXtraDBCluster", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient, grafanaClient, versionService)
-		dbClusterName := "delete-pxc-test"
-		mockReq := controllerv1beta1.DeleteXtraDBClusterRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
-			},
-			Name: dbClusterName,
-		}
-
-		dbaasClient.On("DeleteXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeleteXtraDBClusterResponse{}, nil)
-		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("pxc-%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
-
-		in := dbaasv1beta1.DeleteXtraDBClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
-			Name:                  dbClusterName,
-		}
-
-		_, err := s.DeleteXtraDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 

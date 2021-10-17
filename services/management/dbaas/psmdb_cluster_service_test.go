@@ -114,42 +114,6 @@ func TestPSMDBClusterService(t *testing.T) {
 	assert.NotNil(t, registerKubernetesClusterResponse)
 	versionService := NewVersionServiceClient(versionServiceURL)
 
-	t.Run("BasicListPSMDBClusters", func(t *testing.T) {
-		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
-		mockResp := controllerv1beta1.ListPSMDBClustersResponse{
-			Clusters: []*controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-				{
-					Name: "first-psmdb-test",
-					Params: &controllerv1beta1.PSMDBClusterParams{
-						ClusterSize: 5,
-						Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-							ComputeResources: &controllerv1beta1.ComputeResources{
-								CpuM:        3,
-								MemoryBytes: 256,
-							},
-						},
-					},
-					Operation: &controllerv1beta1.RunningOperation{
-						TotalSteps:    int32(10),
-						FinishedSteps: int32(10),
-					},
-				},
-			},
-		}
-
-		dbaasClient.On("ListPSMDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
-
-		resp, err := s.ListPSMDBClusters(ctx, &dbaasv1beta1.ListPSMDBClustersRequest{KubernetesClusterName: kubernetesClusterNameTest})
-		assert.NoError(t, err)
-		require.NotNil(t, resp.Clusters[0])
-		assert.Equal(t, resp.Clusters[0].Name, "first-psmdb-test")
-		assert.Equal(t, int32(5), resp.Clusters[0].Params.ClusterSize)
-		assert.Equal(t, int32(3), resp.Clusters[0].Params.Replicaset.ComputeResources.CpuM)
-		assert.Equal(t, int64(256), resp.Clusters[0].Params.Replicaset.ComputeResources.MemoryBytes)
-		assert.Equal(t, int32(10), resp.Clusters[0].Operation.TotalSteps)
-		assert.Equal(t, int32(10), resp.Clusters[0].Operation.FinishedSteps)
-	})
-
 	//nolint:dupl
 	t.Run("BasicCreatePSMDBClusters", func(t *testing.T) {
 		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
@@ -308,28 +272,6 @@ func TestPSMDBClusterService(t *testing.T) {
 		}
 
 		_, err := s.RestartPSMDBCluster(ctx, &in)
-		assert.NoError(t, err)
-	})
-
-	t.Run("BasicDeletePSMDBCluster", func(t *testing.T) {
-		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
-		dbClusterName := "delete-psmdb-test"
-		mockReq := controllerv1beta1.DeletePSMDBClusterRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubeconfTest,
-			},
-			Name: dbClusterName,
-		}
-
-		dbaasClient.On("DeletePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeletePSMDBClusterResponse{}, nil)
-		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("psmdb-%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
-
-		in := dbaasv1beta1.DeletePSMDBClusterRequest{
-			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  dbClusterName,
-		}
-
-		_, err := s.DeletePSMDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 

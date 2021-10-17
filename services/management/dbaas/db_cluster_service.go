@@ -19,7 +19,9 @@ package dbaas
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -32,16 +34,23 @@ import (
 )
 
 type DBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient *VersionServiceClient
 }
 
 // NewDBClusterService creates DB Clusters Service.
-func NewDBClusterService(db *reform.DB, client dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.DBClusterServer {
+func NewDBClusterService(db *reform.DB, controllerClient dbaasClient, grafanaClient grafanaClient, versionServiceClient *VersionServiceClient) dbaasv1beta1.DBClusterServer {
 	l := logrus.WithField("component", "dbaas_db_cluster")
-	return &DBClusterService{db: db, l: l, controllerClient: client, grafanaClient: grafanaClient}
+	return &DBClusterService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     controllerClient,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // ListDBClusters returns a list of all DB clusters.
@@ -51,12 +60,17 @@ func (s DBClusterService) ListDBClusters(ctx context.Context, req *dbaasv1beta1.
 		return nil, err
 	}
 
-	pxcClusters, err := s.listPXCClusters(ctx, kubernetesCluster.KubeConfig)
+	checkResponse, err := s.controllerClient.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	psmdbClusters, err := s.listPSMDBClusters(ctx, kubernetesCluster.KubeConfig)
+	pxcClusters, err := s.listPXCClusters(ctx, kubernetesCluster.KubeConfig, checkResponse.Operators.PxcOperatorVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	psmdbClusters, err := s.listPSMDBClusters(ctx, kubernetesCluster.KubeConfig, checkResponse.Operators.PsmdbOperatorVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +81,7 @@ func (s DBClusterService) ListDBClusters(ctx context.Context, req *dbaasv1beta1.
 	}, nil
 }
 
-func (s DBClusterService) listPSMDBClusters(ctx context.Context, kubeConfig string) ([]*dbaasv1beta1.PSMDBCluster, error) {
+func (s DBClusterService) listPSMDBClusters(ctx context.Context, kubeConfig string, operatorVersion string) ([]*dbaasv1beta1.PSMDBCluster, error) {
 	in := dbaascontrollerv1beta1.ListPSMDBClustersRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubeConfig,
@@ -111,13 +125,28 @@ func (s DBClusterService) listPSMDBClusters(ctx context.Context, kubeConfig stri
 			Exposed: c.Exposed,
 		}
 
+		if c.Params.Image != "" {
+			imageAndTag := strings.Split(c.Params.Image, ":")
+			if len(imageAndTag) != 2 {
+				return nil, errors.Errorf("failed to parse PSMDB version out of %q", c.Params.Image)
+			}
+			currentDBVersion := imageAndTag[1]
+
+			nextVersionImage, err := s.versionServiceClient.GetNextDatabaseImage(ctx, psmdbOperator, operatorVersion, currentDBVersion)
+			if err != nil {
+				return nil, err
+			}
+			cluster.AvailableImage = nextVersionImage
+			cluster.InstalledImage = c.Params.Image
+		}
+
 		clusters[i] = &cluster
 	}
 
 	return clusters, nil
 }
 
-func (s DBClusterService) listPXCClusters(ctx context.Context, kubeConfig string) ([]*dbaasv1beta1.PXCCluster, error) {
+func (s DBClusterService) listPXCClusters(ctx context.Context, kubeConfig string, operatorVersion string) ([]*dbaasv1beta1.PXCCluster, error) {
 	in := dbaascontrollerv1beta1.ListPXCClustersRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubeConfig,
@@ -176,6 +205,21 @@ func (s DBClusterService) listPXCClusters(ctx context.Context, kubeConfig string
 					},
 				}
 			}
+		}
+
+		if c.Params.Pxc.Image != "" {
+			imageAndTag := strings.Split(c.Params.Pxc.Image, ":")
+			if len(imageAndTag) != 2 {
+				return nil, errors.Errorf("failed to parse Xtradb Cluster version out of %q", c.Params.Pxc.Image)
+			}
+			currentDBVersion := imageAndTag[1]
+
+			nextVersionImage, err := s.versionServiceClient.GetNextDatabaseImage(ctx, pxcOperator, operatorVersion, currentDBVersion)
+			if err != nil {
+				return nil, err
+			}
+			cluster.AvailableImage = nextVersionImage
+			cluster.InstalledImage = c.Params.Pxc.Image
 		}
 
 		pxcClusters[i] = &cluster

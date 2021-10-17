@@ -35,16 +35,23 @@ import (
 
 // PXCClustersService implements PXCClusterServer methods.
 type PXCClustersService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient versionService
 }
 
 // NewPXCClusterService creates PXC Service.
-func NewPXCClusterService(db *reform.DB, client dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.PXCClustersServer {
+func NewPXCClusterService(db *reform.DB, controllerClient dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.PXCClustersServer {
 	l := logrus.WithField("component", "pxc_cluster")
-	return &PXCClustersService{db: db, l: l, controllerClient: client, grafanaClient: grafanaClient}
+	return &PXCClustersService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     controllerClient,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // GetPXCClusterCredentials returns a PXC cluster credentials.
@@ -126,6 +133,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
+			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
 		},
 		Expose: req.Expose,
 	}
