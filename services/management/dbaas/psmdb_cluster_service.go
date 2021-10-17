@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,16 +35,23 @@ import (
 
 // PSMDBClusterService implements PSMDBClusterServer methods.
 type PSMDBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient versionService
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.PSMDBClustersServer {
+func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.PSMDBClustersServer {
 	l := logrus.WithField("component", "psmdb_cluster")
-	return &PSMDBClusterService{db: db, l: l, controllerClient: dbaasClient, grafanaClient: grafanaClient}
+	return &PSMDBClusterService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     dbaasClient,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // Enabled returns if service is enabled and can be used.
@@ -131,6 +140,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
+			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
 		},
 		Pmm:    pmmParams,
 		Expose: req.Expose,
@@ -184,6 +194,7 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 			}
 		}
+		in.Params.Image = req.Params.Image
 	}
 	_, err = s.controllerClient.UpdatePSMDBCluster(ctx, &in)
 	if err != nil {
@@ -243,11 +254,12 @@ func (s PSMDBClusterService) GetPSMDBClusterResources(ctx context.Context, req *
 
 func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
 	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:     dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING,
 	}
 }
