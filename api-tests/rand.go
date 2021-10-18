@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // This file contains implementation for concurrent safe RNG.
-package apitests
+package pmmapitests
 
 import (
 	"math/rand"
