@@ -522,7 +522,7 @@ receivers:
                                         {{ else }}
                                     <td class="alert alert-critical">
                                         {{ end }}
-                                        You have {{ .Alerts | len }} {{ .CommonLabels.severity |  }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
+                                        You have {{ .Alerts | len }} {{ .CommonLabels.severity }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
                                     </td>
                                 </tr>
                                 <tr>
@@ -537,12 +537,20 @@ receivers:
                                                 <tr>
                                                     <td class="content-block">
                                                         <strong>------------------</strong><br />
-                                                        <strong>Alert: </strong>{{ .Annotations.summary }}<br />
+                                                        <strong>Alert: </strong>
+                                                        {{ if .Labels.severity }}
+                                                            [{{ .Labels.severity | toUpper }}]
+                                                        {{ end }}{{ .Annotations.summary }}<br />
                                                         <strong>Description: </strong>{{ .Annotations.description }}<br />
                                                         <strong>Violated rule: </strong>{{ .Annotations.rule }}<br />
                                                         <strong>Details:</strong><br />
-                                                        {{ range .Labels.SortedPairs }} • <strong>{{ .Name }}:</strong> {{ .Value }}<br />{{ end }}
-                                                        <a href="{{ .GeneratorURL }}">Source</a><br />
+                                                        {{ with .Labels }}
+                                                        {{ with .Remove (stringSlice "alertname" "ia" "instance" "node_type" "server") }}
+                                                            {{ range .SortedPairs }}
+                                                                • <strong>{{ .Name }}:</strong> {{ .Value }}<br />
+                                                            {{ end }}
+                                                        {{ end }}
+                                                        {{ end }}
                                                     </td>
                                                 </tr>
                                             {{ end }}
@@ -796,7 +804,7 @@ receivers:
                                         {{ else }}
                                     <td class="alert alert-critical">
                                         {{ end }}
-                                        You have {{ .Alerts | len }} {{ .CommonLabels.severity |  }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
+                                        You have {{ .Alerts | len }} {{ .CommonLabels.severity }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
                                     </td>
                                 </tr>
                                 <tr>
@@ -811,12 +819,20 @@ receivers:
                                                 <tr>
                                                     <td class="content-block">
                                                         <strong>------------------</strong><br />
-                                                        <strong>Alert: </strong>{{ .Annotations.summary }}<br />
+                                                        <strong>Alert: </strong>
+                                                        {{ if .Labels.severity }}
+                                                            [{{ .Labels.severity | toUpper }}]
+                                                        {{ end }}{{ .Annotations.summary }}<br />
                                                         <strong>Description: </strong>{{ .Annotations.description }}<br />
                                                         <strong>Violated rule: </strong>{{ .Annotations.rule }}<br />
                                                         <strong>Details:</strong><br />
-                                                        {{ range .Labels.SortedPairs }} • <strong>{{ .Name }}:</strong> {{ .Value }}<br />{{ end }}
-                                                        <a href="{{ .GeneratorURL }}">Source</a><br />
+                                                        {{ with .Labels }}
+                                                        {{ with .Remove (stringSlice "alertname" "ia" "instance" "node_type" "server") }}
+                                                            {{ range .SortedPairs }}
+                                                                • <strong>{{ .Name }}:</strong> {{ .Value }}<br />
+                                                            {{ end }}
+                                                        {{ end }}
+                                                        {{ end }}
                                                     </td>
                                                 </tr>
                                             {{ end }}

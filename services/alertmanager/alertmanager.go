@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	_ "embed" // importing it for embedding alertmanager email template
+
 	"github.com/AlekSi/pointer"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -66,6 +68,9 @@ const (
 
 var notificationLabels = []string{"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
 	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job"}
+
+//go:embed email_template.html
+var emailTemplate string
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {

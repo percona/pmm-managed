@@ -1,22 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-package alertmanager
-
-var emailTemplate = `<!--
+<!--
 Style and HTML derived from https://github.com/mailgun/transactional-email-templates
 
 
@@ -241,7 +223,7 @@ SOFTWARE.
                             {{ else }}
                         <td class="alert alert-critical">
                             {{ end }}
-                            You have {{ .Alerts | len }} {{ .CommonLabels.severity |  }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
+                            You have {{ .Alerts | len }} {{ .CommonLabels.severity }} alert{{ if gt (len .Alerts) 1 }}s{{ end }} firing
                         </td>
                     </tr>
                     <tr>
@@ -256,12 +238,20 @@ SOFTWARE.
                                     <tr>
                                         <td class="content-block">
                                             <strong>------------------</strong><br />
-                                            <strong>Alert: </strong>{{ .Annotations.summary }}<br />
+                                            <strong>Alert: </strong>
+                                            {{ if .Labels.severity }}
+                                                [{{ .Labels.severity | toUpper }}]
+                                            {{ end }}{{ .Annotations.summary }}<br />
                                             <strong>Description: </strong>{{ .Annotations.description }}<br />
                                             <strong>Violated rule: </strong>{{ .Annotations.rule }}<br />
                                             <strong>Details:</strong><br />
-                                            {{ range .Labels.SortedPairs }} • <strong>{{ .Name }}:</strong> {{ .Value }}<br />{{ end }}
-                                            <a href="{{ .GeneratorURL }}">Source</a><br />
+                                            {{ with .Labels }}
+                                            {{ with .Remove (stringSlice "alertname" "ia" "instance" "node_type" "server") }}
+                                                {{ range .SortedPairs }}
+                                                    • <strong>{{ .Name }}:</strong> {{ .Value }}<br />
+                                                {{ end }}
+                                            {{ end }}
+                                            {{ end }}
                                         </td>
                                     </tr>
                                 {{ end }}
@@ -284,4 +274,4 @@ SOFTWARE.
 
 
 </body>
-</html>`
+</html>
