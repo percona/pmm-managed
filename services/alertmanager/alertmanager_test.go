@@ -296,7 +296,7 @@ receivers:
           to: test@test.test
           headers:
             Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
-          html: |-
+          html: |
             <!--
             Style and HTML derived from https://github.com/mailgun/transactional-email-templates
 
@@ -578,7 +578,7 @@ receivers:
           to: test2@test.test
           headers:
             Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
-          html: |-
+          html: |
             <!--
             Style and HTML derived from https://github.com/mailgun/transactional-email-templates
 
