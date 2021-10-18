@@ -27,7 +27,6 @@ require (
 	github.com/go-openapi/spec v0.19.9 // indirect
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.5.0
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
@@ -36,7 +35,6 @@ require (
 	github.com/hashicorp/go-version v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
-	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20211017223243-a6f3f8f006ad
 	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
 	github.com/percona/pmm v0.0.0-20211017233723-756abbbc3032
@@ -50,7 +48,6 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	go.mongodb.org/mongo-driver v1.7.1 // indirect
 	go.starlark.net v0.0.0-20201210151846-e81fc95f7bd5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
