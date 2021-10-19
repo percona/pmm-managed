@@ -204,7 +204,6 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, management.NewChecksAPIService(deps.checksService))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
-	deps.templatesService.Collect(ctx)
 	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
 	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
@@ -422,6 +421,8 @@ func runDebugServer(ctx context.Context) {
 
 type setupDeps struct {
 	sqlDB        *sql.DB
+	dbName       string
+	dbAddress    string
 	dbUsername   string
 	dbPassword   string
 	supervisord  *supervisord.Service
@@ -437,6 +438,8 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	deps.l.Infof("Migrating database...")
 	db, err := models.SetupDB(deps.sqlDB, &models.SetupDBParams{
 		Logf:          deps.l.Debugf,
+		Name:          deps.dbName,
+		Address:       deps.dbAddress,
 		Username:      deps.dbUsername,
 		Password:      deps.dbPassword,
 		SetupFixtures: models.SetupFixtures,
@@ -653,6 +656,8 @@ func main() {
 	if err != nil {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
+	// We should collect templates before rules service created, because it will regenerate rule files on startup.
+	templatesService.Collect(ctx)
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
 	alertsService := ia.NewAlertsService(db, alertmanager, templatesService)
 
@@ -714,6 +719,8 @@ func main() {
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
 		sqlDB:        sqlDB,
+		dbName:       *postgresDBNameF,
+		dbAddress:    *postgresAddrF,
 		dbUsername:   *postgresDBUsernameF,
 		dbPassword:   *postgresDBPasswordF,
 		supervisord:  supervisord,
