@@ -19,6 +19,7 @@ package alertmanager
 
 import (
 	"context"
+	_ "embed" //nolint:gci
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -26,8 +27,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	_ "embed" // importing it for embedding alertmanager email template
 
 	"github.com/AlekSi/pointer"
 	httptransport "github.com/go-openapi/runtime/client"
