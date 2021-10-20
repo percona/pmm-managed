@@ -496,7 +496,7 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						To:   to,
 						HTML: emailTemplate,
 						Headers: map[string]string{
-							"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}`,
+							"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]`,
 						},
 					})
 				}
