@@ -250,28 +250,6 @@ func (s PXCClustersService) UpdatePXCCluster(ctx context.Context, req *dbaasv1be
 	return &dbaasv1beta1.UpdatePXCClusterResponse{}, nil
 }
 
-// RestartPXCCluster restarts PXC cluster by given name.
-func (s PXCClustersService) RestartPXCCluster(ctx context.Context, req *dbaasv1beta1.RestartPXCClusterRequest) (*dbaasv1beta1.RestartPXCClusterResponse, error) {
-	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	in := dbaascontrollerv1beta1.RestartPXCClusterRequest{
-		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: kubernetesCluster.KubeConfig,
-		},
-	}
-
-	_, err = s.controllerClient.RestartPXCCluster(ctx, &in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dbaasv1beta1.RestartPXCClusterResponse{}, nil
-}
-
 // GetPXCClusterResources returns expected resources to be consumed by the cluster.
 func (s PXCClustersService) GetPXCClusterResources(ctx context.Context, req *dbaasv1beta1.GetPXCClusterResourcesRequest) (*dbaasv1beta1.GetPXCClusterResourcesResponse, error) {
 	settings, err := models.GetSettings(s.db.Querier)
@@ -304,15 +282,4 @@ func (s PXCClustersService) GetPXCClusterResources(ctx context.Context, req *dba
 			DiskSize:    disk,
 		},
 	}, nil
-}
-
-func pxcStates() map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.PXCClusterState {
-	return map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.PXCClusterState{
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_INVALID:  dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING: dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_READY:    dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_FAILED:   dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_DELETING: dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_PAUSED:   dbaasv1beta1.PXCClusterState_PXC_CLUSTER_STATE_PAUSED,
-	}
 }

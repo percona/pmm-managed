@@ -202,28 +202,6 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 	return &dbaasv1beta1.UpdatePSMDBClusterResponse{}, nil
 }
 
-// RestartPSMDBCluster restarts PSMDB cluster by given name.
-func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaasv1beta1.RestartPSMDBClusterRequest) (*dbaasv1beta1.RestartPSMDBClusterResponse, error) {
-	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
-		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: kubernetesCluster.KubeConfig,
-		},
-	}
-
-	_, err = s.controllerClient.RestartPSMDBCluster(ctx, &in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dbaasv1beta1.RestartPSMDBClusterResponse{}, nil
-}
-
 // GetPSMDBClusterResources returns expected resources to be consumed by the cluster.
 func (s PSMDBClusterService) GetPSMDBClusterResources(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterResourcesRequest) (*dbaasv1beta1.GetPSMDBClusterResourcesResponse, error) {
 	settings, err := models.GetSettings(s.db.Querier)
@@ -248,16 +226,4 @@ func (s PSMDBClusterService) GetPSMDBClusterResources(ctx context.Context, req *
 			DiskSize:    disk,
 		},
 	}, nil
-}
-
-func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
-	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:     dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING,
-	}
 }

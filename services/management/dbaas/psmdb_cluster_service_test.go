@@ -255,26 +255,6 @@ func TestPSMDBClusterService(t *testing.T) {
 		assert.Equal(t, resp.Credentials.Host, cluster.ConnectionCredentials.Host)
 	})
 
-	t.Run("BasicRestartPSMDBCluster", func(t *testing.T) {
-		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
-		mockReq := controllerv1beta1.RestartPSMDBClusterRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubeconfTest,
-			},
-			Name: "third-psmdb-test",
-		}
-
-		dbaasClient.On("RestartPSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartPSMDBClusterResponse{}, nil)
-
-		in := dbaasv1beta1.RestartPSMDBClusterRequest{
-			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  "third-psmdb-test",
-		}
-
-		_, err := s.RestartPSMDBCluster(ctx, &in)
-		assert.NoError(t, err)
-	})
-
 	t.Run("BasicGetPSMDBClusterResources", func(t *testing.T) {
 		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
 

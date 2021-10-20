@@ -334,26 +334,6 @@ func TestPXCClusterService(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("BasicRestartPXCCluster", func(t *testing.T) {
-		s := NewPXCClusterService(db, dbaasClient, grafanaClient, versionService)
-		mockReq := controllerv1beta1.RestartPXCClusterRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
-			},
-			Name: "third-pxc-test",
-		}
-
-		dbaasClient.On("RestartPXCCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartPXCClusterResponse{}, nil)
-
-		in := dbaasv1beta1.RestartPXCClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
-			Name:                  "third-pxc-test",
-		}
-
-		_, err := s.RestartPXCCluster(ctx, &in)
-		assert.NoError(t, err)
-	})
-
 	t.Run("BasicGetXtraDBClusterResources", func(t *testing.T) {
 		t.Parallel()
 		t.Run("ProxySQL", func(t *testing.T) {

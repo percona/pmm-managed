@@ -227,6 +227,43 @@ func (s DBClusterService) listPXCClusters(ctx context.Context, kubeConfig string
 	return pxcClusters, nil
 }
 
+// RestartDBCluster restarts DB cluster by given name and type.
+func (s DBClusterService) RestartDBCluster(ctx context.Context, req *dbaasv1beta1.RestartDBClusterRequest) (*dbaasv1beta1.RestartDBClusterResponse, error) {
+	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	switch req.ClusterType {
+	case dbaasv1beta1.DBClusterType_DB_CLUSTER_TYPE_PXC:
+		in := dbaascontrollerv1beta1.RestartPXCClusterRequest{
+			Name: req.Name,
+			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+				Kubeconfig: kubernetesCluster.KubeConfig,
+			},
+		}
+
+		_, err = s.controllerClient.RestartPXCCluster(ctx, &in)
+		if err != nil {
+			return nil, err
+		}
+	case dbaasv1beta1.DBClusterType_DB_CLUSTER_TYPE_PSMDB:
+		in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
+			Name: req.Name,
+			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+				Kubeconfig: kubernetesCluster.KubeConfig,
+			},
+		}
+
+		_, err = s.controllerClient.RestartPSMDBCluster(ctx, &in)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &dbaasv1beta1.RestartDBClusterResponse{}, nil
+}
+
 // DeleteDBCluster deletes DB cluster by given name and type.
 func (s DBClusterService) DeleteDBCluster(ctx context.Context, req *dbaasv1beta1.DeleteDBClusterRequest) (*dbaasv1beta1.DeleteDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
@@ -273,4 +310,28 @@ func (s DBClusterService) DeleteDBCluster(ctx context.Context, req *dbaasv1beta1
 	}
 
 	return &dbaasv1beta1.DeleteDBClusterResponse{}, nil
+}
+
+func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.DBClusterState {
+	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.DBClusterState{
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:   dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:     dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING: dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
+	}
+}
+
+func pxcStates() map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.DBClusterState {
+	return map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.DBClusterState{
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_INVALID:   dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_READY:     dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_FAILED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_DELETING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_PAUSED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
+		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_UPGRADING: dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
+	}
 }
