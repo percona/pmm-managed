@@ -153,8 +153,8 @@ func TestPSMDBClusterServer(t *testing.T) {
 		assert.NotEmpty(t, cluster.Payload.ConnectionCredentials.Password)
 
 		t.Skip("Skip restart till better implementation. https://jira.percona.com/browse/PMM-6980")
-		_, err = dbaasClient.Default.PSMDBClusters.RestartPSMDBCluster(&psmdbclusters.RestartPSMDBClusterParams{
-			Body: psmdbclusters.RestartPSMDBClusterBody{
+		_, err = dbaasClient.Default.DBClusters.RestartDBCluster(&dbclusters.RestartDBClusterParams{
+			Body: dbclusters.RestartDBClusterBody{
 				KubernetesClusterName: psmdbKubernetesClusterName,
 				Name:                  "first-psmdb-test",
 			},
@@ -218,14 +218,14 @@ func TestPSMDBClusterServer(t *testing.T) {
 	})
 
 	t.Run("RestartUnknownPSMDBCluster", func(t *testing.T) {
-		restartPSMDBClusterParamsParam := psmdbclusters.RestartPSMDBClusterParams{
+		restartPSMDBClusterParamsParam := dbclusters.RestartDBClusterParams{
 			Context: pmmapitests.Context,
-			Body: psmdbclusters.RestartPSMDBClusterBody{
+			Body: dbclusters.RestartDBClusterBody{
 				KubernetesClusterName: psmdbKubernetesClusterName,
 				Name:                  "Unknown-psmdb-name",
 			},
 		}
-		_, err := dbaasClient.Default.PSMDBClusters.RestartPSMDBCluster(&restartPSMDBClusterParamsParam)
+		_, err := dbaasClient.Default.DBClusters.RestartDBCluster(&restartPSMDBClusterParamsParam)
 		require.Error(t, err)
 		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
 	})

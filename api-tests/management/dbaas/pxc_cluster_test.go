@@ -173,14 +173,14 @@ func TestPXCClusterServer(t *testing.T) {
 		}
 
 		t.Skip("Skip restart till better implementation. https://jira.percona.com/browse/PMM-6980")
-		restartPXCClusterParamsParam := pxcclusters.RestartPXCClusterParams{
+		restartPXCClusterParamsParam := dbclusters.RestartDBClusterParams{
 			Context: pmmapitests.Context,
-			Body: pxcclusters.RestartPXCClusterBody{
+			Body: dbclusters.RestartDBClusterBody{
 				KubernetesClusterName: kubernetesClusterName,
 				Name:                  "first-pxc-test",
 			},
 		}
-		_, err = dbaasClient.Default.PXCClusters.RestartPXCCluster(&restartPXCClusterParamsParam)
+		_, err = dbaasClient.Default.DBClusters.RestartDBCluster(&restartPXCClusterParamsParam)
 		assert.NoError(t, err)
 	})
 
@@ -250,14 +250,14 @@ func TestPXCClusterServer(t *testing.T) {
 	})
 
 	t.Run("RestartUnknownPXCCluster", func(t *testing.T) {
-		restartPXCClusterParamsParam := pxcclusters.RestartPXCClusterParams{
+		restartPXCClusterParamsParam := dbclusters.RestartDBClusterParams{
 			Context: pmmapitests.Context,
-			Body: pxcclusters.RestartPXCClusterBody{
+			Body: dbclusters.RestartDBClusterBody{
 				KubernetesClusterName: kubernetesClusterName,
 				Name:                  "Unknown-pxc-name",
 			},
 		}
-		_, err := dbaasClient.Default.PXCClusters.RestartPXCCluster(&restartPXCClusterParamsParam)
+		_, err := dbaasClient.Default.DBClusters.RestartDBCluster(&restartPXCClusterParamsParam)
 		require.Error(t, err)
 		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
 	})

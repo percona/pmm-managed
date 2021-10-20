@@ -116,7 +116,7 @@ func (s DBClusterService) listPSMDBClusters(ctx context.Context, kubeConfig stri
 					DiskSize:         diskSize,
 				},
 			},
-			State: psmdbStates()[c.State],
+			State: dbClusterStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
 				TotalSteps:    c.Operation.TotalSteps,
 				FinishedSteps: c.Operation.FinishedSteps,
@@ -165,7 +165,7 @@ func (s DBClusterService) listPXCClusters(ctx context.Context, kubeConfig string
 			Params: &dbaasv1beta1.PXCClusterParams{
 				ClusterSize: c.Params.ClusterSize,
 			},
-			State: pxcStates()[c.State],
+			State: dbClusterStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
 				TotalSteps:    c.Operation.TotalSteps,
 				FinishedSteps: c.Operation.FinishedSteps,
@@ -312,26 +312,14 @@ func (s DBClusterService) DeleteDBCluster(ctx context.Context, req *dbaasv1beta1
 	return &dbaasv1beta1.DeleteDBClusterResponse{}, nil
 }
 
-func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.DBClusterState {
-	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.DBClusterState{
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:   dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:     dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING: dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
-	}
-}
-
-func pxcStates() map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.DBClusterState {
-	return map[dbaascontrollerv1beta1.PXCClusterState]dbaasv1beta1.DBClusterState{
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_INVALID:   dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_READY:     dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_FAILED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_DELETING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_PAUSED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
-		dbaascontrollerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_UPGRADING: dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
+func dbClusterStates() map[dbaascontrollerv1beta1.DBClusterState]dbaasv1beta1.DBClusterState {
+	return map[dbaascontrollerv1beta1.DBClusterState]dbaasv1beta1.DBClusterState{
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID:   dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY:     dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING:  dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED:    dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
+		dbaascontrollerv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING: dbaasv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
 	}
 }
