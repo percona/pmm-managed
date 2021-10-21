@@ -440,8 +440,8 @@ github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2 h1:TJX3
 github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2/go.mod h1:zgb9gTJusc8Jv2zRNAlWV0/XQ8IK+hwHMc9lIqfK0tM=
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932 h1:EDe5KfOdEoEBKg33BsFsMrdazZu8vaRj4fTKdg4zjCc=
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
-github.com/percona/pmm v0.0.0-20211020134416-f13d0096df4c h1:CzJTIu5PE4ry4gLQRrJ3/pgFqtTlVzr2GU/FfvFFcK0=
-github.com/percona/pmm v0.0.0-20211020134416-f13d0096df4c/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211021063227-029494e562e3 h1:UlwL0bj9QQ4iFYtIrvz0fLG03PSMMQafEUBxunYainY=
+github.com/percona/pmm v0.0.0-20211021063227-029494e562e3/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
