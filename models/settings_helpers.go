@@ -19,11 +19,11 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/asaskevich/govalidator"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 

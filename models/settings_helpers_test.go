@@ -17,11 +17,11 @@
 package models_test
 
 import (
-	"github.com/pkg/errors"
 	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
