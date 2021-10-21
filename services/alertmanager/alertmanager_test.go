@@ -161,7 +161,6 @@ var htmlTemplate = `|
                         LINKS & BUTTONS
                     ------------------------------------- */
                     a {
-                        color: #348eda;
                         text-decoration: underline;
                     }
 
