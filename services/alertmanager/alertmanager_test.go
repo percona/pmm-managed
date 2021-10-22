@@ -166,7 +166,7 @@ var htmlTemplate = `|
 
                     .btn-primary {
                         text-decoration: none;
-                        color: #FFF;
+                        color: white;
                         background-color: #3274D9;
                         border: solid #3274D9;
                         border-width: 10px 20px;
