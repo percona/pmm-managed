@@ -105,6 +105,10 @@ SOFTWARE.
             padding: 0 0 20px;
         }
 
+        .content-paragraph {
+            padding-bottom: 1em;
+        }
+
         .footer {
             width: 100%;
             clear: both;
@@ -236,13 +240,22 @@ SOFTWARE.
                                 {{ range .Alerts.Firing }}
                                     <tr>
                                         <td class="content-block">
-                                            <strong>------------------</strong><br />
-                                            <strong>Alert: </strong>
-                                            {{ if .Labels.severity }}
-                                                [{{ .Labels.severity | toUpper }}]
-                                            {{ end }}{{ .Annotations.summary }}<br />
-                                            <strong>Description: </strong>{{ .Annotations.description }}<br />
-                                            <strong>Violated rule: </strong>{{ .Annotations.rule }}<br />
+                                            <strong>------------------</strong>
+                                            <div class="content-paragraph">
+                                                <strong>Alert: </strong>
+                                                {{ if .Labels.severity }}
+                                                    [{{ .Labels.severity | toUpper }}]
+                                                {{ end }}
+                                                {{ .Annotations.summary }}
+                                            </div>
+                                            <div class="content-paragraph">
+                                                <strong>Description: </strong>
+                                                {{ .Annotations.description }}
+                                            </div>
+                                            <div class="content-paragraph">
+                                                <strong>Violated rule: </strong>
+                                                {{ .Annotations.rule }}
+                                            </div>
                                             <strong>Details:</strong><br />
                                             {{ with .Labels }}
                                                 {{ with .Remove (stringSlice "alertname" "ia" "instance" "node_type" "server") }}
