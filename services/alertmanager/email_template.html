@@ -106,7 +106,8 @@ SOFTWARE.
         }
 
         .content-paragraph {
-            padding-bottom: 1em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
         }
 
         .footer {
@@ -129,7 +130,7 @@ SOFTWARE.
 
         .btn-primary {
             text-decoration: none;
-            color: white;
+            color: white !important;
             background-color: #3274D9;
             border: solid #3274D9;
             border-width: 10px 20px;
@@ -240,7 +241,7 @@ SOFTWARE.
                                 {{ range .Alerts.Firing }}
                                     <tr>
                                         <td class="content-block">
-                                            <strong>------------------</strong>
+                                            <hr>
                                             <div class="content-paragraph">
                                                 <strong>Alert: </strong>
                                                 {{ if .Labels.severity }}

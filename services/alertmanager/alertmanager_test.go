@@ -146,6 +146,11 @@ var htmlTemplate = `|
                         padding: 0 0 20px;
                     }
 
+                    .content-paragraph {
+                        padding-top: 0.5em;
+                        padding-bottom: 0.5em;
+                    }
+
                     .footer {
                         width: 100%;
                         clear: both;
@@ -166,7 +171,7 @@ var htmlTemplate = `|
 
                     .btn-primary {
                         text-decoration: none;
-                        color: white;
+                        color: white !important;
                         background-color: #3274D9;
                         border: solid #3274D9;
                         border-width: 10px 20px;
@@ -277,13 +282,22 @@ var htmlTemplate = `|
                                             {{ range .Alerts.Firing }}
                                                 <tr>
                                                     <td class="content-block">
-                                                        <strong>------------------</strong><br />
-                                                        <strong>Alert: </strong>
-                                                        {{ if .Labels.severity }}
-                                                            [{{ .Labels.severity | toUpper }}]
-                                                        {{ end }}{{ .Annotations.summary }}<br />
-                                                        <strong>Description: </strong>{{ .Annotations.description }}<br />
-                                                        <strong>Violated rule: </strong>{{ .Annotations.rule }}<br />
+                                                        <hr>
+                                                        <div class="content-paragraph">
+                                                            <strong>Alert: </strong>
+                                                            {{ if .Labels.severity }}
+                                                                [{{ .Labels.severity | toUpper }}]
+                                                            {{ end }}
+                                                            {{ .Annotations.summary }}
+                                                        </div>
+                                                        <div class="content-paragraph">
+                                                            <strong>Description: </strong>
+                                                            {{ .Annotations.description }}
+                                                        </div>
+                                                        <div class="content-paragraph">
+                                                            <strong>Violated rule: </strong>
+                                                            {{ .Annotations.rule }}
+                                                        </div>
                                                         <strong>Details:</strong><br />
                                                         {{ with .Labels }}
                                                             {{ with .Remove (stringSlice "alertname" "ia" "instance" "node_type" "server") }}
