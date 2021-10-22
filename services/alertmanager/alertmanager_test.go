@@ -78,8 +78,7 @@ func TestPopulateConfig(t *testing.T) {
 		}
 
 		actual := marshalAndValidate(t, svc, cfg)
-		expected := strings.TrimSpace(`
-# Managed by pmm-managed. DO NOT EDIT.
+		expected := `# Managed by pmm-managed. DO NOT EDIT.
 ---
 global:
     resolve_timeout: 0s
@@ -92,7 +91,7 @@ receivers:
     - name: empty
     - name: disabled
 templates: []
-		`) + "\n"
+`
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 
@@ -297,49 +296,7 @@ templates: []
 			assert.Equal(t, f.content, string(actualContent))
 		}
 
-		expected := strings.TrimSpace(fmt.Sprintf(`
-# Managed by pmm-managed. DO NOT EDIT.
----
-global:
-    resolve_timeout: 0s
-    smtp_from: from@test.com
-    smtp_hello: host
-    smtp_smarthost: 1.2.3.4:80
-    smtp_auth_username: user
-    smtp_auth_password: password
-    smtp_auth_secret: secret
-    smtp_auth_identity: id
-    smtp_require_tls: false
-    slack_api_url: https://hooks.slack.com/services/abc/456/xyz
-route:
-    receiver: empty
-    continue: false
-    routes:
-        - receiver: %[1]s + %[2]s
-          match:
-            rule_id: %[3]s
-            service_name: mysql1
-          continue: false
-        - receiver: %[1]s + %[2]s + %[6]s
-          match:
-            rule_id: %[4]s
-            service_name: mysql2
-          continue: false
-        - receiver: disabled
-          match:
-            rule_id: %[5]s
-            service_name: mysql3
-          continue: false
-receivers:
-    - name: empty
-    - name: disabled
-    - name: %[1]s + %[2]s
-      email_configs:
-        - send_resolved: false
-          to: test@test.test
-        - send_resolved: false
-          to: test2@test.test
-      pagerduty_configs:
+		pagerDutyConfigs := `      pagerduty_configs:
         - send_resolved: false
           routing_key: ms-pagerduty-dev
           description: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]{{ range .Alerts -}}{{ if .Labels.severity }}[{{ .Labels.severity | toUpper }}]{{ end }} {{ .Annotations.summary }}{{ end }}'
@@ -363,28 +320,70 @@ receivers:
                 {{ end }}{{ if .Labels.job }}  - job: {{ .Labels.job }}
                 {{ end }}
 
-                {{ end }}
-    - name: %[7]s + %[8]s + %[9]s
+                {{ end }}`
+
+		expected := fmt.Sprintf(`# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+    resolve_timeout: 0s
+    smtp_from: from@test.com
+    smtp_hello: host
+    smtp_smarthost: 1.2.3.4:80
+    smtp_auth_username: user
+    smtp_auth_password: password
+    smtp_auth_secret: secret
+    smtp_auth_identity: id
+    smtp_require_tls: false
+    slack_api_url: https://hooks.slack.com/services/abc/456/xyz
+route:
+    receiver: empty
+    continue: false
+    routes:
+        - receiver: %[1]s + %[2]s
+          match:
+            rule_id: %[3]s
+            service_name: mysql1
+          continue: false
+        - receiver: %[1]s + %[2]s + %[8]s
+          match:
+            rule_id: %[4]s
+            service_name: mysql2
+          continue: false
+        - receiver: disabled
+          match:
+            rule_id: %[5]s
+            service_name: mysql3
+          continue: false
+receivers:
+    - name: empty
+    - name: disabled
+    - name: %[1]s + %[2]s
       email_configs:
         - send_resolved: false
           to: test@test.test
         - send_resolved: false
           to: test2@test.test
-      pagerduty_configs:
+`+pagerDutyConfigs+`
+    - name: %[6]s + %[7]s + %[8]s
+      email_configs:
         - send_resolved: false
-          routing_key: ms-pagerduty-dev
+          to: test@test.test
+        - send_resolved: false
+          to: test2@test.test
+`+pagerDutyConfigs+`
       webhook_configs:
         - send_resolved: false
           http_config:
             tls_config:
-                ca_file: %[10]s
-                cert_file: %[11]s
-                key_file: %[12]s
+                ca_file: %[9]s
+                cert_file: %[10]s
+                key_file: %[11]s
                 insecure_skip_verify: false
           url: https://example.com
           max_alerts: 0
 templates: []
-`, channel1.ID, channel2.ID, rule1.ID, rule2.ID, rule4.ID, channel4.ID, channel1.ID, channel2.ID, channel4.ID, tlsFileContents[0].file, tlsFileContents[1].file, tlsFileContents[2].file)) + "\n"
+`, channel1.ID, channel2.ID, rule1.ID, rule2.ID, rule4.ID, channel1.ID, channel2.ID, channel4.ID,
+			tlsFileContents[0].file, tlsFileContents[1].file, tlsFileContents[2].file)
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 }
@@ -427,113 +426,44 @@ func TestGenerateReceivers(t *testing.T) {
 	actual, err := yaml.Marshal(actualR)
 	require.NoError(t, err)
 
+	slackConfigs := func(channelName string) string {
+		return fmt.Sprintf(`    - send_resolved: false
+      channel: %s
+      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
+      text: |-
+        {{ range .Alerts -}}
+        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
+        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
+        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
+        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
+        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
+        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
+        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
+        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
+        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
+        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
+        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
+        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
+        {{ end }}
+
+        {{ end }}
+      short_fields: false
+      link_names: false`, channelName)
+	}
+
 	expected := strings.TrimSpace(`
 - name: "1"
   slack_configs:
-    - send_resolved: false
-      channel: channel1
-      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-      text: |-
-        {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
-        *Description:* {{ .Annotations.description }}
-        *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
-        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
-        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
-        {{ end }}
-
-        {{ end }}
-      short_fields: false
-      link_names: false
+`+slackConfigs("channel1")+`
 - name: 1+2
   slack_configs:
-    - send_resolved: false
-      channel: channel1
-      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-      text: |-
-        {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
-        *Description:* {{ .Annotations.description }}
-        *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
-        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
-        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
-        {{ end }}
-
-        {{ end }}
-      short_fields: false
-      link_names: false
-    - send_resolved: false
-      channel: channel2
-      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-      text: |-
-        {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
-        *Description:* {{ .Annotations.description }}
-        *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
-        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
-        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
-        {{ end }}
-
-        {{ end }}
-      short_fields: false
-      link_names: false
+`+slackConfigs("channel1")+`
+`+slackConfigs("channel2")+`
 - name: "2"
   slack_configs:
-    - send_resolved: false
-      channel: channel2
-      title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-      text: |-
-        {{ range .Alerts -}}
-        *Alert:* {{ if .Labels.severity }}`+"`{{ .Labels.severity | toUpper }}`"+`{{ end }} {{ .Annotations.summary }}
-        *Description:* {{ .Annotations.description }}
-        *Details:*
-        {{ if .Labels.node_name }}     • *node_name:* `+"`{{ .Labels.node_name }}`"+`
-        {{ end }}{{ if .Labels.node_id }}     • *node_id:* `+"`{{ .Labels.node_id }}`"+`
-        {{ end }}{{ if .Labels.service_name }}     • *service_name:* `+"`{{ .Labels.service_name }}`"+`
-        {{ end }}{{ if .Labels.service_id }}     • *service_id:* `+"`{{ .Labels.service_id }}`"+`
-        {{ end }}{{ if .Labels.service_type }}     • *service_type:* `+"`{{ .Labels.service_type }}`"+`
-        {{ end }}{{ if .Labels.rule_id }}     • *rule_id:* `+"`{{ .Labels.rule_id }}`"+`
-        {{ end }}{{ if .Labels.alertgroup }}     • *alertgroup:* `+"`{{ .Labels.alertgroup }}`"+`
-        {{ end }}{{ if .Labels.template_name }}     • *template_name:* `+"`{{ .Labels.template_name }}`"+`
-        {{ end }}{{ if .Labels.severity }}     • *severity:* `+"`{{ .Labels.severity }}`"+`
-        {{ end }}{{ if .Labels.agent_id }}     • *agent_id:* `+"`{{ .Labels.agent_id }}`"+`
-        {{ end }}{{ if .Labels.agent_type }}     • *agent_type:* `+"`{{ .Labels.agent_type }}`"+`
-        {{ end }}{{ if .Labels.job }}     • *job:* `+"`{{ .Labels.job }}`"+`
-        {{ end }}
-
-        {{ end }}
-      short_fields: false
-      link_names: false
-`) + "\n"
+`+slackConfigs("channel2")) + "\n"
 	assert.Equal(t, expected, string(actual), "actual:\n%s", actual)
 }
