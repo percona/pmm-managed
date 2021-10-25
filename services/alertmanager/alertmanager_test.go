@@ -263,8 +263,6 @@ var htmlTemplate = `|
                                     <td class="alert alert-warning">
                                         {{ else if eq .CommonLabels.severity "error" }}
                                     <td class="alert alert-high">
-                                        {{ else if eq .CommonLabels.severity "critical" }}
-                                    <td class="alert alert-critical">
                                         {{ else }}
                                     <td class="alert alert-critical">
                                         {{ end }}
