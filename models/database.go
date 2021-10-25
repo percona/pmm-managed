@@ -628,7 +628,8 @@ var databaseSchema = [][]string{
 			client_id VARCHAR NOT NULL,
 			client_secret VARCHAR NOT NULL,
 			issuer_url VARCHAR NOT NULL,
-			scope VARCHAR NOT NULL
+			scope VARCHAR NOT NULL,
+			created_at TIMESTAMP NOT NULL
 		)`,
 	},
 }
