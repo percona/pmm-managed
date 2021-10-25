@@ -137,6 +137,23 @@ func FindArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	}
 }
 
+// FindArtifactByName returns artifact by given name if found, ErrNotFound if not.
+func FindArtifactByName(q *reform.Querier, name string) (*Artifact, error) {
+	if name == "" {
+		return nil, errors.New("provided backup artifact name is empty")
+	}
+	artifact := new(Artifact)
+	err := q.FindOneTo(artifact, "name", name)
+	switch err {
+	case nil:
+		return artifact, nil
+	case reform.ErrNoRows:
+		return nil, errors.Wrapf(ErrNotFound, "backup artifact with name %q not found.", name)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 func checkUniqueArtifactName(q *reform.Querier, name string) error {
 	if name == "" {
 		panic("empty Location Name")
@@ -157,9 +174,11 @@ func checkUniqueArtifactName(q *reform.Querier, name string) error {
 type CreateArtifactParams struct {
 	Name       string
 	Vendor     string
+	DBVersion  string
 	LocationID string
 	ServiceID  string
 	DataModel  DataModel
+	Mode       BackupMode
 	Status     BackupStatus
 	ScheduleID string
 }
@@ -177,6 +196,10 @@ func (p *CreateArtifactParams) Validate() error {
 	}
 	if p.ServiceID == "" {
 		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+	}
+
+	if err := p.Mode.Validate(); err != nil {
+		return err
 	}
 
 	if err := p.DataModel.Validate(); err != nil {
@@ -210,9 +233,11 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 		ID:         id,
 		Name:       params.Name,
 		Vendor:     params.Vendor,
+		DBVersion:  params.DBVersion,
 		LocationID: params.LocationID,
 		ServiceID:  params.ServiceID,
 		DataModel:  params.DataModel,
+		Mode:       params.Mode,
 		Status:     params.Status,
 		Type:       OnDemandArtifactType,
 		ScheduleID: params.ScheduleID,

@@ -24,6 +24,7 @@ import (
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -72,7 +73,9 @@ func TestScheduledBackups(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
 	backupService := &mockBackupService{}
+	backupService.On("SwitchMongoPITR", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	schedulerService := scheduler.New(db, backupService)
 	backupSvc := NewBackupsService(db, backupService, schedulerService)
 	t.Cleanup(func() {
@@ -104,6 +107,7 @@ func TestScheduledBackups(t *testing.T) {
 			Name:           t.Name(),
 			Description:    t.Name(),
 			Enabled:        true,
+			Mode:           backupv1beta1.BackupMode_SNAPSHOT,
 			Retries:        maxRetriesAttempts - 1,
 			RetryInterval:  durationpb.New(maxRetryInterval),
 		}
@@ -159,7 +163,6 @@ func TestScheduledBackups(t *testing.T) {
 		task, err := models.CreateScheduledTask(db.Querier, models.CreateScheduledTaskParams{
 			CronExpression: "* * * * *",
 			Type:           models.ScheduledMySQLBackupTask,
-			Data:           models.ScheduledTaskData{},
 		})
 		require.NoError(t, err)
 
@@ -170,8 +173,9 @@ func TestScheduledBackups(t *testing.T) {
 			Vendor:     "mysql",
 			LocationID: locationRes.ID,
 			ServiceID:  *agent.ServiceID,
-			DataModel:  "physical",
-			Status:     "pending",
+			DataModel:  models.PhysicalDataModel,
+			Mode:       models.Snapshot,
+			Status:     models.PendingBackupStatus,
 			ScheduleID: id,
 		})
 		require.NoError(t, err)
@@ -192,4 +196,77 @@ func TestScheduledBackups(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, artifacts, 0)
 	})
+}
+
+func TestGetLogs(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	backupService := &mockBackupService{}
+	schedulerService := &mockScheduleService{}
+	backupSvc := NewBackupsService(db, backupService, schedulerService)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	job, err := models.CreateJob(db.Querier, models.CreateJobParams{
+		PMMAgentID: "agent",
+		Type:       models.MongoDBBackupJob,
+		Data: &models.JobData{
+			MongoDBBackup: &models.MongoDBBackupJobData{
+				ServiceID:  "svc",
+				ArtifactID: "artifact",
+			},
+		},
+	})
+	require.NoError(t, err)
+	for chunkID := 0; chunkID < 5; chunkID++ {
+		_, err = models.CreateJobLog(db.Querier, models.CreateJobLogParams{
+			JobID:   job.ID,
+			ChunkID: chunkID,
+			Data:    "not important",
+		})
+		assert.NoError(t, err)
+	}
+
+	type testCase struct {
+		offset uint32
+		limit  uint32
+		expect []uint32
+	}
+	testCases := []testCase{
+		{
+			expect: []uint32{0, 1, 2, 3, 4},
+		},
+		{
+			offset: 3,
+			expect: []uint32{3, 4},
+		},
+		{
+			limit:  2,
+			expect: []uint32{0, 1},
+		},
+		{
+			offset: 1,
+			limit:  3,
+			expect: []uint32{1, 2, 3},
+		},
+		{
+			offset: 5,
+			expect: []uint32{},
+		},
+	}
+	for _, tc := range testCases {
+		logs, err := backupSvc.GetLogs(ctx, &backupv1beta1.GetLogsRequest{
+			ArtifactId: "artifact",
+			Offset:     tc.offset,
+			Limit:      tc.limit,
+		})
+		assert.NoError(t, err)
+		chunkIDs := make([]uint32, 0, len(logs.Logs))
+		for _, log := range logs.Logs {
+			chunkIDs = append(chunkIDs, log.ChunkId)
+		}
+		assert.Equal(t, tc.expect, chunkIDs)
+	}
 }

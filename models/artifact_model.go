@@ -39,6 +39,8 @@ func (dm DataModel) Validate() error {
 	switch dm {
 	case PhysicalDataModel:
 	case LogicalDataModel:
+	case "":
+		return errors.Wrap(ErrInvalidArgument, "empty data model")
 	default:
 		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", dm)
 	}
@@ -91,15 +93,42 @@ const (
 	ScheduledArtifactType ArtifactType = "scheduled"
 )
 
+// BackupMode represents artifact mode.
+type BackupMode string
+
+// Backup modes.
+const (
+	Snapshot    BackupMode = "snapshot"
+	Incremental BackupMode = "incremental"
+	PITR        BackupMode = "pitr"
+)
+
+// Validate validates backup mode.
+func (m BackupMode) Validate() error {
+	switch m {
+	case Snapshot:
+	case Incremental:
+	case PITR:
+	case "":
+		return errors.Wrapf(ErrInvalidArgument, "empty backup mode")
+	default:
+		return errors.Wrapf(ErrInvalidArgument, "invalid backup mode '%s'", m)
+	}
+
+	return nil
+}
+
 // Artifact represents result of a backup.
 //reform:artifacts
 type Artifact struct {
 	ID         string       `reform:"id,pk"`
 	Name       string       `reform:"name"`
 	Vendor     string       `reform:"vendor"`
+	DBVersion  string       `reform:"db_version"`
 	LocationID string       `reform:"location_id"`
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
+	Mode       BackupMode   `reform:"mode"`
 	Status     BackupStatus `reform:"status"`
 	Type       ArtifactType `reform:"type"`
 	ScheduleID string       `reform:"schedule_id"`
