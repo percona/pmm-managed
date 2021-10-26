@@ -24,7 +24,7 @@ import (
 
 //go:generate reform
 
-// Okta SSO Details stores everything we need to issue access_token from Okta SSO API.
+// OktaSSODetails stores everything we need to issue access_token from Okta SSO API.
 // It is intended to have only one row in this table as PMM can be connected to Portal only once.
 //reform:okta_sso_details
 type OktaSSODetails struct {

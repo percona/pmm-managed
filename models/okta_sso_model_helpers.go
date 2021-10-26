@@ -30,6 +30,7 @@ func GetOktaSSODetails(q *reform.Querier) (*OktaSSODetails, error) {
 	return ssoDetails.(*OktaSSODetails), nil
 }
 
+// DeleteOktaSSODetails removes all stored DeleteOktaSSODetails.
 func DeleteOktaSSODetails(q *reform.Querier) error {
 	_, err := q.DeleteFrom(OktaSSODetailsView, "")
 	if err != nil {
@@ -40,8 +41,7 @@ func DeleteOktaSSODetails(q *reform.Querier) error {
 
 // InsertOktaSSODetails inserts a new Okta SSO details.
 func InsertOktaSSODetails(q *reform.Querier, ssoDetails *OktaSSODetails) error {
-	err := q.Insert(ssoDetails)
-	if err != nil {
+	if err := q.Insert(ssoDetails); err != nil {
 		return errors.Wrap(err, "failed to insert Okta SSO Details")
 	}
 	return nil
