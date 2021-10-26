@@ -700,7 +700,7 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 	}
 	if !ok {
 		return fmt.Errorf("%w: xtrabackup version %q is not compatible with mysql version %q",
-			ErrIncompatibleXtrabackup, svm[models.MysqldSoftwareName], svm[models.XtrabackupSoftwareName])
+			ErrIncompatibleXtrabackup, svm[models.XtrabackupSoftwareName], svm[models.MysqldSoftwareName])
 	}
 
 	return nil
