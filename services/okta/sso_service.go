@@ -17,13 +17,11 @@
 package okta
 
 // SSOService includes logic for handling access_token for Okta SSO.
-type SSOService struct {
-	oktaURL string
-}
+type SSOService struct{}
 
 // NewSSOService creates a new Okta single sign-on service.
-func NewSSOService(oktaURL string) *SSOService {
-	return &SSOService{oktaURL: oktaURL}
+func NewSSOService() *SSOService {
+	return &SSOService{}
 }
 
 // RenewAccessToken creates a request for the new access token. After it's successful the new token replaces the
