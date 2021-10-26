@@ -410,7 +410,7 @@ func TestSettings(t *testing.T) {
 				},
 			})
 			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
-			assert.EqualError(t, err, "invalid argument: invalid from email")
+			assert.EqualError(t, err, "invalid argument: invalid \"from\" email")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EmailAlertingSettings: &models.EmailAlertingSettings{
@@ -420,7 +420,7 @@ func TestSettings(t *testing.T) {
 				},
 			})
 			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
-			assert.EqualError(t, err, "invalid argument: invalid server address")
+			assert.EqualError(t, err, "invalid argument: invalid server address, expected format host:port")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EmailAlertingSettings: &models.EmailAlertingSettings{
@@ -430,7 +430,7 @@ func TestSettings(t *testing.T) {
 				},
 			})
 			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
-			assert.EqualError(t, err, "invalid argument: invalid hello field")
+			assert.EqualError(t, err, "invalid argument: invalid hello field, expected valid host")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				RemoveSlackAlertingSettings: true,
