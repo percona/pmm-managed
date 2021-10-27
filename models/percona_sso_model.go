@@ -24,10 +24,10 @@ import (
 
 //go:generate reform
 
-// OktaSSODetails stores everything we need to issue access_token from Okta SSO API.
+// PerconaSSODetails stores everything we need to issue access_token from Percona SSO API.
 // It is intended to have only one row in this table as PMM can be connected to Portal only once.
-//reform:okta_sso_details
-type OktaSSODetails struct {
+//reform:percona_sso_details
+type PerconaSSODetails struct {
 	ClientID     string `reform:"client_id"`
 	ClientSecret string `reform:"client_secret"`
 	IssuerURL    string `reform:"issuer_url"`
@@ -37,20 +37,13 @@ type OktaSSODetails struct {
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-func (s *OktaSSODetails) BeforeInsert() error {
+func (s *PerconaSSODetails) BeforeInsert() error {
 	now := Now()
-	s.CreatedAt = now
-	return nil
-}
-
-// AfterFind implements reform.AfterFinder interface.
-func (s *OktaSSODetails) AfterFind() error {
-	s.CreatedAt = s.CreatedAt.UTC()
+	s.CreatedAt = now.UTC()
 	return nil
 }
 
 // check interfaces.
 var (
-	_ reform.BeforeInserter = (*OktaSSODetails)(nil)
-	_ reform.AfterFinder    = (*OktaSSODetails)(nil)
+	_ reform.BeforeInserter = (*PerconaSSODetails)(nil)
 )

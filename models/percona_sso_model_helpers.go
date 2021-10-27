@@ -21,28 +21,28 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// GetOktaSSODetails return OktaSSODetails if there are any, error otherwise.
-func GetOktaSSODetails(q *reform.Querier) (*OktaSSODetails, error) {
-	ssoDetails, err := q.SelectOneFrom(OktaSSODetailsView, "")
+// GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
+func GetPerconaSSODetails(q *reform.Querier) (*PerconaSSODetails, error) {
+	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get Okta SSO Details")
+		return nil, errors.Wrap(err, "failed to get Percona SSO Details")
 	}
-	return ssoDetails.(*OktaSSODetails), nil
+	return ssoDetails.(*PerconaSSODetails), nil
 }
 
-// DeleteOktaSSODetails removes all stored DeleteOktaSSODetails.
-func DeleteOktaSSODetails(q *reform.Querier) error {
-	_, err := q.DeleteFrom(OktaSSODetailsView, "")
+// DeletePerconaSSODetails removes all stored DeletePerconaSSODetails.
+func DeletePerconaSSODetails(q *reform.Querier) error {
+	_, err := q.DeleteFrom(PerconaSSODetailsView, "")
 	if err != nil {
-		return errors.Wrap(err, "failed to delete Okta SSO Details")
+		return errors.Wrap(err, "failed to delete Percona SSO Details")
 	}
 	return nil
 }
 
-// InsertOktaSSODetails inserts a new Okta SSO details.
-func InsertOktaSSODetails(q *reform.Querier, ssoDetails *OktaSSODetails) error {
+// InsertPerconaSSODetails inserts a new Percona SSO details.
+func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetails) error {
 	if err := q.Insert(ssoDetails); err != nil {
-		return errors.Wrap(err, "failed to insert Okta SSO Details")
+		return errors.Wrap(err, "failed to insert Percona SSO Details")
 	}
 	return nil
 }

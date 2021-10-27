@@ -10,23 +10,23 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type oktaSSODetailsViewType struct {
+type perconaSSODetailsViewType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *oktaSSODetailsViewType) Schema() string {
+func (v *perconaSSODetailsViewType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("okta_sso_details").
-func (v *oktaSSODetailsViewType) Name() string {
+// Name returns a view or table name in SQL database ("percona_sso_details").
+func (v *perconaSSODetailsViewType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *oktaSSODetailsViewType) Columns() []string {
+func (v *perconaSSODetailsViewType) Columns() []string {
 	return []string{
 		"client_id",
 		"client_secret",
@@ -37,15 +37,15 @@ func (v *oktaSSODetailsViewType) Columns() []string {
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *oktaSSODetailsViewType) NewStruct() reform.Struct {
-	return new(OktaSSODetails)
+func (v *perconaSSODetailsViewType) NewStruct() reform.Struct {
+	return new(PerconaSSODetails)
 }
 
-// OktaSSODetailsView represents okta_sso_details view or table in SQL database.
-var OktaSSODetailsView = &oktaSSODetailsViewType{
+// PerconaSSODetailsView represents percona_sso_details view or table in SQL database.
+var PerconaSSODetailsView = &perconaSSODetailsViewType{
 	s: parse.StructInfo{
-		Type:    "OktaSSODetails",
-		SQLName: "okta_sso_details",
+		Type:    "PerconaSSODetails",
+		SQLName: "percona_sso_details",
 		Fields: []parse.FieldInfo{
 			{Name: "ClientID", Type: "string", Column: "client_id"},
 			{Name: "ClientSecret", Type: "string", Column: "client_secret"},
@@ -55,11 +55,11 @@ var OktaSSODetailsView = &oktaSSODetailsViewType{
 		},
 		PKFieldIndex: -1,
 	},
-	z: new(OktaSSODetails).Values(),
+	z: new(PerconaSSODetails).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s OktaSSODetails) String() string {
+func (s PerconaSSODetails) String() string {
 	res := make([]string, 5)
 	res[0] = "ClientID: " + reform.Inspect(s.ClientID, true)
 	res[1] = "ClientSecret: " + reform.Inspect(s.ClientSecret, true)
@@ -71,7 +71,7 @@ func (s OktaSSODetails) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *OktaSSODetails) Values() []interface{} {
+func (s *PerconaSSODetails) Values() []interface{} {
 	return []interface{}{
 		s.ClientID,
 		s.ClientSecret,
@@ -83,7 +83,7 @@ func (s *OktaSSODetails) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *OktaSSODetails) Pointers() []interface{} {
+func (s *PerconaSSODetails) Pointers() []interface{} {
 	return []interface{}{
 		&s.ClientID,
 		&s.ClientSecret,
@@ -94,17 +94,17 @@ func (s *OktaSSODetails) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *OktaSSODetails) View() reform.View {
-	return OktaSSODetailsView
+func (s *PerconaSSODetails) View() reform.View {
+	return PerconaSSODetailsView
 }
 
 // check interfaces
 var (
-	_ reform.View   = OktaSSODetailsView
-	_ reform.Struct = (*OktaSSODetails)(nil)
-	_ fmt.Stringer  = (*OktaSSODetails)(nil)
+	_ reform.View   = PerconaSSODetailsView
+	_ reform.Struct = (*PerconaSSODetails)(nil)
+	_ fmt.Stringer  = (*PerconaSSODetails)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&OktaSSODetailsView.s, new(OktaSSODetails))
+	parse.AssertUpToDate(&PerconaSSODetailsView.s, new(PerconaSSODetails))
 }

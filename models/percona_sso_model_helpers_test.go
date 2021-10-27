@@ -28,26 +28,32 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func TestOktaSSODetails(t *testing.T) {
+func setupDB(t *testing.T) (*reform.DB, func()) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	defer func() {
+	cleanup := func() {
 		require.NoError(t, sqlDB.Close())
-	}()
+	}
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	return db, cleanup
+}
 
-	expectedSSODetails := &models.OktaSSODetails{}
-	err := models.InsertOktaSSODetails(db.Querier, expectedSSODetails)
+func TestPerconaSSODetails(t *testing.T) {
+	db, cleanup := setupDB(t)
+	defer cleanup()
+
+	expectedSSODetails := &models.PerconaSSODetails{}
+	err := models.InsertPerconaSSODetails(db.Querier, expectedSSODetails)
 	require.NoError(t, err)
-	ssoDetails, err := models.GetOktaSSODetails(db.Querier)
+	ssoDetails, err := models.GetPerconaSSODetails(db.Querier)
 	require.NoError(t, err)
 	assert.NotNil(t, ssoDetails)
 	assert.Equal(t, expectedSSODetails.ClientID, ssoDetails.ClientID)
 	assert.Equal(t, expectedSSODetails.ClientSecret, ssoDetails.ClientSecret)
 	assert.Equal(t, expectedSSODetails.IssuerURL, ssoDetails.IssuerURL)
 	assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
-	err = models.DeleteOktaSSODetails(db.Querier)
+	err = models.DeletePerconaSSODetails(db.Querier)
 	require.NoError(t, err)
-	ssoDetails, err = models.GetOktaSSODetails(db.Querier)
+	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
 	assert.Error(t, err)
 	assert.Nil(t, ssoDetails)
 }
