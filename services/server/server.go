@@ -749,7 +749,11 @@ func (s *Server) UpdateConfigurations() error {
 	if err != nil {
 		return err
 	}
-	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
+	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
+	if err != nil {
+		return errors.Wrap(err, "failed to get Percona SSO Details")
+	}
+	if err := s.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		return err
 	}
 	s.vmdb.RequestConfigurationUpdate()

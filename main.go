@@ -470,7 +470,11 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
-	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
+	ssoDetails, err := models.GetPerconaSSODetails(db.Querier)
+	if err != nil {
+		deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+	}
+	if err = deps.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}

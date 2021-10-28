@@ -400,13 +400,14 @@ func (s *Service) reload(name string) error {
 }
 
 // marshalConfig marshals supervisord program configuration.
-func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
+func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
+		"PerconaSSODetails":  ssoDetails,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -496,8 +497,8 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	return true, nil
 }
 
-// UpdateConfiguration updates Prometheus, Alertmanager, and qan-api2 configurations, restarting them if needed.
-func (s *Service) UpdateConfiguration(settings *models.Settings) error {
+// UpdateConfiguration updates Prometheus, Alertmanager, Grafana and qan-api2 configurations, restarting them if needed.
+func (s *Service) UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error {
 	if s.supervisorctlPath == "" {
 		s.l.Errorf("supervisorctl not found, configuration updates are disabled.")
 		return nil
@@ -518,7 +519,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 			continue
 		}
 
-		b, e := s.marshalConfig(tmpl, settings)
+		b, e := s.marshalConfig(tmpl, settings, ssoDetails)
 		if e != nil {
 			s.l.Errorf("Failed to marshal config: %s.", e)
 			err = e
@@ -678,5 +679,35 @@ stdout_logfile = /srv/logs/qan-api2.log
 stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true
+{{end}}
+
+{{define "grafana"}}
+[program:grafana]
+priority = 3
+command =
+    /usr/sbin/grafana-server
+        --homepath=/usr/share/grafana
+        --config=/etc/grafana/grafana.ini
+        cfg:default.paths.data=/srv/grafana
+        cfg:default.paths.plugins=/srv/grafana/plugins
+        cfg:default.paths.logs=/srv/logs
+        cfg:default.log.mode=console
+        cfg:default.log.console.format=console
+        cfg:default.server.root_url="%%(protocol)s://%%(domain)s:%%(http_port)s/graph"
+user = grafana
+directory = /usr/share/grafana
+autorestart = true
+autostart = true
+startretries = 10
+startsecs = 1
+stopsignal = TERM
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/grafana.log
+stdout_logfile_maxbytes = 50MB
+stdout_logfile_backups = 2
+redirect_stderr = true
+{{if .PerconaSSODetails}}
+environment=GF_AUTH_GENERIC_OAUTH_NAME="Percona Account",GF_AUTH_GENERIC_OAUTH_ENABLED="true",GF_AUTH_GENERIC_OAUTH_CLIENT_ID="{{ .PerconaSSODetails.ClientID }}",GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET="{{ .PerconaSSODetails.ClientSecret }}",GF_AUTH_GENERIC_OAUTH_SCOPES="{{ .PerconaSSODetails.Scope }}",GF_AUTH_GENERIC_OAUTH_AUTH_URL="{{ .PerconaSSODetails.IssuerURL }}/authorize",GF_AUTH_GENERIC_OAUTH_TOKEN_URL="{{ .PerconaSSODetails.IssuerURL }}/token",GF_AUTH_GENERIC_OAUTH_API_URL="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
+{{end}}
 {{end}}
 `))

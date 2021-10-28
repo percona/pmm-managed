@@ -101,7 +101,7 @@ type supervisordService interface {
 	UpdateRunning() bool
 	UpdateLog(offset uint32) ([]string, uint32, error)
 
-	UpdateConfiguration(settings *models.Settings) error
+	UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error
 }
 
 // telemetryService is a subset of methods of telemetry.Service used by this package.
