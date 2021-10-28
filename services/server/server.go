@@ -747,14 +747,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 func (s *Server) UpdateConfigurations() error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get settings")
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
 	if err != nil {
 		return errors.Wrap(err, "failed to get Percona SSO Details")
 	}
 	if err := s.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
-		return err
+		return errors.Wrap(err, "failed to update supervisord configuration")
 	}
 	s.vmdb.RequestConfigurationUpdate()
 	s.vmalert.RequestConfigurationUpdate()
@@ -852,6 +852,9 @@ func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConn
 		return nil, err
 	}
 
+	if err := s.UpdateConfigurations(); err != nil {
+		return nil, err
+	}
 	return &serverpb.PlatformConnectResponse{}, nil
 }
 
