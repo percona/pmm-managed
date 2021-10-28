@@ -425,7 +425,8 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 }
 
 // convertSettings merges database settings and settings from environment variables into API response.
-func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
+// Checking if PMM is connected to Portal is separated from settings for security reasons.
+func (s *Server) convertSettings(settings *models.Settings, connectedToPortal bool) *serverpb.Settings {
 	res := &serverpb.Settings{
 		UpdatesDisabled:  settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
@@ -451,6 +452,8 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 
 		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
+
+		ConnectedToPortal: connectedToPortal,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -490,8 +493,10 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		return nil, err
 	}
 
+	_, err = models.GetPerconaSSODetails(s.db.Querier)
+
 	return &serverpb.GetSettingsResponse{
-		Settings: s.convertSettings(settings),
+		Settings: s.convertSettings(settings, err == nil),
 	}, nil
 }
 
@@ -731,8 +736,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
+	_, err = models.GetPerconaSSODetails(s.db.Querier)
+
 	return &serverpb.ChangeSettingsResponse{
-		Settings: s.convertSettings(newSettings),
+		Settings: s.convertSettings(newSettings, err == nil),
 	}, nil
 }
 
@@ -833,15 +840,15 @@ func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignU
 	return &serverpb.PlatformSignUpResponse{}, nil
 }
 
-// PlatformSignIn links that PMM instance to Percona Platform user and created new session.
-func (s *Server) PlatformSignIn(ctx context.Context, req *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
+// PlatformConnect connects PMM instance to Portal. If successful, user is able to log in into the PMM server with Percona Account.
+func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConnectRequest) (*serverpb.PlatformConnectResponse, error) {
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
-	if err := s.platformService.SignIn(nCtx, req.Email, req.Password); err != nil {
+	if err := s.platformService.Connect(nCtx, req.ServerName, req.Email, req.Password); err != nil {
 		return nil, err
 	}
 
-	return &serverpb.PlatformSignInResponse{}, nil
+	return &serverpb.PlatformConnectResponse{}, nil
 }
 
 // PlatformSignOut logouts that PMM instance from Percona Platform account.

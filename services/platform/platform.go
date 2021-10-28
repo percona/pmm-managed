@@ -112,29 +112,38 @@ func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string)
 	return nil
 }
 
-// SignIn checks Percona Platform user authentication and creates session.
-func (s *Service) SignIn(ctx context.Context, email, password string) error {
-	cc, err := saasdial.Dial(ctx, "", s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	resp, err := api.NewAuthAPIClient(cc).SignIn(ctx, &api.SignInRequest{Email: email, Password: password})
-	if err != nil {
-		return err
+// Connect checks if PMM is connected. If it's not it requests Portal API to connect the PMM instance to Portal.
+func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
+	_, err := models.GetPerconaSSODetails(s.db.Querier)
+	if err == nil {
+		return errors.Wrap(err, "PMM server is already connected to Portal")
 	}
 
-	err = s.db.InTransaction(func(tx *reform.TX) error {
-		params := models.ChangeSettingsParams{SessionID: resp.SessionId, Email: email}
-		_, err := models.UpdateSettings(tx.Querier, &params)
-		return err
+	// TODO call portal api
+	ssoParams, err := s.connect(ctx, serverName, email, password)
+	if err != nil {
+		return errors.Wrap(err, "failed to connect PMM server to Portal")
+	}
+
+	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
+		ClientID:     ssoParams.ClientID,
+		ClientSecret: ssoParams.ClientSecret,
+		IssuerURL:    ssoParams.IssuerURL,
+		Scope:        ssoParams.Scope,
 	})
-	if err != nil {
-		return errors.Wrap(err, "failed to save session id")
-	}
+	return errors.Wrap(err, "failed to save session id")
+}
 
-	return nil
+type ssoDetails struct {
+	ClientID     string `json:""`
+	ClientSecret string `json:""`
+	IssuerURL    string `json:""`
+	Scope        string `json:""`
+}
+
+func (s *Service) connect(ctx context.Context, serverName, email, password string) (ssoDetails, error) {
+	// TODO ADD IMPLEMENTATION
+	return ssoDetails{}, nil
 }
 
 // SignOut logouts that instance from Percona Platform account and removes session id.

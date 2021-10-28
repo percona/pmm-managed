@@ -114,7 +114,7 @@ type telemetryService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type platformService interface {
 	SignUp(ctx context.Context, email, firstName, lastName string) error
-	SignIn(ctx context.Context, email, password string) error
+	Connect(ctx context.Context, serverName, email, password string) error
 	SignOut(ctx context.Context) error
 }
 
