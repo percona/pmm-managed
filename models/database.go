@@ -623,6 +623,24 @@ var databaseSchema = [][]string{
 		`UPDATE jobs SET data = data - 'mongo_db_backup' || jsonb_build_object('mongodb_backup', data->'mongo_db_backup') WHERE type = 'mongodb_backup';`,
 		`UPDATE jobs SET data = data - 'mongo_db_restore_backup' || jsonb_build_object('mongodb_restore_backup', data->'mongo_db_restore_backup') WHERE type = 'mongodb_restore_backup';`,
 	},
+	49: {
+		`INSERT INTO job_logs(
+			job_id,
+			chunk_id,
+			data,
+			last_chunk
+		)
+        SELECT
+            id AS job_id,
+            0 AS chunk_id,
+            'No logs available.' AS data,
+            TRUE AS last_chunk
+        FROM jobs j
+			WHERE type = 'mongodb_backup' AND NOT EXISTS (
+				SELECT FROM job_logs
+				WHERE job_id = j.id
+			);`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
