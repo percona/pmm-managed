@@ -633,7 +633,7 @@ var databaseSchema = [][]string{
         SELECT
             id AS job_id,
             0 AS chunk_id,
-            'No logs available.' AS data,
+            '' AS data,
             TRUE AS last_chunk
         FROM jobs j
 			WHERE type = 'mongodb_backup' AND NOT EXISTS (
