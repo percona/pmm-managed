@@ -509,6 +509,8 @@ func fillPostgreSQL(mb *qanpb.MetricsBucket, bp *agentpb.MetricsBucket_PostgreSQ
 	mb.MPlanTimeMin = bp.MPlanTimeMin
 	mb.MPlanTimeMax = bp.MPlanTimeMax
 
+	mb.CmdType = bp.CmdType
+
 	mb.TopQueryid = bp.TopQueryid
 	mb.TopQuery = bp.TopQuery
 	mb.ApplicationName = bp.ApplicationName
