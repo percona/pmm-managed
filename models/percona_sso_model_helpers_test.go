@@ -56,4 +56,8 @@ func TestPerconaSSODetails(t *testing.T) {
 	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
 	assert.Error(t, err)
 	assert.Nil(t, ssoDetails)
+	// See https://github.com/percona/pmm-managed/pull/852#discussion_r738178192
+	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
+	assert.Error(t, err)
+	assert.Nil(t, ssoDetails)
 }
