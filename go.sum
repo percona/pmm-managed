@@ -448,6 +448,16 @@ github.com/percona/pmm v0.0.0-20211101081207-dbd2ea60a09b h1:SDQP/WaDEcPvvjVOfYI
 github.com/percona/pmm v0.0.0-20211101081207-dbd2ea60a09b/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/pmm v0.0.0-20211101111257-7cc6b412b708 h1:UF8v1uWffR11CHYaJ2DvVczc4/ZDxU9IfOg7NSzv1oY=
 github.com/percona/pmm v0.0.0-20211101111257-7cc6b412b708/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211101120027-62bad600690b h1:s/WQ1QLc9dMLpwU/v8NLcEFh2qQIO3PNQpzmp/qMmWw=
+github.com/percona/pmm v0.0.0-20211101120027-62bad600690b/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211101123956-c614b4cfd5b2 h1:REJuLLs4jsBLF+Vw5aWcqGIza1g/h9CLktgj0Am53+E=
+github.com/percona/pmm v0.0.0-20211101123956-c614b4cfd5b2/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211101125015-cd218bbdadf6 h1:7R/ZMAqDlLJ5AV0+AlPhH7rPtKSG9ODTdC/F8DaUydk=
+github.com/percona/pmm v0.0.0-20211101125015-cd218bbdadf6/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211101130307-d4f1ac520be2 h1:7lEeQo4vYqcoMwB1ubYzsu2JikaFRPzU7QRRWSE2RYo=
+github.com/percona/pmm v0.0.0-20211101130307-d4f1ac520be2/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211101130823-6bc648f00726 h1:pLB6pXDVg8gjzfbKfiupluqb92qAVZMkmWWoUPvEK1Y=
+github.com/percona/pmm v0.0.0-20211101130823-6bc648f00726/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
