@@ -693,7 +693,19 @@ command =
         cfg:default.paths.logs=/srv/logs
         cfg:default.log.mode=console
         cfg:default.log.console.format=console
-        cfg:default.server.root_url="%%(protocol)s://%%(domain)s:%%(http_port)s/graph"
+        cfg:default.server.root_url="https://%%(domain)s/graph"
+{{if .PerconaSSODetails}}
+        cfg:default.auth.generic_oauth.enabled=true
+        cfg:default.auth.generic_oauth.name="Percona Account"
+        cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
+        cfg:default.auth.generic_oauth.client_secret="{{ .PerconaSSODetails.ClientSecret }}"
+        cfg:default.auth.generic_oauth.scopes="openid profile email offline_access"
+        cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
+        cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
+        cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
+{{end}}
+
+
 user = grafana
 directory = /usr/share/grafana
 autorestart = true
@@ -706,8 +718,5 @@ stdout_logfile = /srv/logs/grafana.log
 stdout_logfile_maxbytes = 50MB
 stdout_logfile_backups = 2
 redirect_stderr = true
-{{if .PerconaSSODetails}}
-environment=GF_AUTH_GENERIC_OAUTH_NAME="Percona Account",GF_AUTH_GENERIC_OAUTH_ENABLED="true",GF_AUTH_GENERIC_OAUTH_CLIENT_ID="{{ .PerconaSSODetails.ClientID }}",GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET="{{ .PerconaSSODetails.ClientSecret }}",GF_AUTH_GENERIC_OAUTH_SCOPES="{{ .PerconaSSODetails.Scope }}",GF_AUTH_GENERIC_OAUTH_AUTH_URL="{{ .PerconaSSODetails.IssuerURL }}/authorize",GF_AUTH_GENERIC_OAUTH_TOKEN_URL="{{ .PerconaSSODetails.IssuerURL }}/token",GF_AUTH_GENERIC_OAUTH_API_URL="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
-{{end}}
 {{end}}
 `))
