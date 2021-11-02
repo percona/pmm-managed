@@ -507,14 +507,15 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	return qan.NewClient(conn, db)
 }
 
-func migrateDB(sqlDB *sql.DB, dbName, dbAddress, dbUsername, dbPassword string) {
+func migrateDB(ctx context.Context, sqlDB *sql.DB, dbName, dbAddress, dbUsername, dbPassword string) {
 	l := logrus.WithField("component", "migration")
 
-	const timeout = 10 * time.Minute
-	timeoutCh := time.After(timeout)
+	const timeout = 5 * time.Minute
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	for {
 		select {
-		case <-timeoutCh:
+		case <-timeoutCtx.Done():
 			l.Fatalf("Could not migrate DB: timeout")
 		default:
 		}
@@ -596,7 +597,7 @@ func main() {
 	}
 	defer sqlDB.Close() //nolint:errcheck
 
-	migrateDB(sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
+	migrateDB(ctx, sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
 
 	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
@@ -748,9 +749,11 @@ func main() {
 			const delay = 2 * time.Second
 			for {
 				deps.l.Warnf("Retrying in %s.", delay)
-				select {
-				case <-time.After(delay):
-				case <-ctx.Done():
+				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
+				<-sleepCtx.Done()
+				sleepCancel()
+
+				if ctx.Err() != nil {
 					return
 				}
 
