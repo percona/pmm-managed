@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	_ "embed" //nolint:gci
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,6 +71,9 @@ const (
 
 var notificationLabels = []string{"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
 	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job"}
+
+//go:embed email_template.html
+var emailTemplate string
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
@@ -629,7 +633,11 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						NotifierConfig: alertmanager.NotifierConfig{
 							SendResolved: channel.EmailConfig.SendResolved,
 						},
-						To: to,
+						To:   to,
+						HTML: emailTemplate,
+						Headers: map[string]string{
+							"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]`,
+						},
 					})
 				}
 
