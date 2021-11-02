@@ -36,8 +36,8 @@ require (
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2
-	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
-	github.com/percona/pmm v0.0.0-20211101102840-e124fb700bde
+	github.com/percona-platform/saas v0.0.0-20211101203847-f65c32bc8770
+	github.com/percona/pmm v0.0.0-20211102113000-f196a537404a
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
