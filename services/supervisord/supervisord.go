@@ -694,7 +694,7 @@ command =
         cfg:default.log.mode=console
         cfg:default.log.console.format=console
         cfg:default.server.root_url="https://%%(domain)s/graph"
-{{if .PerconaSSODetails}}
+        {{- if .PerconaSSODetails}}
         cfg:default.auth.generic_oauth.enabled=true
         cfg:default.auth.generic_oauth.name="Percona Account"
         cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
@@ -703,7 +703,7 @@ command =
         cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
         cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
-{{end}}
+        {{- end}}
 
 
 user = grafana
