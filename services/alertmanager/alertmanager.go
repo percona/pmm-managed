@@ -20,8 +20,8 @@ package alertmanager
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	_ "embed" //nolint:gci
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"

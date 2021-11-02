@@ -655,19 +655,25 @@ receivers:
           to: test@test.test
           headers:
             Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-          html: %[6]s
+          html: %[12]s
         - send_resolved: false
           to: test2@test.test
           headers:
             Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
-          html: %[6]s
+          html: %[12]s
 `+pagerDutyConfigs+`
     - name: %[6]s + %[7]s + %[8]s
       email_configs:
         - send_resolved: false
           to: test@test.test
+          headers:
+            Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
+          html: %[12]s
         - send_resolved: false
           to: test2@test.test
+          headers:
+            Subject: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
+          html: %[12]s
 `+pagerDutyConfigs+`
       webhook_configs:
         - send_resolved: false
@@ -679,9 +685,8 @@ receivers:
                 insecure_skip_verify: false
           url: https://example.com
           max_alerts: 0
-templates: []
-`, channel1.ID, channel2.ID, rule1.ID, rule2.ID, rule4.ID, channel1.ID, channel2.ID, channel4.ID,
-			tlsFileContents[0].file, tlsFileContents[1].file, tlsFileContents[2].file, htmlTemplate))
+templates: []`, channel1.ID, channel2.ID, rule1.ID, rule2.ID, rule4.ID, channel1.ID, channel2.ID, channel4.ID,
+			tlsFileContents[0].file, tlsFileContents[1].file, tlsFileContents[2].file, htmlTemplate)) + "\n"
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 }
