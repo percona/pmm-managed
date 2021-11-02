@@ -19,7 +19,6 @@ package backup
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -292,8 +291,8 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 
 		if params.ServiceType == models.MySQLServiceType && params.DBVersion != "" {
 			if params.DBVersion != dbVersion {
-				return fmt.Errorf("%w: incompatible service: artifact db version %q != db version %q",
-					ErrIncompatibleTargetMySQL, params.DBVersion, dbVersion)
+				return errors.Wrapf(ErrIncompatibleTargetMySQL, "artifact db version %q != db version %q",
+					params.DBVersion, dbVersion)
 			}
 		}
 
@@ -682,15 +681,15 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 	} {
 		if svm[name] == "" {
 			if name == models.XtrabackupSoftwareName || name == models.XbcloudSoftwareName {
-				return fmt.Errorf("%w: software %q is not installed", ErrXtrabackupNotInstalled, name)
+				return errors.Wrapf(ErrXtrabackupNotInstalled, "software %q is not installed", name)
 			}
 
-			return fmt.Errorf("%w: software %q is not installed", ErrIncompatibleService, name)
+			return errors.Wrapf(ErrIncompatibleService, "software %q is not installed", name)
 		}
 	}
 
 	if svm[models.XtrabackupSoftwareName] != svm[models.XbcloudSoftwareName] {
-		return fmt.Errorf("%w: xtrabackup version %q != xbcloud version %q", ErrInvalidXtrabackup,
+		return errors.Wrapf(ErrInvalidXtrabackup, "xtrabackup version %q != xbcloud version %q",
 			svm[models.XtrabackupSoftwareName], svm[models.XbcloudSoftwareName])
 	}
 
@@ -699,8 +698,8 @@ func mySQLSoftwaresInstalledAndCompatible(svm map[models.SoftwareName]string) er
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("%w: xtrabackup version %q is not compatible with mysql version %q",
-			ErrIncompatibleXtrabackup, svm[models.XtrabackupSoftwareName], svm[models.MysqldSoftwareName])
+		return errors.Wrapf(ErrIncompatibleXtrabackup, "xtrabackup version %q is not compatible with mysql version %q",
+			svm[models.XtrabackupSoftwareName], svm[models.MysqldSoftwareName])
 	}
 
 	return nil
