@@ -26,6 +26,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
@@ -110,15 +111,18 @@ func TestPlatform(t *testing.T) {
 			t.Skip("Skipping - some of the required Percona SSO environment variables are not set.")
 		}
 
+		const serverName string = "my PMM"
+
 		// TODO make sure we are using existing credentials when using real Platform API for connecting.
 		email, password, _, _ := genCredentials(t)
 
 		t.Run("wrong email", func(t *testing.T) {
 			t.Skip("Skip until we use the real credentials for dev")
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    "wrong@example.com",
-					Password: password,
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      "wrong@example.com",
+					Password:   password,
+					ServerName: serverName,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -127,10 +131,11 @@ func TestPlatform(t *testing.T) {
 
 		t.Run("wrong password", func(t *testing.T) {
 			t.Skip("Skip until we use the real credentials for dev")
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: "WrongPassword12345",
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      email,
+					Password:   "WrongPassword12345",
+					ServerName: serverName,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -138,10 +143,11 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    "",
-					Password: password,
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      "",
+					Password:   password,
+					ServerName: serverName,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -149,29 +155,31 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty password", func(t *testing.T) {
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: "",
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      email,
+					ServerName: serverName,
+					Password:   "",
 				},
 				Context: pmmapitests.Context,
 			})
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
 		})
 
-		t.Run("empty password", func(t *testing.T) {
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: "",
+		t.Run("empty server name", func(t *testing.T) {
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      email,
+					Password:   password,
+					ServerName: "",
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServerName: value '' must not be an empty string")
 		})
 
 		t.Run("normal", func(t *testing.T) {
-			_, err = client.PlatformConnect(&server.PlatformConnectParams{
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
 				Body: server.PlatformConnectBody{
 					ServerName: "my PMM server",
 					Email:      email,
@@ -181,59 +189,18 @@ func TestPlatform(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			// Check SSO is setup in the grafana.ini supervisord config.
 			grafanaConfig, err := ioutil.ReadFile("/etc/supervisord.d/grafana.ini")
 			require.NoError(t, err)
-			assert.True(t, strings.Contains(string(grafanaConfig), clientID))
-			assert.True(t, strings.Contains(string(grafanaConfig), clientSecret))
-			assert.True(t, strings.Contains(string(grafanaConfig), issuerURL))
-			assert.True(t, strings.Contains(string(grafanaConfig), scope))
-		})
+			assert.True(t, strings.Contains(string(grafanaConfig), "cfg:default.auth.generic_oauth.enabled=true"), "generic_oauth should have been enabled")
 
-	})
-
-	t.Run("signOut", func(t *testing.T) {
-		t.Skip("Skip till https://jira.percona.com/browse/SAAS-514 is implemented.")
-		email, password, _, _ := genCredentials(t)
-
-		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-			Body: server.PlatformSignUpBody{
-				Email:    email,
-				Password: password,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		t.Run("normal", func(t *testing.T) {
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: password,
-				},
-				Context: pmmapitests.Context,
-			})
+			// Confirm we are connected to Portal.
+			settings, err := client.GetSettings(&server.GetSettingsParams{})
 			require.NoError(t, err)
-
-			_, err = client.PlatformSignOut(&server.PlatformSignOutParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: password,
-				},
-				Context: pmmapitests.Context,
-			})
-			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.True(t, settings.GetPayload().Settings.ConnectedToPortal)
 		})
 
-		t.Run("no active session", func(t *testing.T) {
-			_, err = client.PlatformSignOut(&server.PlatformSignOutParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: password,
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, "No active sessions.")
-		})
 	})
 }
 
