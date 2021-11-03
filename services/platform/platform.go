@@ -41,6 +41,14 @@ const (
 )
 
 var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
+var errConnectingToPortal = errors.New("failed to connect PMM to Portal")
+
+type ssoDetails struct {
+	ClientID     string
+	ClientSecret string
+	IssuerURL    string
+	Scope        string
+}
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
@@ -119,7 +127,6 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 		return errors.Wrap(err, "PMM server is already connected to Portal")
 	}
 
-	// TODO call portal api
 	ssoParams, err := s.connect(ctx, serverName, email, password)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect PMM server to Portal")
@@ -134,16 +141,37 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 	return errors.Wrap(err, "failed to save session id")
 }
 
-type ssoDetails struct {
-	ClientID     string `json:""`
-	ClientSecret string `json:""`
-	IssuerURL    string `json:""`
-	Scope        string `json:""`
-}
+// connect right now just reads environment variables that should contain Percona SSO details.
+// Returns them if none of the environment variables is empty otherwise it returns an error.
+// TODO Change this implementation to the one that uses real Portal API to fetch SSO details when the API is ready.
+func (s *Service) connect(ctx context.Context, serverName, email, password string) (*ssoDetails, error) {
+	clientID := os.Getenv("PERCONA_SSO_CLIENT_ID")
+	if clientID == "" {
+		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_CLIENT_ID is not set")
 
-func (s *Service) connect(ctx context.Context, serverName, email, password string) (ssoDetails, error) {
-	// TODO ADD IMPLEMENTATION
-	return ssoDetails{}, nil
+	}
+
+	clientSecret := os.Getenv("PERCONA_SSO_CLIENT_SECRET")
+	if clientSecret == "" {
+		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_CLIENT_SECRET is not set")
+	}
+
+	issuerURL := os.Getenv("PERCONA_SSO_ISSUER_URL")
+	if issuerURL == "" {
+		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_ISSUER_URL is not set")
+	}
+
+	scope := os.Getenv("PERCONA_SSO_SCOPE")
+	if scope == "" {
+		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_SCOPE is not set")
+	}
+
+	return &ssoDetails{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		IssuerURL:    issuerURL,
+		Scope:        scope,
+	}, nil
 }
 
 // SignOut logouts that instance from Percona Platform account and removes session id.

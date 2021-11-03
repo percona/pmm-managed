@@ -17,6 +17,7 @@
 package server
 
 import (
+	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
@@ -103,31 +104,17 @@ func TestPlatform(t *testing.T) {
 		})
 	})
 
-	t.Run("signIn", func(t *testing.T) {
-		t.Skip("Skip till https://jira.percona.com/browse/SAAS-514 is implemented.")
+	t.Run("connect", func(t *testing.T) {
+		// TODO Change this test once real API for Portal is ready.
+		if os.Getenv("PERCONA_SSO_CLIENT_ID") == "" || os.Getenv("PERCONA_SSO_CLIENT_SECRET") == "" || os.Getenv("PERCONA_SSO_ISSUER_URL") == "" || os.Getenv("PERCONA_SSO_SCOPE") == "" {
+			t.Skip("Skipping - some of the required Percona SSO environment variables are not set.")
+		}
+
+		// TODO make sure we are using existing credentials when using real Platform API for connecting.
 		email, password, _, _ := genCredentials(t)
 
-		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-			Body: server.PlatformSignUpBody{
-				Email:    email,
-				Password: password,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		t.Run("normal", func(t *testing.T) {
-			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
-				Body: server.PlatformSignInBody{
-					Email:    email,
-					Password: password,
-				},
-				Context: pmmapitests.Context,
-			})
-			require.NoError(t, err)
-		})
-
 		t.Run("wrong email", func(t *testing.T) {
+			t.Skip("Skip until we use the real credentials for dev")
 			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
 				Body: server.PlatformSignInBody{
 					Email:    "wrong@example.com",
@@ -139,6 +126,7 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("wrong password", func(t *testing.T) {
+			t.Skip("Skip until we use the real credentials for dev")
 			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
 				Body: server.PlatformSignInBody{
 					Email:    email,
@@ -170,6 +158,37 @@ func TestPlatform(t *testing.T) {
 			})
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
 		})
+
+		t.Run("empty password", func(t *testing.T) {
+			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
+				Body: server.PlatformSignInBody{
+					Email:    email,
+					Password: "",
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
+		})
+
+		t.Run("normal", func(t *testing.T) {
+			_, err = client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					ServerName: "my PMM server",
+					Email:      email,
+					Password:   password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			grafanaConfig, err := ioutil.ReadFile("/etc/supervisord.d/grafana.ini")
+			require.NoError(t, err)
+			assert.True(t, strings.Contains(string(grafanaConfig), clientID))
+			assert.True(t, strings.Contains(string(grafanaConfig), clientSecret))
+			assert.True(t, strings.Contains(string(grafanaConfig), issuerURL))
+			assert.True(t, strings.Contains(string(grafanaConfig), scope))
+		})
+
 	})
 
 	t.Run("signOut", func(t *testing.T) {
