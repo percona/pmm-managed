@@ -118,6 +118,11 @@ func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) 
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if response == nil {
+		return nil, errors.New("nil response")
+	}
 
 	versionsResponse := response.(*agentpb.GetVersionsResponse).Versions
 	if len(versionsResponse) != len(softwaresRequest) {

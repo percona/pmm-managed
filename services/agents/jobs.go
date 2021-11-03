@@ -339,6 +339,11 @@ func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time
 	if err != nil {
 		return err
 	}
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if resp == nil {
+		return errors.New("nil response")
+	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MySQL job: %s", e)
 	}
@@ -391,6 +396,11 @@ func (s *JobsService) StartMongoDBBackupJob(
 	if err != nil {
 		return err
 	}
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if resp == nil {
+		return errors.New("nil response")
+	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MongoDB job: %s", e)
 	}
@@ -433,6 +443,11 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 	resp, err := agent.channel.SendAndWaitResponse(req)
 	if err != nil {
 		return err
+	}
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if resp == nil {
+		return errors.New("nil response")
 	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MySQL restore backup job: %s", e)
@@ -484,6 +499,11 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 	resp, err := agent.channel.SendAndWaitResponse(req)
 	if err != nil {
 		return err
+	}
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if resp == nil {
+		return errors.New("nil response")
 	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MonogDB restore backup job: %s", e)

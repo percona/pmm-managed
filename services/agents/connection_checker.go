@@ -100,6 +100,12 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 	}
 	l.Infof("CheckConnection response: %+v.", resp)
 
+	// we can get nil response if appropriate request is not implemented
+	// on the agent side (e.g. because of the old version of pmm-agent).
+	if resp == nil {
+		return errors.New("nil response")
+	}
+
 	switch service.ServiceType {
 	case models.MySQLServiceType:
 		tableCount := resp.(*agentpb.CheckConnectionResponse).GetStats().GetTableCount()
