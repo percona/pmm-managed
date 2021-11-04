@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 	newServer := func(t *testing.T) *Server {
 		r := new(mockSupervisordService)
 		r.Test(t)
-		r.On("UpdateConfiguration", mock.Anything).Return(nil)
+		r.On("UpdateConfiguration", mock.Anything, mock.Anything).Return(nil)
 
 		mvmdb := new(mockPrometheusService)
 		mvmdb.Test(t)
