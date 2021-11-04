@@ -195,7 +195,7 @@ func TestPlatform(t *testing.T) {
 			assert.True(t, strings.Contains(string(grafanaConfig), "cfg:default.auth.generic_oauth.enabled=true"), "generic_oauth should have been enabled")
 
 			// Confirm we are connected to Portal.
-			settings, err := client.GetSettings(&server.GetSettingsParams{})
+			settings, err := client.GetSettings(nil)
 			require.NoError(t, err)
 			require.NotNil(t, settings)
 			assert.True(t, settings.GetPayload().Settings.ConnectedToPortal)
