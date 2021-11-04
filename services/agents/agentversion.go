@@ -24,6 +24,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// PMMAgentSupported checks if pmm agent version satisfies required min version.
 func PMMAgentSupported(q *reform.Querier, pmmAgentID, functionalityPrefix string, pmmMinVersion *version.Version) error {
 	pmmAgent, err := models.FindAgentByID(q, pmmAgentID)
 	if err != nil {

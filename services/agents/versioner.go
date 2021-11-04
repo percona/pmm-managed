@@ -20,8 +20,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 var pmmAgentMinVersionForSoftwareVersions = version.Must(version.NewVersion("2.22"))
@@ -109,7 +107,7 @@ func convertSoftwares(softwares []Software) ([]*agentpb.GetVersionsRequest_Softw
 // GetVersions retrieves software versions.
 func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) ([]Version, error) {
 	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
-		"versions retrieving", pmmAgentMinVersionForMongoDBBackupAndRestore); err != nil {
+		"versions retrieving", pmmAgentMinVersionForSoftwareVersions); err != nil {
 		return nil, err
 	}
 
