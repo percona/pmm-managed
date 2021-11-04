@@ -108,18 +108,9 @@ func convertSoftwares(softwares []Software) ([]*agentpb.GetVersionsRequest_Softw
 
 // GetVersions retrieves software versions.
 func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) ([]Version, error) {
-	pmmAgent, err := models.FindAgentByID(s.r.db.Querier, pmmAgentID)
-	if err != nil {
-		return nil, errors.Errorf("failed to get PMM Agent: %s", err)
-	}
-	pmmAgentVersion, err := version.NewVersion(*pmmAgent.Version)
-	if err != nil {
-		return nil, errors.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
-	}
-
-	if pmmAgentVersion.LessThan(pmmAgentMinVersionForSoftwareVersions) {
-		return nil, errors.Errorf("versions retrieving is not supported on pmm-agent %q version %q",
-			pmmAgentID, *pmmAgent.Version)
+	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
+		"versions retrieving", pmmAgentMinVersionForMongoDBBackupAndRestore); err != nil {
+		return nil, err
 	}
 
 	agent, err := s.r.get(pmmAgentID)
