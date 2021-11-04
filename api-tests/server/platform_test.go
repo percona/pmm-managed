@@ -107,9 +107,8 @@ func TestPlatform(t *testing.T) {
 
 	t.Run("connect", func(t *testing.T) {
 		// TODO Change this test once real API for Portal is ready.
-		if os.Getenv("PERCONA_SSO_CLIENT_ID") == "" || os.Getenv("PERCONA_SSO_CLIENT_SECRET") == "" || os.Getenv("PERCONA_SSO_ISSUER_URL") == "" || os.Getenv("PERCONA_SSO_SCOPE") == "" {
-			t.Skip("Skipping - some of the required Percona SSO environment variables are not set.")
-		}
+		// Right now, this tests only succeeds if env vars PERCONA_SSO_CLIENT_ID,
+		// PERCONA_SSO_CLIENT_SECRET, PERCONA_SSO_ISSUER_URL, PERCONA_SSO_SCOPE are set.
 
 		const serverName string = "my PMM"
 
