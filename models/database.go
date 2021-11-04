@@ -624,6 +624,15 @@ var databaseSchema = [][]string{
 		`UPDATE jobs SET data = data - 'mongo_db_restore_backup' || jsonb_build_object('mongodb_restore_backup', data->'mongo_db_restore_backup') WHERE type = 'mongodb_restore_backup';`,
 	},
 	49: {
+		`CREATE TABLE percona_sso_details (
+			client_id VARCHAR NOT NULL,
+			client_secret VARCHAR NOT NULL,
+			issuer_url VARCHAR NOT NULL,
+			scope VARCHAR NOT NULL,
+			created_at TIMESTAMP NOT NULL
+		)`,
+	},
+	50: {
 		`ALTER TABLE services
 			ADD COLUMN partition_name VARCHAR NOT NULL DEFAULT ''`,
 	},
