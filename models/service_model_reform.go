@@ -31,7 +31,7 @@ func (v *serviceTableType) Columns() []string {
 		"service_id",
 		"service_type",
 		"service_name",
-		"partition_name",
+		"database_name",
 		"node_id",
 		"environment",
 		"cluster",
@@ -70,7 +70,7 @@ var ServiceTable = &serviceTableType{
 			{Name: "ServiceID", Type: "string", Column: "service_id"},
 			{Name: "ServiceType", Type: "ServiceType", Column: "service_type"},
 			{Name: "ServiceName", Type: "string", Column: "service_name"},
-			{Name: "PartitionName", Type: "string", Column: "partition_name"},
+			{Name: "DatabaseName", Type: "string", Column: "database_name"},
 			{Name: "NodeID", Type: "string", Column: "node_id"},
 			{Name: "Environment", Type: "string", Column: "environment"},
 			{Name: "Cluster", Type: "string", Column: "cluster"},
@@ -94,7 +94,7 @@ func (s Service) String() string {
 	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
 	res[1] = "ServiceType: " + reform.Inspect(s.ServiceType, true)
 	res[2] = "ServiceName: " + reform.Inspect(s.ServiceName, true)
-	res[3] = "PartitionName: " + reform.Inspect(s.PartitionName, true)
+	res[3] = "DatabaseName: " + reform.Inspect(s.DatabaseName, true)
 	res[4] = "NodeID: " + reform.Inspect(s.NodeID, true)
 	res[5] = "Environment: " + reform.Inspect(s.Environment, true)
 	res[6] = "Cluster: " + reform.Inspect(s.Cluster, true)
@@ -116,7 +116,7 @@ func (s *Service) Values() []interface{} {
 		s.ServiceID,
 		s.ServiceType,
 		s.ServiceName,
-		s.PartitionName,
+		s.DatabaseName,
 		s.NodeID,
 		s.Environment,
 		s.Cluster,
@@ -138,7 +138,7 @@ func (s *Service) Pointers() []interface{} {
 		&s.ServiceID,
 		&s.ServiceType,
 		&s.ServiceName,
-		&s.PartitionName,
+		&s.DatabaseName,
 		&s.NodeID,
 		&s.Environment,
 		&s.Cluster,

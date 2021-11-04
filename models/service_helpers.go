@@ -236,19 +236,19 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		return nil, err
 	}
 
-	partitionName := ""
+	databaseName := ""
 	if serviceType == PostgreSQLServiceType {
 		if params.Database == "" {
-			partitionName = "postgres"
+			databaseName = "postgres"
 		} else {
-			partitionName = params.Database
+			databaseName = params.Database
 		}
 	}
 	row := &Service{
 		ServiceID:      id,
 		ServiceType:    serviceType,
 		ServiceName:    params.ServiceName,
-		PartitionName:  partitionName,
+		DatabaseName:   databaseName,
 		NodeID:         params.NodeID,
 		Environment:    params.Environment,
 		Cluster:        params.Cluster,

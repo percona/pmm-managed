@@ -634,7 +634,7 @@ var databaseSchema = [][]string{
 	},
 	50: {
 		`ALTER TABLE services
-			ADD COLUMN partition_name VARCHAR NOT NULL DEFAULT ''`,
+			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
 	},
 }
 
