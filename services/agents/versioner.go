@@ -17,9 +17,14 @@
 package agents
 
 import (
+	"github.com/hashicorp/go-version"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
+
+	"github.com/percona/pmm-managed/models"
 )
+
+var pmmAgentMinVersionForSoftwareVersions = version.Must(version.NewVersion("2.22"))
 
 // VersionerService provides methods for retrieving versions of different software.
 type VersionerService struct {
@@ -103,6 +108,20 @@ func convertSoftwares(softwares []Software) ([]*agentpb.GetVersionsRequest_Softw
 
 // GetVersions retrieves software versions.
 func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) ([]Version, error) {
+	pmmAgent, err := models.FindAgentByID(s.r.db.Querier, pmmAgentID)
+	if err != nil {
+		return nil, errors.Errorf("failed to get PMM Agent: %s", err)
+	}
+	pmmAgentVersion, err := version.NewVersion(*pmmAgent.Version)
+	if err != nil {
+		return nil, errors.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
+	}
+
+	if pmmAgentVersion.LessThan(pmmAgentMinVersionForSoftwareVersions) {
+		return nil, errors.Errorf("versions retrieving is not supported on pmm-agent %q version %q",
+			pmmAgentID, *pmmAgent.Version)
+	}
+
 	agent, err := s.r.get(pmmAgentID)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -117,11 +136,6 @@ func (s *VersionerService) GetVersions(pmmAgentID string, softwares []Software) 
 	response, err := agent.channel.SendAndWaitResponse(request)
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if response == nil {
-		return nil, errors.New("nil response")
 	}
 
 	versionsResponse := response.(*agentpb.GetVersionsResponse).Versions

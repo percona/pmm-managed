@@ -21,6 +21,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -30,8 +31,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// ErrRetriesExhausted is returned when remaining retries are 0.
-var ErrRetriesExhausted = errors.New("retries exhausted")
+var (
+	// ErrRetriesExhausted is returned when remaining retries are 0.
+	ErrRetriesExhausted = errors.New("retries exhausted")
+
+	pmmAgentMinVersionForMySQLBackupAndRestore   = version.Must(version.NewVersion("2.23"))
+	pmmAgentMinVersionForMongoDBBackupAndRestore = version.Must(version.NewVersion("2.19"))
+)
 
 const (
 	maxRestartInterval = 8 * time.Hour
@@ -305,6 +311,11 @@ func (s *JobsService) handleJobProgress(ctx context.Context, progress *agentpb.J
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
 func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time.Duration, name string, dbConfig *models.DBConfig, locationConfig *models.BackupLocationConfig) error {
+	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
+		"mysql backup", pmmAgentMinVersionForMySQLBackupAndRestore); err != nil {
+		return err
+	}
+
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
 		Name:     name,
 		User:     dbConfig.User,
@@ -339,11 +350,6 @@ func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time
 	if err != nil {
 		return err
 	}
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if resp == nil {
-		return errors.New("nil response")
-	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MySQL job: %s", e)
 	}
@@ -361,6 +367,11 @@ func (s *JobsService) StartMongoDBBackupJob(
 	mode models.BackupMode,
 	locationConfig *models.BackupLocationConfig,
 ) error {
+	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
+		"mongodb backup", pmmAgentMinVersionForMongoDBBackupAndRestore); err != nil {
+		return err
+	}
+
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
 		Name:       name,
 		User:       dbConfig.User,
@@ -396,11 +407,6 @@ func (s *JobsService) StartMongoDBBackupJob(
 	if err != nil {
 		return err
 	}
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if resp == nil {
-		return errors.New("nil response")
-	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MongoDB job: %s", e)
 	}
@@ -417,6 +423,11 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 	name string,
 	locationConfig *models.BackupLocationConfig,
 ) error {
+	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
+		"mysql restore", pmmAgentMinVersionForMySQLBackupAndRestore); err != nil {
+		return err
+	}
+
 	if locationConfig.S3Config == nil {
 		return errors.Errorf("location config is not set")
 	}
@@ -444,11 +455,6 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 	if err != nil {
 		return err
 	}
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if resp == nil {
-		return errors.New("nil response")
-	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MySQL restore backup job: %s", e)
 	}
@@ -465,6 +471,11 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 	dbConfig *models.DBConfig,
 	locationConfig *models.BackupLocationConfig,
 ) error {
+	if err := PMMAgentSupported(s.r.db.Querier, pmmAgentID,
+		"mongodb restore", pmmAgentMinVersionForMongoDBBackupAndRestore); err != nil {
+		return err
+	}
+
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBRestoreBackup{
 		Name:     name,
 		User:     dbConfig.User,
@@ -499,11 +510,6 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 	resp, err := agent.channel.SendAndWaitResponse(req)
 	if err != nil {
 		return err
-	}
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if resp == nil {
-		return errors.New("nil response")
 	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MonogDB restore backup job: %s", e)

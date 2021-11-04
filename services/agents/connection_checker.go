@@ -36,9 +36,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var (
-	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
-)
+var checkExternalExporterConnectionPMMVersion = version.MustParse("2.14.99")
 
 // ConnectionChecker checks if connection can be established to service.
 type ConnectionChecker struct {
@@ -99,12 +97,6 @@ func (c *ConnectionChecker) CheckConnectionToService(ctx context.Context, q *ref
 		return err
 	}
 	l.Infof("CheckConnection response: %+v.", resp)
-
-	// we can get nil response if appropriate request is not implemented
-	// on the agent side (e.g. because of the old version of pmm-agent).
-	if resp == nil {
-		return errors.New("nil response")
-	}
 
 	switch service.ServiceType {
 	case models.MySQLServiceType:
