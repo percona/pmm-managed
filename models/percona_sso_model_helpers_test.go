@@ -60,5 +60,4 @@ func TestPerconaSSODetails(t *testing.T) {
 	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
 	assert.Error(t, err)
 	assert.Nil(t, ssoDetails)
-
 }

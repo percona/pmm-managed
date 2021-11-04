@@ -844,7 +844,7 @@ func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignU
 	return &serverpb.PlatformSignUpResponse{}, nil
 }
 
-// PlatformConnect connects PMM instance to Portal. If successful, user is able to log in into the PMM server with Percona Account.
+// PlatformConnect connects PMM instance to Portal. If successful, user is able to log in to PMM server with their Percona Account.
 func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConnectRequest) (*serverpb.PlatformConnectResponse, error) {
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()

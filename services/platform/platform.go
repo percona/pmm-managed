@@ -120,7 +120,7 @@ func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string)
 	return nil
 }
 
-// Connect checks if PMM is connected. If it's not it requests Portal API to connect the PMM instance to Portal.
+// Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
 func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
 	_, err := models.GetPerconaSSODetails(s.db.Querier)
 	if err == nil {
@@ -142,7 +142,7 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 }
 
 // connect right now just reads environment variables that should contain Percona SSO details.
-// Returns them if none of the environment variables is empty otherwise it returns an error.
+// It returns them if none of the environment variables is empty. Otherwise it returns an error.
 // TODO Change this implementation to the one that uses real Portal API to fetch SSO details when the API is ready.
 func (s *Service) connect(ctx context.Context, serverName, email, password string) (*ssoDetails, error) {
 	clientID := os.Getenv("PERCONA_SSO_CLIENT_ID")

@@ -107,7 +107,7 @@ func TestPlatform(t *testing.T) {
 
 	t.Run("connect", func(t *testing.T) {
 		// TODO Change this test once real API for Portal is ready.
-		// Right now, this tests only succeeds if env vars PERCONA_SSO_CLIENT_ID,
+		// Right now, this test only succeeds if env vars PERCONA_SSO_CLIENT_ID,
 		// PERCONA_SSO_CLIENT_SECRET, PERCONA_SSO_ISSUER_URL, PERCONA_SSO_SCOPE are set.
 
 		const serverName string = "my PMM"
@@ -180,7 +180,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
 			_, err := client.PlatformConnect(&server.PlatformConnectParams{
 				Body: server.PlatformConnectBody{
-					ServerName: "my PMM server",
+					ServerName: serverName,
 					Email:      email,
 					Password:   password,
 				},
@@ -188,7 +188,7 @@ func TestPlatform(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			// Check SSO is setup in the grafana.ini supervisord config.
+			// Check SSO is set up in the grafana.ini supervisord config.
 			grafanaConfig, err := ioutil.ReadFile("/etc/supervisord.d/grafana.ini")
 			require.NoError(t, err)
 			assert.True(t, strings.Contains(string(grafanaConfig), "cfg:default.auth.generic_oauth.enabled=true"), "generic_oauth should have been enabled")
