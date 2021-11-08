@@ -547,13 +547,13 @@ templates: []
 
 		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
-				From:      "from@test.com",
-				Smarthost: "1.2.3.4:80",
-				Hello:     "host",
-				Username:  "user",
-				Password:  "password",
-				Identity:  "id",
-				Secret:    "secret",
+				From:       "from@test.com",
+				Smarthost:  "1.2.3.4:80",
+				Hello:      "host",
+				Username:   "user",
+				Password:   "password",
+				Identity:   "id",
+				Secret:     "secret",
 				RequireTLS: true,
 			},
 			SlackAlertingSettings: &models.SlackAlertingSettings{
