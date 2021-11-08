@@ -623,12 +623,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		if req.EmailAlertingSettings != nil {
 			settingsParams.EmailAlertingSettings = &models.EmailAlertingSettings{
-				From:      req.EmailAlertingSettings.From,
-				Smarthost: req.EmailAlertingSettings.Smarthost,
-				Hello:     req.EmailAlertingSettings.Hello,
-				Username:  req.EmailAlertingSettings.Username,
-				Identity:  req.EmailAlertingSettings.Identity,
-				Secret:    req.EmailAlertingSettings.Secret,
+				From:       req.EmailAlertingSettings.From,
+				Smarthost:  req.EmailAlertingSettings.Smarthost,
+				Hello:      req.EmailAlertingSettings.Hello,
+				Username:   req.EmailAlertingSettings.Username,
+				Identity:   req.EmailAlertingSettings.Identity,
+				Secret:     req.EmailAlertingSettings.Secret,
+				RequireTLS: req.EmailAlertingSettings.RequireTls,
 			}
 			if req.EmailAlertingSettings.Password != "" {
 				settingsParams.EmailAlertingSettings.Password = req.EmailAlertingSettings.Password
