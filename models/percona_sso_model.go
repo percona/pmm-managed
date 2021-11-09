@@ -47,7 +47,7 @@ type PerconaSSODetailsInsert struct {
 	Scope        string
 }
 
-// MongoDBOptions represents structure for special MongoDB options.
+// PerconaSSOAccessToken represents structure for special access token options.
 type PerconaSSOAccessToken struct {
 	TokenType   string    `json:"token_type"`
 	ExpiresIn   int32     `json:"expires_in"`

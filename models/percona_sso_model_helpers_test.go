@@ -17,6 +17,7 @@
 package models_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -44,6 +45,7 @@ func TestPerconaSSODetails(t *testing.T) {
 		t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
 	}
 
+	ctx := context.Background()
 	db, cleanup := setupDB(t)
 	defer cleanup()
 
@@ -59,9 +61,9 @@ func TestPerconaSSODetails(t *testing.T) {
 		ClientSecret: expectedSSODetails.ClientSecret,
 		Scope:        expectedSSODetails.Scope,
 	}
-	err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
+	err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
 	require.NoError(t, err)
-	ssoDetails, err := models.GetPerconaSSODetails(db.Querier)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
 	require.NoError(t, err)
 	assert.NotNil(t, ssoDetails)
 	assert.Equal(t, expectedSSODetails.ClientID, ssoDetails.ClientID)
@@ -70,11 +72,11 @@ func TestPerconaSSODetails(t *testing.T) {
 	assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
 	err = models.DeletePerconaSSODetails(db.Querier)
 	require.NoError(t, err)
-	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
+	ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
 	assert.Error(t, err)
 	assert.Nil(t, ssoDetails)
 	// See https://github.com/percona/pmm-managed/pull/852#discussion_r738178192
-	ssoDetails, err = models.GetPerconaSSODetails(db.Querier)
+	ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
 	assert.Error(t, err)
 	assert.Nil(t, ssoDetails)
 }

@@ -17,6 +17,7 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -32,8 +33,8 @@ import (
 const issuerSubdirectoryAndQuery = "/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
 
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
-// Access token is automatically refresh if it is expired.
-func GetPerconaSSODetails(q *reform.Querier) (*PerconaSSODetails, error) {
+// Access token is automatically refreshed if it is expired.
+func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODetails, error) {
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func GetPerconaSSODetails(q *reform.Querier) (*PerconaSSODetails, error) {
 	details := ssoDetails.(*PerconaSSODetails)
 
 	if details.isAccessTokenExpired() {
-		refreshedToken, err := details.refreshAndGetAccessToken(q)
+		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
 			return nil, err
 		}
@@ -53,14 +54,14 @@ func GetPerconaSSODetails(q *reform.Querier) (*PerconaSSODetails, error) {
 }
 
 // GetPerconaSSOAccessToken returns PerconaSSOAccessToken if there are any, error otherwise.
-func GetPerconaSSOAccessToken(q *reform.Querier) (*PerconaSSOAccessToken, error) {
-	ssoDetails, err := GetPerconaSSODetails(q)
+func GetPerconaSSOAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
+	ssoDetails, err := GetPerconaSSODetails(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
 	if ssoDetails.isAccessTokenExpired() {
-		refreshedToken, err := ssoDetails.refreshAndGetAccessToken(q)
+		refreshedToken, err := ssoDetails.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +71,7 @@ func GetPerconaSSOAccessToken(q *reform.Querier) (*PerconaSSOAccessToken, error)
 	return ssoDetails.AccessToken, nil
 }
 
-func (sso *PerconaSSODetails) refreshAndGetAccessToken(q *reform.Querier) (*PerconaSSOAccessToken, error) {
+func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
 	url := sso.IssuerURL + fmt.Sprintf("%s%s", issuerSubdirectoryAndQuery, sso.Scope)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
@@ -133,7 +134,7 @@ func DeletePerconaSSODetails(q *reform.Querier) error {
 }
 
 // InsertPerconaSSODetails inserts a new Percona SSO details.
-func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetailsInsert) error {
+func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails *PerconaSSODetailsInsert) error {
 	details := &PerconaSSODetails{
 		IssuerURL:    ssoDetails.IssuerURL,
 		ClientID:     ssoDetails.ClientID,
@@ -141,21 +142,18 @@ func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetailsIns
 		Scope:        ssoDetails.Scope,
 	}
 
-	accessToken, err := GetPerconaSSOAccessToken(q)
+	accessToken, err := GetPerconaSSOAccessToken(ctx, q)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	details.AccessToken = accessToken
 	if details.isAccessTokenExpired() {
-		refreshedToken, err := details.refreshAndGetAccessToken(q)
+		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
 			return err
 		}
 		details.AccessToken = refreshedToken
 	}
 
-	if err := q.Insert(details); err != nil {
-		return err
-	}
-	return nil
+	return q.Insert(details)
 }
