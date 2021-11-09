@@ -52,19 +52,11 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 	return details, nil
 }
 
-// GetPerconaSSOAccessToken returns PerconaSSOAccessToken if there are any, error otherwise.
+// GetPerconaSSOAccessToken returns PerconaSSOAccessToken if there is GetPerconaSSODetails, error otherwise.
 func GetPerconaSSOAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
 	ssoDetails, err := GetPerconaSSODetails(ctx, q)
 	if err != nil {
 		return nil, err
-	}
-
-	if ssoDetails.isAccessTokenExpired() {
-		refreshedToken, err := ssoDetails.refreshAndGetAccessToken(ctx, q)
-		if err != nil {
-			return nil, err
-		}
-		return refreshedToken, nil
 	}
 
 	return ssoDetails.AccessToken, nil
