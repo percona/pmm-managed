@@ -25,7 +25,7 @@ import (
 
 //go:generate reform
 
-// PerconaSSODetails stores everything we need to issue access_token from Percona SSO API.
+// PerconaSSODetails stores everything what we need to issue access_token from Percona SSO API.
 // It is intended to have only one row in this table as PMM can be connected to Portal only once.
 //reform:percona_sso_details
 type PerconaSSODetails struct {
@@ -38,7 +38,7 @@ type PerconaSSODetails struct {
 	CreatedAt time.Time `reform:"created_at"`
 }
 
-// PerconaSSODetailsInsert stores everything we can set. Other properties missing compared to
+// PerconaSSODetailsInsert stores everything what we can set. Other properties missing compared to
 // PerconaSSODetails will be added automatically.
 type PerconaSSODetailsInsert struct {
 	ClientID     string
