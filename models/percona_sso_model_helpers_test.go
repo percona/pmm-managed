@@ -46,37 +46,60 @@ func TestPerconaSSODetails(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, cleanup := setupDB(t)
-	defer cleanup()
 
-	expectedSSODetails := &models.PerconaSSODetails{
-		IssuerURL:    "https://id-dev.percona.com",
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Scope:        "percona",
-	}
-	InsertSSODetails := &models.PerconaSSODetailsInsert{
-		IssuerURL:    expectedSSODetails.IssuerURL,
-		ClientID:     expectedSSODetails.ClientID,
-		ClientSecret: expectedSSODetails.ClientSecret,
-		Scope:        expectedSSODetails.Scope,
-	}
-	err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
-	require.NoError(t, err)
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
-	require.NoError(t, err)
-	assert.NotNil(t, ssoDetails)
-	assert.Equal(t, expectedSSODetails.ClientID, ssoDetails.ClientID)
-	assert.Equal(t, expectedSSODetails.ClientSecret, ssoDetails.ClientSecret)
-	assert.Equal(t, expectedSSODetails.IssuerURL, ssoDetails.IssuerURL)
-	assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
-	err = models.DeletePerconaSSODetails(db.Querier)
-	require.NoError(t, err)
-	ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
-	assert.Error(t, err)
-	assert.Nil(t, ssoDetails)
-	// See https://github.com/percona/pmm-managed/pull/852#discussion_r738178192
-	ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
-	assert.Error(t, err)
-	assert.Nil(t, ssoDetails)
+	t.Run("CorrectCredentials", func(t *testing.T) {
+		db, cleanup := setupDB(t)
+		defer cleanup()
+
+		expectedSSODetails := &models.PerconaSSODetails{
+			IssuerURL:    "https://id-dev.percona.com",
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			Scope:        "percona",
+		}
+		InsertSSODetails := &models.PerconaSSODetailsInsert{
+			IssuerURL:    expectedSSODetails.IssuerURL,
+			ClientID:     expectedSSODetails.ClientID,
+			ClientSecret: expectedSSODetails.ClientSecret,
+			Scope:        expectedSSODetails.Scope,
+		}
+		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
+		require.NoError(t, err)
+		ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
+		require.NoError(t, err)
+		assert.NotNil(t, ssoDetails)
+		assert.Equal(t, expectedSSODetails.ClientID, ssoDetails.ClientID)
+		assert.Equal(t, expectedSSODetails.ClientSecret, ssoDetails.ClientSecret)
+		assert.Equal(t, expectedSSODetails.IssuerURL, ssoDetails.IssuerURL)
+		assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
+		err = models.DeletePerconaSSODetails(db.Querier)
+		require.NoError(t, err)
+		ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
+		assert.Error(t, err)
+		assert.Nil(t, ssoDetails)
+		// See https://github.com/percona/pmm-managed/pull/852#discussion_r738178192
+		ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
+		assert.Error(t, err)
+		assert.Nil(t, ssoDetails)
+	})
+
+	t.Run("WrongCredentials", func(t *testing.T) {
+		db, cleanup := setupDB(t)
+		defer cleanup()
+
+		expectedSSODetails := &models.PerconaSSODetails{
+			IssuerURL:    "https://id-dev.percona.com",
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			Scope:        "percona",
+		}
+		InsertSSODetails := &models.PerconaSSODetailsInsert{
+			IssuerURL:    expectedSSODetails.IssuerURL,
+			ClientID:     "wrongClientID",
+			ClientSecret: "wrongClientSecret",
+			Scope:        expectedSSODetails.Scope,
+		}
+		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
+		require.Error(t, err)
+	})
 }
