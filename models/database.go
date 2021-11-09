@@ -650,6 +650,10 @@ var databaseSchema = [][]string{
 				WHERE job_id = j.id
 			);`,
 	},
+	51: {
+		`ALTER TABLE percona_sso_details
+			ADD COLUMN access_token VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
