@@ -73,7 +73,7 @@ func GetPerconaSSOAccessToken(ctx context.Context, q *reform.Querier) (*PerconaS
 
 func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
 	url := sso.IssuerURL + fmt.Sprintf("%s%s", issuerSubdirectoryAndQuery, sso.Scope)
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
 	}
