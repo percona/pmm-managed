@@ -43,14 +43,14 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get Percona SSO Details")
 	}
 
 	details := ssoDetails.(*PerconaSSODetails)
 	if details.isAccessTokenExpired() {
 		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to insert Percona SSO Details")
 		}
 		details.AccessToken = refreshedToken
 	}
@@ -85,7 +85,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to refresh access")
+		return nil, err
 	}
 
 	if res.StatusCode == http.StatusOK {
@@ -138,6 +138,8 @@ func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails 
 	}
 
 	_, err := details.refreshAndGetAccessToken(ctx, q)
-
-	return err
+	if err != nil {
+		return errors.Wrap(err, "failed to insert Percona SSO Details")
+	}
+	return nil
 }
