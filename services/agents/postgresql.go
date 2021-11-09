@@ -47,6 +47,9 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		// HR
 		"--collect.custom_query.hr",
 
+		// new parameter to set the number of retries when connecting to the database
+		"--connection-retries=1" 
+
 		"--collect.custom_query.lr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/low-resolution",
 		"--collect.custom_query.mr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/medium-resolution",
 		"--collect.custom_query.hr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/high-resolution",
