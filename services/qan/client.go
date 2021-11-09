@@ -19,6 +19,7 @@ package qan
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -508,4 +509,32 @@ func fillPostgreSQL(mb *qanpb.MetricsBucket, bp *agentpb.MetricsBucket_PostgreSQ
 	mb.MPlanTimeSum = bp.MPlanTimeSum
 	mb.MPlanTimeMin = bp.MPlanTimeMin
 	mb.MPlanTimeMax = bp.MPlanTimeMax
+
+	mb.CmdType = bp.CmdType
+
+	mb.TopQueryid = bp.TopQueryid
+	mb.TopQuery = bp.TopQuery
+	mb.ApplicationName = bp.ApplicationName
+	mb.Planid = bp.Planid
+	mb.QueryPlan = bp.QueryPlan
+	mb.HistogramItems = convertHistogramItems(bp.HistogramItems)
+}
+
+func convertHistogramItems(items []*agentpb.HistogramItem) []string {
+	res := []string{}
+	for _, v := range items {
+		item := &qanpb.HistogramItem{
+			Range:     v.Range,
+			Frequency: v.Frequency,
+		}
+
+		json, err := json.Marshal(item)
+		if err != nil {
+			continue
+		}
+
+		res = append(res, string(json))
+	}
+
+	return res
 }
