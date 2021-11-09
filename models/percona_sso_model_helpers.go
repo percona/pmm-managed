@@ -18,12 +18,12 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -32,9 +32,15 @@ import (
 
 const issuerSubdirectoryAndQuery = "/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
 
+var tokenMtx sync.Mutex
+
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
 // Access token is automatically refreshed if it is expired.
+// Get, check eventually refresh did in one tx.
 func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODetails, error) {
+	tokenMtx.Lock()
+	defer tokenMtx.Unlock()
+
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
 	if err != nil {
 		return nil, err
@@ -131,18 +137,7 @@ func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails 
 		Scope:        ssoDetails.Scope,
 	}
 
-	accessToken, err := GetPerconaSSOAccessToken(ctx, q)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-	details.AccessToken = accessToken
-	if details.isAccessTokenExpired() {
-		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
-		if err != nil {
-			return err
-		}
-		details.AccessToken = refreshedToken
-	}
+	_, err := details.refreshAndGetAccessToken(ctx, q)
 
-	return q.Insert(details)
+	return err
 }
