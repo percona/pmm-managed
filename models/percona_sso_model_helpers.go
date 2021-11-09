@@ -32,14 +32,14 @@ import (
 
 const issuerSubdirectoryAndQuery = "/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
 
-var tokenMtx sync.Mutex
+var perconaSSOMtx sync.Mutex
 
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
 // Access token is automatically refreshed if it is expired.
 // Get, check eventually refresh did in one tx.
 func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODetails, error) {
-	tokenMtx.Lock()
-	defer tokenMtx.Unlock()
+	perconaSSOMtx.Lock()
+	defer perconaSSOMtx.Unlock()
 
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
 	if err != nil {
