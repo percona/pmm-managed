@@ -41,7 +41,6 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 	}
 
 	details := ssoDetails.(*PerconaSSODetails)
-
 	if details.isAccessTokenExpired() {
 		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
@@ -98,12 +97,11 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 		if err != nil {
 			return nil, err
 		}
-
 		if err := json.Unmarshal(bodyBytes, &accessToken); err != nil {
 			return nil, err
 		}
-		accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
 
+		accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
 		sso.AccessToken = accessToken
 
 		if err := q.Insert(sso); err != nil {
