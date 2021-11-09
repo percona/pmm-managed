@@ -87,17 +87,11 @@ func TestPerconaSSODetails(t *testing.T) {
 		db, cleanup := setupDB(t)
 		defer cleanup()
 
-		expectedSSODetails := &models.PerconaSSODetails{
-			IssuerURL:    "https://id-dev.percona.com",
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
-			Scope:        "percona",
-		}
 		InsertSSODetails := &models.PerconaSSODetailsInsert{
-			IssuerURL:    expectedSSODetails.IssuerURL,
+			IssuerURL:    "https://id-dev.percona.com",
 			ClientID:     "wrongClientID",
 			ClientSecret: "wrongClientSecret",
-			Scope:        expectedSSODetails.Scope,
+			Scope:        "percona",
 		}
 		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
 		require.Error(t, err)
