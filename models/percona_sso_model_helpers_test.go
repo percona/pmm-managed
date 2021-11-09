@@ -17,6 +17,7 @@
 package models_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,11 +39,27 @@ func setupDB(t *testing.T) (*reform.DB, func()) {
 }
 
 func TestPerconaSSODetails(t *testing.T) {
+	clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
+	if clientID == "" || clientSecret == "" {
+		t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
+	}
+
 	db, cleanup := setupDB(t)
 	defer cleanup()
 
-	expectedSSODetails := &models.PerconaSSODetails{}
-	err := models.InsertPerconaSSODetails(db.Querier, expectedSSODetails)
+	expectedSSODetails := &models.PerconaSSODetails{
+		IssuerURL:    "https://id-dev.percona.com",
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		Scope:        "percona",
+	}
+	InsertSSODetails := &models.PerconaSSODetailsInsert{
+		IssuerURL:    expectedSSODetails.IssuerURL,
+		ClientID:     expectedSSODetails.ClientID,
+		ClientSecret: expectedSSODetails.ClientSecret,
+		Scope:        expectedSSODetails.Scope,
+	}
+	err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
 	require.NoError(t, err)
 	ssoDetails, err := models.GetPerconaSSODetails(db.Querier)
 	require.NoError(t, err)

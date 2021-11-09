@@ -32,6 +32,7 @@ func (v *perconaSSODetailsViewType) Columns() []string {
 		"client_secret",
 		"issuer_url",
 		"scope",
+		"access_token",
 		"created_at",
 	}
 }
@@ -51,6 +52,7 @@ var PerconaSSODetailsView = &perconaSSODetailsViewType{
 			{Name: "ClientSecret", Type: "string", Column: "client_secret"},
 			{Name: "IssuerURL", Type: "string", Column: "issuer_url"},
 			{Name: "Scope", Type: "string", Column: "scope"},
+			{Name: "AccessToken", Type: "*PerconaSSOAccessToken", Column: "access_token"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 		},
 		PKFieldIndex: -1,
@@ -60,12 +62,13 @@ var PerconaSSODetailsView = &perconaSSODetailsViewType{
 
 // String returns a string representation of this struct or record.
 func (s PerconaSSODetails) String() string {
-	res := make([]string, 5)
+	res := make([]string, 6)
 	res[0] = "ClientID: " + reform.Inspect(s.ClientID, true)
 	res[1] = "ClientSecret: " + reform.Inspect(s.ClientSecret, true)
 	res[2] = "IssuerURL: " + reform.Inspect(s.IssuerURL, true)
 	res[3] = "Scope: " + reform.Inspect(s.Scope, true)
-	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[4] = "AccessToken: " + reform.Inspect(s.AccessToken, true)
+	res[5] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -77,6 +80,7 @@ func (s *PerconaSSODetails) Values() []interface{} {
 		s.ClientSecret,
 		s.IssuerURL,
 		s.Scope,
+		s.AccessToken,
 		s.CreatedAt,
 	}
 }
@@ -89,6 +93,7 @@ func (s *PerconaSSODetails) Pointers() []interface{} {
 		&s.ClientSecret,
 		&s.IssuerURL,
 		&s.Scope,
+		&s.AccessToken,
 		&s.CreatedAt,
 	}
 }
