@@ -77,8 +77,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 		return nil, err
 	}
 
-	authHeader := base64.StdEncoding.EncodeToString(
-		[]byte(sso.ClientID + ":" + sso.ClientSecret))
+	authHeader := base64.StdEncoding.EncodeToString([]byte(sso.ClientID + ":" + sso.ClientSecret))
 	h := req.Header
 	h.Add("Authorization", "Basic "+authHeader)
 	h.Add("Accept", "application/json")
