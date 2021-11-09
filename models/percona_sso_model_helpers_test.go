@@ -40,14 +40,14 @@ func setupDB(t *testing.T) (*reform.DB, func()) {
 }
 
 func TestPerconaSSODetails(t *testing.T) {
-	clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
-	if clientID == "" || clientSecret == "" {
-		t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
-	}
-
 	ctx := context.Background()
 
 	t.Run("CorrectCredentials", func(t *testing.T) {
+		clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
+		if clientID == "" || clientSecret == "" {
+			t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
+		}
+
 		db, cleanup := setupDB(t)
 		defer cleanup()
 
