@@ -34,7 +34,7 @@ var perconaSSOMtx sync.Mutex
 
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
 // Access token is automatically refreshed if it is expired.
-// Get, check eventually refresh did in one tx.
+// Get, check eventually refresh done in one tx.
 func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODetails, error) {
 	perconaSSOMtx.Lock()
 	defer perconaSSOMtx.Unlock()
