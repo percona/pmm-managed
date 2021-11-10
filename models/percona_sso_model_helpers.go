@@ -116,7 +116,7 @@ func (sso *PerconaSSODetails) isAccessTokenExpired() bool {
 		return true
 	}
 
-	return sso.AccessToken.ExpiresAt.After(time.Now())
+	return time.Now().After(sso.AccessToken.ExpiresAt)
 }
 
 // DeletePerconaSSODetails removes all stored DeletePerconaSSODetails.
