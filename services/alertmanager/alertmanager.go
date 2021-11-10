@@ -19,10 +19,15 @@ package alertmanager
 
 import (
 	"context"
+	"crypto/sha256"
+	_ "embed" //nolint:gci
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -54,6 +59,7 @@ const (
 	configurationUpdateTimeout = 3 * time.Second
 
 	alertmanagerDir     = "/srv/alertmanager"
+	alertmanagerCertDir = "/srv/alertmanager/cert"
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	dirPerm             = os.FileMode(0o775)
 
@@ -62,6 +68,12 @@ const (
 
 	receiverNameSeparator = " + "
 )
+
+var notificationLabels = []string{"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
+	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job"}
+
+//go:embed email_template.html
+var emailTemplate string
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
@@ -87,11 +99,10 @@ func New(db *reform.DB) *Service {
 // It is needed because Alertmanager was added to PMM
 // with invalid configuration file (it will fail with "no route provided in config" error).
 func (svc *Service) GenerateBaseConfigs() {
-	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
-	}
-	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
+	for _, dirPath := range []string{alertmanagerDir, alertmanagerDataDir, alertmanagerCertDir} {
+		if err := dir.CreateDataDir(dirPath, "pmm", "pmm", dirPerm); err != nil {
+			svc.l.Error(err)
+		}
 	}
 
 	defaultBase := strings.TrimSpace(`
@@ -328,6 +339,102 @@ func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 	return nil
 }
 
+// convertTLSConfig converts model TLSConfig to promconfig TLSConfig.
+// Resulting promconfig field
+//  - CAFile is set to corresponding model field if CAFileContent is not specified, `sha256(id).ca` otherwise.
+//  - CertFile is set to corresponding model field if CertFileContent is not specified, `sha256(id).crt` otherwise.
+//  - KeyFile is set to corresponding model field if KeyFileContent is not specified, `sha256(id).key` otherwise.
+func convertTLSConfig(id string, tls *models.TLSConfig) promconfig.TLSConfig {
+	hashedIDBytes := sha256.Sum256([]byte(id))
+	hashedID := hex.EncodeToString(hashedIDBytes[:])
+
+	caFile := tls.CAFile
+	if tls.CAFileContent != "" {
+		caFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.ca", hashedID))
+	}
+	certFile := tls.CertFile
+	if tls.CertFileContent != "" {
+		certFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.crt", hashedID))
+	}
+	keyFile := tls.KeyFile
+	if tls.KeyFileContent != "" {
+		keyFile = path.Join(alertmanagerCertDir, fmt.Sprintf("%s.key", hashedID))
+	}
+	return promconfig.TLSConfig{
+		CAFile:             caFile,
+		CertFile:           certFile,
+		KeyFile:            keyFile,
+		ServerName:         tls.ServerName,
+		InsecureSkipVerify: tls.InsecureSkipVerify,
+	}
+}
+
+func cleanupTLSConfigFiles() error {
+	des, err := os.ReadDir(alertmanagerCertDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to list alertmanager certificates directory")
+	}
+	for _, de := range des {
+		if de.IsDir() {
+			continue
+		}
+
+		if err := os.Remove(path.Join(alertmanagerCertDir, de.Name())); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
+func tlsConfig(c *models.Channel) *models.TLSConfig {
+	if c.WebHookConfig != nil &&
+		c.WebHookConfig.HTTPConfig != nil &&
+		c.WebHookConfig.HTTPConfig.TLSConfig != nil {
+		return c.WebHookConfig.HTTPConfig.TLSConfig
+	}
+
+	return nil
+}
+
+// recreateTLSConfigFiles cleanups old tls config files and creates new ones for each channel using the content
+// from CAFileContent, CertFileContent, KeyFileContent if it is set.
+func recreateTLSConfigFiles(chanMap map[string]*models.Channel) error {
+	fi, err := os.Stat(alertmanagerCertDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := cleanupTLSConfigFiles(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, c := range chanMap {
+		tlsConfig := tlsConfig(c)
+		if tlsConfig == nil {
+			continue
+		}
+
+		convertedTLSConfig := convertTLSConfig(c.ID, tlsConfig)
+		fileContentMap := map[string]string{
+			convertedTLSConfig.CAFile:   tlsConfig.CAFileContent,
+			convertedTLSConfig.CertFile: tlsConfig.CertFileContent,
+			convertedTLSConfig.KeyFile:  tlsConfig.KeyFileContent,
+		}
+		for filePath, content := range fileContentMap {
+			if filePath == "" || content == "" {
+				continue
+			}
+
+			if err := ioutil.WriteFile(filePath, []byte(content), fi.Mode()); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // populateConfig adds configuration from the database to cfg.
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	var settings *models.Settings
@@ -352,7 +459,15 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return nil
 	})
 	if e != nil {
-		return errors.Errorf("Failed to fetch items from database: %s", e)
+		return errors.Errorf("failed to fetch items from database: %v", e)
+	}
+
+	chanMap := make(map[string]*models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ID] = ch
+	}
+	if err := recreateTLSConfigFiles(chanMap); err != nil {
+		return err
 	}
 
 	if cfg.Global == nil {
@@ -409,10 +524,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
 	}
-	chanMap := make(map[string]*models.Channel, len(channels))
-	for _, ch := range channels {
-		chanMap[ch.ID] = ch
-	}
+
 	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
 		// skip rules with 0 notification channels
@@ -467,6 +579,38 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	return nil
 }
 
+func formatSlackText(labels ...string) string {
+	const listEntryFormat = "{{ if .Labels.%[1]s }}     • *%[1]s:* `{{ .Labels.%[1]s }}`\n{{ end }}"
+
+	text := "{{ range .Alerts -}}\n" +
+		"*Alert:* {{ if .Labels.severity }}`{{ .Labels.severity | toUpper }}`{{ end }} {{ .Annotations.summary }}\n" +
+		"*Description:* {{ .Annotations.description }}\n" +
+		"*Details:*\n"
+	for _, l := range labels {
+		text += fmt.Sprintf(listEntryFormat, l)
+	}
+
+	text += "\n\n{{ end }}"
+
+	return text
+}
+
+func formatPagerDutyFiringDetails(labels ...string) string {
+	const listEntryFormat = "{{ if .Labels.%[1]s }}  - %[1]s: {{ .Labels.%[1]s }}\n{{ end }}"
+
+	text := "{{ range .Alerts -}}\n" +
+		"Alert: {{ if .Labels.severity }}[{{ .Labels.severity | toUpper }}]{{ end }} {{ .Annotations.summary }}\n" +
+		"Description: {{ .Annotations.description }}\n" +
+		"Details:\n"
+	for _, l := range labels {
+		text += fmt.Sprintf(listEntryFormat, l)
+	}
+
+	text += "\n\n{{ end }}"
+
+	return text
+}
+
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
 func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]models.ChannelIDs) ([]*alertmanager.Receiver, error) {
 	receivers := make([]*alertmanager.Receiver, 0, len(recvSet))
@@ -489,7 +633,11 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						NotifierConfig: alertmanager.NotifierConfig{
 							SendResolved: channel.EmailConfig.SendResolved,
 						},
-						To: to,
+						To:   to,
+						HTML: emailTemplate,
+						Headers: map[string]string{
+							"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]`,
+						},
 					})
 				}
 
@@ -497,6 +645,11 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 				pdConfig := &alertmanager.PagerdutyConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
 						SendResolved: channel.PagerDutyConfig.SendResolved,
+					},
+					Description: `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]` +
+						"{{ range .Alerts -}}{{ if .Labels.severity }}[{{ .Labels.severity | toUpper }}]{{ end }} {{ .Annotations.summary }}{{ end }}",
+					Details: map[string]string{
+						"firing": formatPagerDutyFiringDetails(notificationLabels...),
 					},
 				}
 				if channel.PagerDutyConfig.RoutingKey != "" {
@@ -513,6 +666,8 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						SendResolved: channel.SlackConfig.SendResolved,
 					},
 					Channel: channel.SlackConfig.Channel,
+					Title:   `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]`,
+					Text:    formatSlackText(notificationLabels...),
 				})
 
 			case models.WebHook:
@@ -538,13 +693,8 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 						}
 					}
 					if channel.WebHookConfig.HTTPConfig.TLSConfig != nil {
-						webhookConfig.HTTPConfig.TLSConfig = promconfig.TLSConfig{
-							CAFile:             channel.WebHookConfig.HTTPConfig.TLSConfig.CaFile,
-							CertFile:           channel.WebHookConfig.HTTPConfig.TLSConfig.CertFile,
-							KeyFile:            channel.WebHookConfig.HTTPConfig.TLSConfig.KeyFile,
-							ServerName:         channel.WebHookConfig.HTTPConfig.TLSConfig.ServerName,
-							InsecureSkipVerify: channel.WebHookConfig.HTTPConfig.TLSConfig.InsecureSkipVerify,
-						}
+						webhookConfig.HTTPConfig.TLSConfig = convertTLSConfig(channel.ID,
+							channel.WebHookConfig.HTTPConfig.TLSConfig)
 					}
 				}
 
