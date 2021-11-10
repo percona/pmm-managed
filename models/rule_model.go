@@ -155,9 +155,9 @@ func (p ParamsValues) AsStringMap() map[string]string {
 			value = fmt.Sprint(rp.BoolValue)
 		case String:
 			value = rp.StringValue
-		default:
-			panic(fmt.Errorf("unknown parameter type %s", rp.Type))
 		}
+		// do not add `default:` to make exhaustive linter do its job
+
 		m[rp.Name] = value
 	}
 

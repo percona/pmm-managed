@@ -401,13 +401,13 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	}
 
 	var rule *models.Rule
-	e := s.db.InTransaction(func(tx *reform.TX) error {
+	errTX := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		rule, err = models.CreateRule(tx.Querier, params)
 		return err
 	})
-	if e != nil {
-		return nil, e
+	if errTX != nil {
+		return nil, errTX
 	}
 
 	s.updateConfigurations()
@@ -530,9 +530,11 @@ func convertModelToParamsDefinitions(definitions models.ParamsDefinitions) ([]*i
 				value.Max = float32(pointer.GetFloat64(float.Max))
 			}
 			p.Value = &iav1beta1.ParamDefinition_Float{Float: &value}
-		default:
-			return nil, errors.Errorf("unknown parameter type %s", t)
+		case alert.Bool, alert.String:
+			return nil, errors.Errorf("unsupported parameter type %s", t)
 		}
+
+		// do not add `default:` to make exhaustive linter do its job
 
 		res = append(res, p)
 	}

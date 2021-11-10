@@ -62,10 +62,9 @@ func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel)
 		Severity:        managementpb.Severity(rule.Severity),
 		DefaultFor:      durationpb.New(rule.DefaultFor),
 		For:             durationpb.New(rule.For),
+		CreatedAt:       timestamppb.New(rule.CreatedAt),
 	}
 
-	var err error
-	r.CreatedAt = timestamppb.New(rule.CreatedAt)
 	if err := r.CreatedAt.CheckValid(); err != nil {
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}

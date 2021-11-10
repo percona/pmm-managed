@@ -695,9 +695,11 @@ func convertParamDefinitions(l *logrus.Entry, params []alert.Parameter) ([]*iav1
 			pd.Value = &iav1beta1.ParamDefinition_Float{Float: &fp}
 			res = append(res, pd)
 
-		default:
-			l.Warnf("Skipping unexpected parameter type %q.", p.Type)
+		case alert.Bool, alert.String:
+			l.Warnf("Skipping unsupported parameter type %q.", p.Type)
 		}
+
+		// do not add `default:` to make exhaustive linter do its job
 	}
 
 	return res, nil
