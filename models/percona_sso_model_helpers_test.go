@@ -52,7 +52,7 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		expectedSSODetails := &models.PerconaSSODetails{
-			IssuerURL:    "https://id-dev.percona.com",
+			IssuerURL:    "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope=",
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			Scope:        "percona",

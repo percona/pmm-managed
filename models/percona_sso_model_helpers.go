@@ -30,8 +30,6 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-const issuerSubdirectoryAndQuery = "/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
-
 var perconaSSOMtx sync.Mutex
 
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
@@ -69,7 +67,7 @@ func GetPerconaSSOAccessToken(ctx context.Context, q *reform.Querier) (*PerconaS
 }
 
 func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
-	url := sso.IssuerURL + fmt.Sprintf("%s%s", issuerSubdirectoryAndQuery, sso.Scope)
+	url := fmt.Sprintf("%s%s", sso.IssuerURL, sso.Scope)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
