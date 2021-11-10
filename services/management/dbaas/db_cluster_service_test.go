@@ -196,7 +196,7 @@ func TestDBClusterService(t *testing.T) {
 		s := NewDBClusterService(db, dbaasClient, grafanaClient, versionService)
 		mockReq := controllerv1beta1.RestartPXCClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
+				Kubeconfig: dbKubeconfigTest,
 			},
 			Name: "third-pxc-test",
 		}
@@ -204,7 +204,7 @@ func TestDBClusterService(t *testing.T) {
 		dbaasClient.On("RestartPXCCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartPXCClusterResponse{}, nil)
 
 		in := dbaasv1beta1.RestartDBClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			KubernetesClusterName: dbKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 			ClusterType:           dbaasv1beta1.DBClusterType_DB_CLUSTER_TYPE_PXC,
 		}
@@ -217,7 +217,7 @@ func TestDBClusterService(t *testing.T) {
 		s := NewDBClusterService(db, dbaasClient, grafanaClient, versionService)
 		mockReq := controllerv1beta1.RestartPSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubeconfTest,
+				Kubeconfig: dbKubeconfigTest,
 			},
 			Name: "third-psmdb-test",
 		}
@@ -225,7 +225,7 @@ func TestDBClusterService(t *testing.T) {
 		dbaasClient.On("RestartPSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartPSMDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.RestartDBClusterRequest{
-			KubernetesClusterName: kubernetesClusterNameTest,
+			KubernetesClusterName: dbKubernetesClusterNameTest,
 			Name:                  "third-psmdb-test",
 			ClusterType:           dbaasv1beta1.DBClusterType_DB_CLUSTER_TYPE_PSMDB,
 		}
