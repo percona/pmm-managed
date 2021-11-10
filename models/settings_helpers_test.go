@@ -236,7 +236,7 @@ func TestSettings(t *testing.T) {
 
 			// disable STT
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				DisableSTT:       true,
+				DisableSTT: true,
 			})
 			require.NoError(t, err)
 			assert.True(t, ns.Telemetry.Disabled)
