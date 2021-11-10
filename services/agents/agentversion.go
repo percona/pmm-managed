@@ -30,6 +30,9 @@ func PMMAgentSupported(q *reform.Querier, pmmAgentID, functionalityPrefix string
 	if err != nil {
 		return errors.Errorf("failed to get PMM Agent: %s", err)
 	}
+	if pmmAgent.Version == nil {
+		return errors.Errorf("pmm agent %q has no version info", pmmAgentID)
+	}
 	pmmAgentVersion, err := version.NewVersion(*pmmAgent.Version)
 	if err != nil {
 		return errors.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
