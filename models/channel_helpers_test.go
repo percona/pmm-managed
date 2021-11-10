@@ -182,14 +182,12 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		templateName := gofakeit.UUID()
-
-		_, err = models.CreateTemplate(q, createTemplateParams(templateName))
+		template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
 		require.NoError(t, err)
 
 		channel := createChannel(t, q)
 
-		_ = createRule(t, q, channel.ID, templateName)
+		_ = createRule(t, q, channel.ID, template)
 
 		err = models.RemoveChannel(q, channel.ID)
 		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" channel when it's being used by a rule.`, channel.Summary), err)

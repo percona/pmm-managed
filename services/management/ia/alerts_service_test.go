@@ -245,8 +245,9 @@ func TestListAlerts(t *testing.T) {
 	require.NoError(t, err)
 
 	rule, err := models.CreateRule(q, &models.CreateRuleParams{
-		TemplateName: tmpl.Name,
-		Severity:     models.Severity(common.Warning),
+		TemplateName:    tmpl.Name,
+		DefaultSeverity: tmpl.Severity,
+		Severity:        models.Severity(common.Warning),
 	})
 	require.NoError(t, err)
 

@@ -650,6 +650,19 @@ var databaseSchema = [][]string{
 				WHERE job_id = j.id
 			);`,
 	},
+	51: {
+		`ALTER TABLE ia_rules
+			RENAME COLUMN params TO params_values`,
+		`ALTER TABLE ia_rules
+			ADD COLUMN template_summary VARCHAR NOT NULL,	
+			ADD COLUMN expr	VARCHAR NOT NULL, 
+			ADD COLUMN params_definitions JSONB,
+			ADD COLUMN default_for BIGINT,
+			ADD COLUMN default_severity VARCHAR NOT NULL,
+			ADD COLUMN labels TEXT,
+			ADD COLUMN annotations TEXT
+		`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

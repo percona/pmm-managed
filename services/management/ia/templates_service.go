@@ -30,12 +30,15 @@ import (
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/data"
@@ -419,7 +422,7 @@ func validateUserTemplate(t *alert.Template) error {
 
 	// TODO more validations
 
-	// validate expression template with fake parameter values
+	// validate expression template with fake parameters values
 	params := make(map[string]string, len(t.Params))
 	for _, p := range t.Params {
 		var value string
@@ -437,7 +440,7 @@ func validateUserTemplate(t *alert.Template) error {
 		params[p.Name] = value
 	}
 
-	if _, err := templateRuleExpr(t.Expr, params); err != nil {
+	if _, err := fillExprWithParams(t.Expr, params); err != nil {
 		return err
 	}
 
@@ -623,6 +626,81 @@ func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.De
 	s.Collect(ctx)
 
 	return &iav1beta1.DeleteTemplateResponse{}, nil
+}
+
+func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Template, error) {
+	var err error
+	t := &iav1beta1.Template{
+		Name:        template.Name,
+		Summary:     template.Summary,
+		Expr:        template.Expr,
+		Params:      make([]*iav1beta1.ParamDefinition, 0, len(template.Params)),
+		For:         durationpb.New(time.Duration(template.For)),
+		Severity:    managementpb.Severity(template.Severity),
+		Labels:      template.Labels,
+		Annotations: template.Annotations,
+		Source:      template.Source,
+		Yaml:        template.Yaml,
+	}
+
+	if template.CreatedAt != nil {
+		t.CreatedAt = timestamppb.New(*template.CreatedAt)
+		if err = t.CreatedAt.CheckValid(); err != nil {
+			return nil, err
+		}
+	}
+
+	t.Params, err = convertParamDefinitions(l, template.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func convertParamDefinitions(l *logrus.Entry, params []alert.Parameter) ([]*iav1beta1.ParamDefinition, error) {
+	res := make([]*iav1beta1.ParamDefinition, 0, len(params))
+	for _, p := range params {
+		pd := &iav1beta1.ParamDefinition{
+			Name:    p.Name,
+			Summary: p.Summary,
+			Unit:    convertParamUnit(p.Unit),
+			Type:    convertParamType(p.Type),
+		}
+
+		switch p.Type {
+		case alert.Float:
+			var fp iav1beta1.FloatParamDefinition
+			if p.Value != nil {
+				value, err := p.GetValueForFloat()
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to get value for float parameter")
+				}
+				fp.HasDefault = true
+				fp.Default = float32(value) // TODO eliminate conversion
+			}
+
+			if len(p.Range) != 0 {
+				min, max, err := p.GetRangeForFloat()
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to get range for float parameter")
+				}
+
+				fp.HasMin = true
+				fp.Min = float32(min) // TODO eliminate conversion.,
+				fp.HasMax = true
+				fp.Max = float32(max) // TODO eliminate conversion.,
+			}
+
+			pd.Value = &iav1beta1.ParamDefinition_Float{Float: &fp}
+			res = append(res, pd)
+
+		default:
+			l.Warnf("Skipping unexpected parameter type %q.", p.Type)
+		}
+	}
+
+	return res, nil
 }
 
 // Check interfaces.

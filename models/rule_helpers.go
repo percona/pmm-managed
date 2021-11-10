@@ -102,15 +102,22 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 
 // CreateRuleParams are params for creating new Rule.
 type CreateRuleParams struct {
-	TemplateName string
-	Summary      string
-	Disabled     bool
-	RuleParams   RuleParams
-	For          time.Duration
-	Severity     Severity
-	CustomLabels map[string]string
-	Filters      Filters
-	ChannelIDs   []string
+	Summary           string
+	TemplateName      string
+	TemplateSummary   string
+	Disabled          bool
+	Expr              string
+	ParamsDefinitions ParamsDefinitions
+	ParamsValues      ParamsValues
+	DefaultFor        time.Duration
+	For               time.Duration
+	DefaultSeverity   Severity
+	Severity          Severity
+	CustomLabels      map[string]string
+	Labels            map[string]string
+	Annotations       map[string]string
+	Filters           Filters
+	ChannelIDs        []string
 }
 
 // CreateRule persists alert Rule.
@@ -122,14 +129,19 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	row := &Rule{
-		TemplateName: params.TemplateName,
-		ID:           id,
-		Summary:      params.Summary,
-		Disabled:     params.Disabled,
-		Params:       params.RuleParams,
-		For:          params.For,
-		Severity:     params.Severity,
-		Filters:      params.Filters,
+		ID:                id,
+		Summary:           params.Summary,
+		TemplateName:      params.TemplateName,
+		TemplateSummary:   params.TemplateSummary,
+		Disabled:          params.Disabled,
+		Expr:              params.Expr,
+		ParamsDefinitions: params.ParamsDefinitions,
+		ParamsValues:      params.ParamsValues,
+		DefaultFor:        params.DefaultFor,
+		For:               params.For,
+		DefaultSeverity:   params.DefaultSeverity,
+		Severity:          params.Severity,
+		Filters:           params.Filters,
 	}
 
 	if len(params.ChannelIDs) > 0 {
@@ -151,6 +163,14 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		return nil, err
 	}
 
+	if err = row.SetLabels(params.Labels); err != nil {
+		return nil, err
+	}
+
+	if err = row.SetAnnotations(params.Annotations); err != nil {
+		return nil, err
+	}
+
 	if err = q.Insert(row); err != nil {
 		return nil, errors.Wrap(err, "failed to create alert rule")
 	}
@@ -162,7 +182,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 type ChangeRuleParams struct {
 	Summary      string
 	Disabled     bool
-	RuleParams   RuleParams
+	ParamsValues ParamsValues
 	For          time.Duration
 	Severity     Severity
 	CustomLabels map[string]string
@@ -192,7 +212,7 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	row.For = params.For
 	row.Severity = params.Severity
 	row.Filters = params.Filters
-	row.Params = params.RuleParams
+	row.ParamsValues = params.ParamsValues
 	row.Summary = params.Summary
 
 	labels, err := json.Marshal(params.CustomLabels)

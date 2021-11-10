@@ -95,7 +95,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		return nil, err
 	}
 
-	p, err := convertTemplateParams(params.Template.Params)
+	p, err := ConvertParamsDefinitions(params.Template.Params)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
 	}
@@ -151,7 +151,7 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template: %v.", err)
 	}
 
-	p, err := convertTemplateParams(params.Template.Params)
+	p, err := ConvertParamsDefinitions(params.Template.Params)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
 	}
@@ -215,10 +215,11 @@ func templateInUse(q *reform.Querier, name string) (bool, error) {
 	}
 }
 
-func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
-	res := make(TemplateParams, 0, len(params))
+// ConvertParamsDefinitions converts parameters definitions to the model.
+func ConvertParamsDefinitions(params []alert.Parameter) (ParamsDefinitions, error) {
+	res := make(ParamsDefinitions, 0, len(params))
 	for _, param := range params {
-		p := TemplateParam{
+		p := ParamDefinition{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    string(param.Unit),

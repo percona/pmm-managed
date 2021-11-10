@@ -61,7 +61,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.ElementsMatch(t, params.Template.Tiers, created.Tiers)
 		assert.Equal(t, params.Template.Expr, created.Expr)
 		assert.Equal(t,
-			models.TemplateParams{{
+			models.ParamsDefinitions{{
 				Name:    params.Template.Params[0].Name,
 				Summary: params.Template.Params[0].Summary,
 				Unit:    string(params.Template.Params[0].Unit),
@@ -112,7 +112,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.ElementsMatch(t, updateParams.Template.Tiers, updated.Tiers)
 		assert.Equal(t, updateParams.Template.Expr, updated.Expr)
 		assert.Equal(t,
-			models.TemplateParams{{
+			models.ParamsDefinitions{{
 				Name:    updateParams.Template.Params[0].Name,
 				Summary: updateParams.Template.Params[0].Summary,
 				Unit:    string(updateParams.Template.Params[0].Unit),
@@ -191,16 +191,14 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		templateName := gofakeit.UUID()
-
-		template, err := models.CreateTemplate(q, createTemplateParams(templateName))
+		template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
 		require.NoError(t, err)
 
 		channelID := createChannel(t, q).ID
 
-		_ = createRule(t, q, channelID, templateName)
+		_ = createRule(t, q, channelID, template)
 
-		err = models.RemoveTemplate(q, templateName)
+		err = models.RemoveTemplate(q, template.Name)
 		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary), err)
 
 		templates, err := models.FindTemplates(q)
@@ -291,22 +289,23 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 	}
 }
 
-func createRule(t *testing.T, q *reform.Querier, channelID, templateName string) string {
+func createRule(t *testing.T, q *reform.Querier, channelID string, template *models.Template) string {
 	rule, err := models.CreateRule(q, &models.CreateRuleParams{
-		TemplateName: templateName,
+		TemplateName: template.Name,
 		Disabled:     true,
-		RuleParams: []models.RuleParam{
+		ParamsValues: []models.ParamValue{
 			{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
 			},
 		},
-		For:          5 * time.Second,
-		Severity:     models.Severity(common.Warning),
-		CustomLabels: map[string]string{"foo": "bar"},
-		Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
-		ChannelIDs:   []string{channelID},
+		For:             5 * time.Second,
+		DefaultSeverity: models.Severity(common.Info),
+		Severity:        models.Severity(common.Warning),
+		CustomLabels:    map[string]string{"foo": "bar"},
+		Filters:         []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
+		ChannelIDs:      []string{channelID},
 	})
 	require.NoError(t, err)
 	return rule.ID

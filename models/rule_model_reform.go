@@ -28,14 +28,21 @@ func (v *ruleTableType) Name() string {
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *ruleTableType) Columns() []string {
 	return []string{
-		"template_name",
 		"id",
 		"summary",
+		"template_name",
+		"template_summary",
 		"disabled",
-		"params",
+		"expr",
+		"params_definitions",
+		"params_values",
+		"default_for",
 		"for",
+		"default_severity",
 		"severity",
 		"custom_labels",
+		"labels",
+		"annotations",
 		"filters",
 		"channel_ids",
 		"created_at",
@@ -64,39 +71,53 @@ var RuleTable = &ruleTableType{
 		Type:    "Rule",
 		SQLName: "ia_rules",
 		Fields: []parse.FieldInfo{
-			{Name: "TemplateName", Type: "string", Column: "template_name"},
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Summary", Type: "string", Column: "summary"},
+			{Name: "TemplateName", Type: "string", Column: "template_name"},
+			{Name: "TemplateSummary", Type: "string", Column: "template_summary"},
 			{Name: "Disabled", Type: "bool", Column: "disabled"},
-			{Name: "Params", Type: "RuleParams", Column: "params"},
+			{Name: "Expr", Type: "string", Column: "expr"},
+			{Name: "ParamsDefinitions", Type: "ParamsDefinitions", Column: "params_definitions"},
+			{Name: "ParamsValues", Type: "ParamsValues", Column: "params_values"},
+			{Name: "DefaultFor", Type: "time.Duration", Column: "default_for"},
 			{Name: "For", Type: "time.Duration", Column: "for"},
+			{Name: "DefaultSeverity", Type: "Severity", Column: "default_severity"},
 			{Name: "Severity", Type: "Severity", Column: "severity"},
 			{Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"},
+			{Name: "Labels", Type: "[]uint8", Column: "labels"},
+			{Name: "Annotations", Type: "[]uint8", Column: "annotations"},
 			{Name: "Filters", Type: "Filters", Column: "filters"},
 			{Name: "ChannelIDs", Type: "ChannelIDs", Column: "channel_ids"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
-		PKFieldIndex: 1,
+		PKFieldIndex: 0,
 	},
 	z: new(Rule).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Rule) String() string {
-	res := make([]string, 12)
-	res[0] = "TemplateName: " + reform.Inspect(s.TemplateName, true)
-	res[1] = "ID: " + reform.Inspect(s.ID, true)
-	res[2] = "Summary: " + reform.Inspect(s.Summary, true)
-	res[3] = "Disabled: " + reform.Inspect(s.Disabled, true)
-	res[4] = "Params: " + reform.Inspect(s.Params, true)
-	res[5] = "For: " + reform.Inspect(s.For, true)
-	res[6] = "Severity: " + reform.Inspect(s.Severity, true)
-	res[7] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
-	res[8] = "Filters: " + reform.Inspect(s.Filters, true)
-	res[9] = "ChannelIDs: " + reform.Inspect(s.ChannelIDs, true)
-	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res := make([]string, 19)
+	res[0] = "ID: " + reform.Inspect(s.ID, true)
+	res[1] = "Summary: " + reform.Inspect(s.Summary, true)
+	res[2] = "TemplateName: " + reform.Inspect(s.TemplateName, true)
+	res[3] = "TemplateSummary: " + reform.Inspect(s.TemplateSummary, true)
+	res[4] = "Disabled: " + reform.Inspect(s.Disabled, true)
+	res[5] = "Expr: " + reform.Inspect(s.Expr, true)
+	res[6] = "ParamsDefinitions: " + reform.Inspect(s.ParamsDefinitions, true)
+	res[7] = "ParamsValues: " + reform.Inspect(s.ParamsValues, true)
+	res[8] = "DefaultFor: " + reform.Inspect(s.DefaultFor, true)
+	res[9] = "For: " + reform.Inspect(s.For, true)
+	res[10] = "DefaultSeverity: " + reform.Inspect(s.DefaultSeverity, true)
+	res[11] = "Severity: " + reform.Inspect(s.Severity, true)
+	res[12] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
+	res[13] = "Labels: " + reform.Inspect(s.Labels, true)
+	res[14] = "Annotations: " + reform.Inspect(s.Annotations, true)
+	res[15] = "Filters: " + reform.Inspect(s.Filters, true)
+	res[16] = "ChannelIDs: " + reform.Inspect(s.ChannelIDs, true)
+	res[17] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[18] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -104,14 +125,21 @@ func (s Rule) String() string {
 // Returned interface{} values are never untyped nils.
 func (s *Rule) Values() []interface{} {
 	return []interface{}{
-		s.TemplateName,
 		s.ID,
 		s.Summary,
+		s.TemplateName,
+		s.TemplateSummary,
 		s.Disabled,
-		s.Params,
+		s.Expr,
+		s.ParamsDefinitions,
+		s.ParamsValues,
+		s.DefaultFor,
 		s.For,
+		s.DefaultSeverity,
 		s.Severity,
 		s.CustomLabels,
+		s.Labels,
+		s.Annotations,
 		s.Filters,
 		s.ChannelIDs,
 		s.CreatedAt,
@@ -123,14 +151,21 @@ func (s *Rule) Values() []interface{} {
 // Returned interface{} values are never untyped nils.
 func (s *Rule) Pointers() []interface{} {
 	return []interface{}{
-		&s.TemplateName,
 		&s.ID,
 		&s.Summary,
+		&s.TemplateName,
+		&s.TemplateSummary,
 		&s.Disabled,
-		&s.Params,
+		&s.Expr,
+		&s.ParamsDefinitions,
+		&s.ParamsValues,
+		&s.DefaultFor,
 		&s.For,
+		&s.DefaultSeverity,
 		&s.Severity,
 		&s.CustomLabels,
+		&s.Labels,
+		&s.Annotations,
 		&s.Filters,
 		&s.ChannelIDs,
 		&s.CreatedAt,

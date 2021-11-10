@@ -61,7 +61,7 @@ func TestRules(t *testing.T) {
 			assert.Equal(t, templateName, rule.TemplateName)
 			assert.Equal(t, params.Summary, rule.Summary)
 			assert.Equal(t, params.Disabled, rule.Disabled)
-			assert.Equal(t, params.RuleParams, rule.Params)
+			assert.Equal(t, params.ParamsValues, rule.ParamsValues)
 			assert.Equal(t, params.For, rule.For)
 			assert.Equal(t, models.Severity(common.Warning), rule.Severity)
 
@@ -91,7 +91,7 @@ func TestRules(t *testing.T) {
 			assert.Equal(t, templateName, rule.TemplateName)
 			assert.Equal(t, params.Summary, rule.Summary)
 			assert.Equal(t, params.Disabled, rule.Disabled)
-			assert.Equal(t, params.RuleParams, rule.Params)
+			assert.Equal(t, params.ParamsValues, rule.ParamsValues)
 			assert.Equal(t, params.For, rule.For)
 			assert.Equal(t, models.Severity(common.Warning), rule.Severity)
 
@@ -140,7 +140,7 @@ func TestRules(t *testing.T) {
 			params := &models.ChangeRuleParams{
 				Summary:      "summary",
 				Disabled:     false,
-				RuleParams:   nil,
+				ParamsValues: nil,
 				For:          3 * time.Second,
 				Severity:     models.Severity(common.Info),
 				CustomLabels: map[string]string{"test": "example"},
@@ -155,7 +155,7 @@ func TestRules(t *testing.T) {
 			assert.Equal(t, templateName, updated.TemplateName)
 			assert.Equal(t, params.Summary, updated.Summary)
 			assert.Equal(t, params.Disabled, updated.Disabled)
-			assert.Equal(t, params.RuleParams, updated.Params)
+			assert.Equal(t, params.ParamsValues, updated.ParamsValues)
 			assert.Equal(t, params.For, updated.For)
 			assert.Equal(t, models.Severity(common.Info), updated.Severity)
 
@@ -184,7 +184,7 @@ func TestRules(t *testing.T) {
 
 			params := &models.ChangeRuleParams{
 				Disabled:     false,
-				RuleParams:   nil,
+				ParamsValues: nil,
 				For:          3 * time.Second,
 				Severity:     models.Severity(common.Info),
 				CustomLabels: map[string]string{"test": "example"},
@@ -246,7 +246,7 @@ func TestRules(t *testing.T) {
 		assert.Equal(t, rule.Summary, actual.Summary)
 		assert.Equal(t, rule.TemplateName, actual.TemplateName)
 		assert.Equal(t, rule.Disabled, actual.Disabled)
-		assert.Equal(t, rule.Params, actual.Params)
+		assert.Equal(t, rule.ParamsValues, actual.ParamsValues)
 		assert.Equal(t, rule.For, actual.For)
 		assert.Equal(t, rule.Severity, actual.Severity)
 		assert.Equal(t, rule.CustomLabels, actual.CustomLabels)
@@ -259,16 +259,18 @@ func createCreateRuleParams(templateName, channelID string, filters []models.Fil
 	rule := &models.CreateRuleParams{
 		TemplateName: templateName,
 		Disabled:     true,
-		RuleParams: []models.RuleParam{
+		ParamsValues: []models.ParamValue{
 			{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
 			},
 		},
-		For:          5 * time.Second,
-		Severity:     models.Severity(common.Warning),
-		CustomLabels: map[string]string{"foo": "bar"},
+		DefaultFor:      1 * time.Second,
+		For:             5 * time.Second,
+		DefaultSeverity: models.Severity(common.Info),
+		Severity:        models.Severity(common.Warning),
+		CustomLabels:    map[string]string{"foo": "bar"},
 	}
 	if channelID != "" {
 		rule.ChannelIDs = []string{channelID}

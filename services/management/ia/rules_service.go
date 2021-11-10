@@ -19,11 +19,12 @@ package ia
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona-platform/saas/pkg/alert"
@@ -124,7 +125,7 @@ func (s *RulesService) RemoveVMAlertRulesFiles() error {
 
 // WriteVMAlertRulesFiles converts all available rules to VMAlert rule files.
 func (s *RulesService) WriteVMAlertRulesFiles() {
-	rules, err := s.getAlertRules()
+	rules, err := models.FindRules(s.db.Querier)
 	if err != nil {
 		s.l.Errorf("Failed to get available alert rules: %+v", err)
 		return
@@ -150,66 +151,69 @@ func (s *RulesService) WriteVMAlertRulesFiles() {
 }
 
 // prepareRulesFiles converts collected IA rules to Alertmanager rule files content.
-func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, error) {
+func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, error) {
 	res := make([]ruleFile, 0, len(rules))
 	for _, ruleM := range rules {
 		if ruleM.Disabled {
-			s.l.Debugf("Skipping rule %s as it is disabled.", ruleM.RuleId)
+			s.l.Debugf("Skipping rule %s as it is disabled.", ruleM.ID)
 			continue
 		}
 
 		r := rule{
-			Alert:       ruleM.RuleId,
-			Duration:    promconfig.Duration(ruleM.For.AsDuration()),
+			Alert:       ruleM.ID,
+			Duration:    promconfig.Duration(ruleM.For),
 			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
 		}
 
-		params := make(map[string]string, len(ruleM.Params))
-		for _, p := range ruleM.Params {
-			var value string
-			switch p.Type {
-			case iav1beta1.ParamType_FLOAT:
-				value = fmt.Sprint(p.GetFloat())
-			case iav1beta1.ParamType_BOOL:
-				value = fmt.Sprint(p.GetBool())
-			case iav1beta1.ParamType_STRING:
-				value = fmt.Sprint(p.GetString_())
-			case iav1beta1.ParamType_PARAM_TYPE_INVALID:
-				s.l.Warnf("Invalid parameter type %s", p.Type)
-				continue
-			}
-
-			params[p.Name] = value
-		}
-		var err error
-		r.Expr, err = templateRuleExpr(ruleM.Template.Expr, params)
+		params, err := processExprParameters(ruleM.ParamsDefinitions, ruleM.ParamsValues)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to template rule expression")
 		}
 
+		paramsM := params.AsStringMap()
+
+		r.Expr, err = fillExprWithParams(ruleM.Expr, paramsM)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Failed to template rule expression: %s", err)
+		}
+
+		annotations, err := ruleM.GetAnnotations()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read rule annotations")
+		}
 		// Copy annotations form template
-		if err = transformMaps(ruleM.Template.Annotations, r.Annotations, params); err != nil {
+		if err = transformMaps(annotations, r.Annotations, paramsM); err != nil {
 			return nil, errors.Wrap(err, "failed to fill template annotations placeholders")
 		}
 
 		r.Annotations["rule"] = ruleM.Summary
 
+		labels, err := ruleM.GetLabels()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read rule labels")
+		}
+
 		// Copy labels form template
-		if err = transformMaps(ruleM.Template.Labels, r.Labels, params); err != nil {
+		if err = transformMaps(labels, r.Labels, paramsM); err != nil {
 			return nil, errors.Wrap(err, "failed to fill template labels placeholders")
 		}
 
+		customLabels, err := ruleM.GetCustomLabels()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read rule custom labels")
+		}
+
 		// Add rule labels
-		if err = transformMaps(ruleM.CustomLabels, r.Labels, params); err != nil {
+		if err = transformMaps(customLabels, r.Labels, paramsM); err != nil {
 			return nil, errors.Wrap(err, "failed to fill rule labels placeholders")
 		}
 
 		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = common.Severity(ruleM.Severity).String()
-		r.Labels["rule_id"] = ruleM.RuleId
-		r.Labels["template_name"] = ruleM.Template.Name
+		r.Labels["rule_id"] = ruleM.ID
+		r.Labels["template_name"] = ruleM.TemplateName
 
 		res = append(res, ruleFile{
 			Group: []ruleGroup{{
@@ -225,7 +229,6 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 // fills templates found in labels and annotaitons with values.
 func transformMaps(src map[string]string, dest map[string]string, data map[string]string) error {
 	var buf bytes.Buffer
-
 	for k, v := range src {
 		buf.Reset()
 		t, err := newParamTemplate().Parse(v)
@@ -265,22 +268,13 @@ func (s *RulesService) writeRuleFile(rule *ruleFile) error {
 // ListAlertRules returns a list of all Integrated Alerting rules.
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
 	var pageIndex int
-	var pageSize int
+	pageSize := math.MaxInt32
 	if req.PageParams != nil {
 		pageIndex = int(req.PageParams.Index)
 		pageSize = int(req.PageParams.PageSize)
 	}
-	var err error
-	var rules []*iav1beta1.Rule
-	pageTotals := &iav1beta1.PageTotals{
-		TotalPages: 1,
-	}
-	if pageSize == 0 {
-		rules, err = s.getAlertRules()
-		pageTotals.TotalItems = int32(len(rules))
-	} else {
-		rules, pageTotals, err = s.getAlertRulesPage(pageIndex, pageSize)
-	}
+
+	rules, pageTotals, err := s.getAlertRulesPage(pageIndex, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -289,17 +283,9 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 }
 
 func (s *RulesService) convertAlertRules(rules []*models.Rule, channels []*models.Channel) ([]*iav1beta1.Rule, error) {
-	templates := s.templates.getTemplates()
-
 	res := make([]*iav1beta1.Rule, 0, len(rules))
 	for _, rule := range rules {
-		template, ok := templates[rule.TemplateName]
-		if !ok {
-			s.l.Warnf("template %s used by rule %s doesn't exist, skipping that rule", template.Name, rule.ID)
-			continue
-		}
-
-		r, err := convertRule(s.l, rule, template, channels)
+		r, err := convertRule(s.l, rule, channels)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -362,57 +348,56 @@ func (s *RulesService) getAlertRulesPage(pageIndex, pageSize int) ([]*iav1beta1.
 	return res, totals, nil
 }
 
-// getAlertRules returns list of available alert rules.
-func (s *RulesService) getAlertRules() ([]*iav1beta1.Rule, error) {
-	var rules []*models.Rule
-	var channels []*models.Channel
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		rules, err = models.FindRules(tx.Querier)
-		if err != nil {
-			return err
-		}
-
-		channels, err = models.FindChannels(tx.Querier)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if e != nil {
-		return nil, e
-	}
-
-	res, err := s.convertAlertRules(rules, channels)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return res, nil
-}
-
 // CreateAlertRule creates Integrated Alerting rule.
 func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.CreateAlertRuleRequest) (*iav1beta1.CreateAlertRuleResponse, error) {
+	template, ok := s.templates.getTemplates()[req.TemplateName]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", req.TemplateName)
+	}
+
+	definitions, err := models.ConvertParamsDefinitions(template.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	filters, err := convertFiltersToModel(req.Filters)
+	if err != nil {
+		return nil, err
+	}
+
+	values, err := convertParamsValuesToModel(req.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that we can compile given expression with given parameters
+	p, err := processExprParameters(definitions, values)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = fillExprWithParams(template.Expr, p.AsStringMap())
+	if err != nil {
+		return nil, err
+	}
+
 	params := &models.CreateRuleParams{
-		TemplateName: req.TemplateName,
-		Summary:      req.Summary,
-		Disabled:     req.Disabled,
-		For:          req.For.AsDuration(),
-		Severity:     models.Severity(req.Severity),
-		CustomLabels: req.CustomLabels,
-		ChannelIDs:   req.ChannelIds,
-	}
-
-	var err error
-	params.Filters, err = convertFiltersToModel(req.Filters)
-	if err != nil {
-		return nil, err
-	}
-
-	params.RuleParams, err = s.processRuleParameters(req.Params, req.TemplateName)
-	if err != nil {
-		return nil, err
+		Summary:           req.Summary,
+		TemplateName:      req.TemplateName,
+		TemplateSummary:   template.Summary,
+		Disabled:          req.Disabled,
+		Expr:              template.Expr,
+		ParamsDefinitions: definitions,
+		ParamsValues:      values,
+		DefaultFor:        time.Duration(template.For),
+		For:               req.For.AsDuration(),
+		DefaultSeverity:   models.Severity(template.Severity),
+		Severity:          models.Severity(req.Severity),
+		CustomLabels:      req.CustomLabels,
+		Labels:            template.Labels,
+		Annotations:       template.Annotations,
+		Filters:           filters,
+		ChannelIDs:        req.ChannelIds,
 	}
 
 	var rule *models.Rule
@@ -430,103 +415,6 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	return &iav1beta1.CreateAlertRuleResponse{RuleId: rule.ID}, nil
 }
 
-func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templateName string) (models.RuleParams, error) {
-	ruleParams, err := convertRuleParamsToModel(param)
-	if err != nil {
-		return nil, err
-	}
-
-	t, ok := s.templates.getTemplates()[templateName]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", templateName)
-	}
-
-	unknownParams := make(map[string]struct{}, len(ruleParams))
-	for _, p := range ruleParams {
-		unknownParams[p.Name] = struct{}{}
-	}
-
-	res := make(models.RuleParams, 0, len(t.Params))
-	for _, tp := range t.Params {
-		var filled bool
-		for _, rp := range ruleParams {
-			if rp.Name == tp.Name {
-				if string(tp.Type) != string(rp.Type) {
-					return nil, status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", tp.Name, rp.Type, tp.Type)
-				}
-				delete(unknownParams, rp.Name)
-				filled = true
-				res = append(res, rp)
-				break
-			}
-		}
-
-		if !filled {
-			if tp.Value == nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Parameter %s defined in template %s doesn't have "+
-					"default value, so it should be specified in rule", tp.Name, templateName)
-			}
-
-			p := models.RuleParam{
-				Name: tp.Name,
-				Type: models.ParamType(tp.Type),
-			}
-
-			switch tp.Type {
-			case alert.Bool:
-				v, err := tp.GetValueForBool()
-				if err != nil {
-					return nil, err
-				}
-				p.BoolValue = v
-			case alert.Float:
-				v, err := tp.GetValueForFloat()
-				if err != nil {
-					return nil, err
-				}
-				p.FloatValue = float32(v)
-			case alert.String:
-				v, err := tp.GetValueForString()
-				if err != nil {
-					return nil, err
-				}
-				p.StringValue = v
-			}
-
-			res = append(res, p)
-		}
-	}
-
-	names := make([]string, 0, len(unknownParams))
-	for name := range unknownParams {
-		names = append(names, name)
-	}
-	if len(names) != 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Unknown parameters %s.", names)
-	}
-
-	params := make(map[string]string, len(res))
-	for _, rp := range res {
-		var value string
-		switch rp.Type {
-		case models.Float:
-			value = fmt.Sprint(rp.FloatValue)
-		case models.Bool:
-			value = fmt.Sprint(rp.BoolValue)
-		case models.String:
-			value = rp.StringValue
-		default:
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter type %s", rp.Type)
-		}
-		params[rp.Name] = value
-	}
-	if _, err := templateRuleExpr(t.Expr, params); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Failed to template rule expression: %s", err)
-	}
-
-	return res, nil
-}
-
 // UpdateAlertRule updates Integrated Alerting rule.
 func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.UpdateAlertRuleRequest) (*iav1beta1.UpdateAlertRuleResponse, error) {
 	params := &models.ChangeRuleParams{
@@ -538,25 +426,31 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		ChannelIDs:   req.ChannelIds,
 	}
 
-	ruleParams, err := convertRuleParamsToModel(req.Params)
-	if err != nil {
-		return nil, err
-	}
-	params.RuleParams = ruleParams
+	var err error
 	params.Filters, err = convertFiltersToModel(req.Filters)
 	if err != nil {
 		return nil, err
 	}
 
+	params.ParamsValues, err = convertParamsValuesToModel(req.Params)
+	if err != nil {
+		return nil, err
+	}
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		rule, err := models.FindRuleByID(tx.Querier, req.RuleId)
 		if err != nil {
 			return err
 		}
 
-		params.RuleParams, err = s.processRuleParameters(req.Params, rule.TemplateName)
+		// Check that we can compile given expression with given parameters
+		values, err := processExprParameters(rule.ParamsDefinitions, params.ParamsValues)
 		if err != nil {
 			return err
+		}
+
+		_, err = fillExprWithParams(rule.Expr, values.AsStringMap())
+		if err != nil {
+			return errors.Wrap(err, "failed to fill expression template with parameters values")
 		}
 
 		_, err = models.ChangeRule(tx.Querier, req.RuleId, params)
@@ -571,22 +465,11 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 	return &iav1beta1.UpdateAlertRuleResponse{}, nil
 }
 
-// ToggleAlertRule allows to switch between disabled and enabled states of an Alert Rule.
+// ToggleAlertRule allows switching between disabled and enabled states of an Alert Rule.
 func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.ToggleAlertRuleRequest) (*iav1beta1.ToggleAlertRuleResponse, error) {
-	var params models.ToggleRuleParams
-	switch req.Disabled {
-	case iav1beta1.BooleanFlag_TRUE:
-		params.Disabled = pointer.ToBool(true)
-	case iav1beta1.BooleanFlag_FALSE:
-		params.Disabled = pointer.ToBool(false)
-	case iav1beta1.BooleanFlag_DO_NOT_CHANGE:
-		fallthrough
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected value of disabled flag.")
-	}
-
+	params := &models.ToggleRuleParams{Disabled: parseBooleanFlag(req.Disabled)}
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ToggleRule(tx.Querier, req.RuleId, &params)
+		_, err := models.ToggleRule(tx.Querier, req.RuleId, params)
 		return err
 	})
 	if e != nil {
@@ -617,34 +500,73 @@ func (s *RulesService) updateConfigurations() {
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 }
+func convertModelToParamsDefinitions(definitions models.ParamsDefinitions) ([]*iav1beta1.ParamDefinition, error) {
+	res := make([]*iav1beta1.ParamDefinition, 0, len(definitions))
+	for _, definition := range definitions {
+		t := alert.Type(definition.Type)
+		p := &iav1beta1.ParamDefinition{
+			Name:    definition.Name,
+			Summary: definition.Summary,
+			Unit:    convertParamUnit(alert.Unit(definition.Unit)),
+			Type:    convertParamType(t),
+		}
 
-func convertModelToRuleParams(params models.RuleParams) ([]*iav1beta1.RuleParam, error) {
-	res := make([]*iav1beta1.RuleParam, len(params))
-	for i, param := range params {
-		p := &iav1beta1.RuleParam{Name: param.Name}
+		switch t {
+		case alert.Float:
+			var value iav1beta1.FloatParamDefinition
+			float := definition.FloatParam
+			if float.Default != nil {
+				value.HasDefault = true
+				value.Default = float32(pointer.GetFloat64(float.Default))
+			}
+
+			if float.Min != nil {
+				value.HasMin = true
+				value.Min = float32(pointer.GetFloat64(float.Min))
+			}
+
+			if float.Max != nil {
+				value.HasMax = true
+				value.Max = float32(pointer.GetFloat64(float.Max))
+			}
+			p.Value = &iav1beta1.ParamDefinition_Float{Float: &value}
+		default:
+			return nil, errors.Errorf("unknown parameter type %s", t)
+		}
+
+		res = append(res, p)
+	}
+
+	return res, nil
+}
+
+func convertModelToParamValues(values models.ParamsValues) ([]*iav1beta1.ParamValue, error) {
+	res := make([]*iav1beta1.ParamValue, len(values))
+	for i, param := range values {
+		p := &iav1beta1.ParamValue{Name: param.Name}
 
 		switch param.Type {
 		case models.Bool:
 			p.Type = iav1beta1.ParamType_BOOL
-			p.Value = &iav1beta1.RuleParam_Bool{Bool: param.BoolValue}
+			p.Value = &iav1beta1.ParamValue_Bool{Bool: param.BoolValue}
 		case models.Float:
 			p.Type = iav1beta1.ParamType_FLOAT
-			p.Value = &iav1beta1.RuleParam_Float{Float: param.FloatValue}
+			p.Value = &iav1beta1.ParamValue_Float{Float: param.FloatValue}
 		case models.String:
 			p.Type = iav1beta1.ParamType_STRING
-			p.Value = &iav1beta1.RuleParam_String_{String_: param.StringValue}
+			p.Value = &iav1beta1.ParamValue_String_{String_: param.StringValue}
 		default:
-			return nil, errors.New("invalid rule param value type")
+			return nil, errors.Errorf("unknown rule param value type %s", param.Type)
 		}
 		res[i] = p
 	}
 	return res, nil
 }
 
-func convertRuleParamsToModel(params []*iav1beta1.RuleParam) (models.RuleParams, error) {
-	ruleParams := make(models.RuleParams, len(params))
+func convertParamsValuesToModel(params []*iav1beta1.ParamValue) (models.ParamsValues, error) {
+	ruleParams := make(models.ParamsValues, len(params))
 	for i, param := range params {
-		p := models.RuleParam{Name: param.Name}
+		p := models.ParamValue{Name: param.Name}
 
 		switch param.Type {
 		case iav1beta1.ParamType_PARAM_TYPE_INVALID:
@@ -665,6 +587,19 @@ func convertRuleParamsToModel(params []*iav1beta1.RuleParam) (models.RuleParams,
 		ruleParams[i] = p
 	}
 	return ruleParams, nil
+}
+
+func parseBooleanFlag(bf iav1beta1.BooleanFlag) *bool {
+	switch bf {
+	case iav1beta1.BooleanFlag_TRUE:
+		return pointer.ToBool(true)
+	case iav1beta1.BooleanFlag_FALSE:
+		return pointer.ToBool(false)
+	case iav1beta1.BooleanFlag_DO_NOT_CHANGE:
+		return nil
+	default:
+		panic("unexpected value of boolean flag")
+	}
 }
 
 func convertModelToFilterType(filterType models.FilterType) iav1beta1.FilterType {
@@ -710,18 +645,6 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) (models.Filters, error) 
 	}
 
 	return res, nil
-}
-
-func templateRuleExpr(templateExpr string, params map[string]string) (string, error) {
-	var buf bytes.Buffer
-	t, err := newParamTemplate().Parse(templateExpr)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse rule expression")
-	}
-	if err = t.Execute(&buf, params); err != nil {
-		return "", errors.Wrap(err, "failed to fill expression placeholders")
-	}
-	return buf.String(), nil
 }
 
 // Check interfaces.

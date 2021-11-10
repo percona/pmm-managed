@@ -92,10 +92,10 @@ func TestCreateAlertRule(t *testing.T) {
 			TemplateName: "test_template",
 			Disabled:     false,
 			Summary:      "some testing rule",
-			Params: []*iav1beta1.RuleParam{{
+			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.RuleParam_Float{
+				Value: &iav1beta1.ParamValue_Float{
 					Float: 1.22,
 				},
 			}},
@@ -170,17 +170,17 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     false,
 			Summary:      "some testing rule",
-			Params: []*iav1beta1.RuleParam{
+			Params: []*iav1beta1.ParamValue{
 				{
 					Name: "param2",
 					Type: iav1beta1.ParamType_FLOAT,
-					Value: &iav1beta1.RuleParam_Float{
+					Value: &iav1beta1.ParamValue_Float{
 						Float: 22.1,
 					},
 				}, {
 					Name: "unknown parameter",
 					Type: iav1beta1.ParamType_FLOAT,
-					Value: &iav1beta1.RuleParam_Float{
+					Value: &iav1beta1.ParamValue_Float{
 						Float: 1.22,
 					},
 				},
@@ -228,7 +228,7 @@ groups:
 			}},
 			ChannelIds: []string{channelID},
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Parameter param2 defined in template test_template doesn't have default value, so it should be specified in rule"), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Parameter param2 doesn't have default value, so it should be specified explicitly"), err)
 	})
 
 	t.Run("wrong parameter type", func(t *testing.T) {
@@ -246,10 +246,10 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     false,
 			Summary:      "some testing rule",
-			Params: []*iav1beta1.RuleParam{{
+			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_BOOL,
-				Value: &iav1beta1.RuleParam_Bool{
+				Value: &iav1beta1.ParamValue_Bool{
 					Bool: true,
 				},
 			}},
@@ -283,10 +283,10 @@ groups:
 			TemplateName: "unknown template",
 			Disabled:     false,
 			Summary:      "some testing rule",
-			Params: []*iav1beta1.RuleParam{{
+			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.RuleParam_Float{
+				Value: &iav1beta1.ParamValue_Float{
 					Float: 1.22,
 				},
 			}},
@@ -323,10 +323,10 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     true,
 			Summary:      "some testing rule",
-			Params: []*iav1beta1.RuleParam{{
+			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.RuleParam_Float{
+				Value: &iav1beta1.ParamValue_Float{
 					Float: 1.22,
 				},
 			}},
@@ -366,7 +366,7 @@ func TestTemplatesRuleExpr(t *testing.T) {
 		"param2": "2",
 		"param3": "4",
 	}
-	actual, err := templateRuleExpr(expr, params)
+	actual, err := fillExprWithParams(expr, params)
 	require.NoError(t, err)
 
 	require.Equal(t, "5 > 2 and 2 < 4", actual)
