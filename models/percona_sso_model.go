@@ -29,7 +29,7 @@ import (
 // It is intended to have only one row in this table as PMM can be connected to Portal only once.
 //reform:percona_sso_details
 type PerconaSSODetails struct {
-	ClientID     string                 `reform:"client_id"`
+	ClientID     string                 `reform:"client_id,pk"`
 	ClientSecret string                 `reform:"client_secret"`
 	IssuerURL    string                 `reform:"issuer_url"`
 	Scope        string                 `reform:"scope"`
@@ -69,7 +69,15 @@ func (s *PerconaSSODetails) BeforeInsert() error {
 	return nil
 }
 
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (s *PerconaSSODetails) BeforeUpdate() error {
+	now := Now()
+	s.CreatedAt = now.UTC()
+	return nil
+}
+
 // check interfaces.
 var (
 	_ reform.BeforeInserter = (*PerconaSSODetails)(nil)
+	_ reform.BeforeUpdater  = (*PerconaSSODetails)(nil)
 )

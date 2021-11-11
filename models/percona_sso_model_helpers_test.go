@@ -94,6 +94,8 @@ func TestPerconaSSODetails(t *testing.T) {
 			Scope:        "percona",
 		}
 		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
+		require.NoError(t, err)
+		_, err = models.GetPerconaSSODetails(ctx, db.Querier)
 		require.Error(t, err)
 	})
 }

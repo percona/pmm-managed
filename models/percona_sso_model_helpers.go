@@ -39,7 +39,7 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 	perconaSSOMtx.Lock()
 	defer perconaSSOMtx.Unlock()
 
-	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsView, "")
+	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get Percona SSO Details")
 	}
@@ -99,7 +99,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 		accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
 		sso.AccessToken = accessToken
 
-		if err := q.Insert(sso); err != nil {
+		if err := q.UpdateColumns(sso, "access_token"); err != nil {
 			return nil, err
 		}
 
@@ -119,7 +119,7 @@ func (sso *PerconaSSODetails) isAccessTokenExpired() bool {
 
 // DeletePerconaSSODetails removes all stored DeletePerconaSSODetails.
 func DeletePerconaSSODetails(q *reform.Querier) error {
-	_, err := q.DeleteFrom(PerconaSSODetailsView, "")
+	_, err := q.DeleteFrom(PerconaSSODetailsTable, "")
 	if err != nil {
 		return errors.Wrap(err, "failed to delete Percona SSO Details")
 	}
@@ -135,9 +135,10 @@ func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails 
 		Scope:        ssoDetails.Scope,
 	}
 
-	_, err := details.refreshAndGetAccessToken(ctx, q)
+	err := q.Save(details)
 	if err != nil {
 		return errors.Wrap(err, "failed to insert Percona SSO Details")
 	}
+
 	return nil
 }
