@@ -8,7 +8,7 @@ go 1.16
 // replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
 // Update depedencies with:
-// go get -v github.com/percona/pmm@PMM-2.0
+// go get -v github.com/percona/pmm@main
 // go get -v github.com/percona-platform/saas@latest
 // go get -v github.com/percona-platform/dbaas-api@latest
 
@@ -21,7 +21,8 @@ require (
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.0
-	github.com/go-co-op/gocron v1.6.1
+	github.com/davecgh/go-spew v1.1.1
+	github.com/go-co-op/gocron v1.7.1
 	github.com/go-openapi/runtime v0.19.20
 	github.com/go-openapi/spec v0.19.9 // indirect
 	github.com/go-openapi/strfmt v0.19.5
@@ -34,9 +35,9 @@ require (
 	github.com/hashicorp/go-version v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
-	github.com/percona-platform/dbaas-api v0.0.0-20210830094230-60d2a17b710c
-	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
-	github.com/percona/pmm v0.0.0-20210924174657-0b785f0bde2f
+	github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2
+	github.com/percona-platform/saas v0.0.0-20211101203847-f65c32bc8770
+	github.com/percona/pmm v0.0.0-20211103155323-14c4ca50e3da
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0

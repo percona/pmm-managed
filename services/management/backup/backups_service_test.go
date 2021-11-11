@@ -18,12 +18,14 @@ package backup
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,6 +36,7 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
@@ -68,12 +71,119 @@ func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
 	return agent
 }
 
+func TestStartBackupErrors(t *testing.T) {
+	backupService := &mockBackupService{}
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	backupSvc := NewBackupsService(db, backupService, nil)
+	agent := setup(t, db.Querier, t.Name())
+
+	for _, tc := range []struct {
+		testName    string
+		backupError error
+		code        backupv1beta1.ErrorCode
+	}{
+		{
+			testName:    "xtrabackup not installed",
+			backupError: backup.ErrXtrabackupNotInstalled,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_XTRABACKUP_NOT_INSTALLED,
+		},
+		{
+			testName:    "invalid xtrabackup",
+			backupError: backup.ErrInvalidXtrabackup,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_INVALID_XTRABACKUP,
+		},
+		{
+			testName:    "incompatible xtrabackup",
+			backupError: backup.ErrIncompatibleXtrabackup,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_INCOMPATIBLE_XTRABACKUP,
+		},
+	} {
+		t.Run(tc.testName, func(t *testing.T) {
+			backupError := fmt.Errorf("error: %w", tc.backupError)
+			backupService.On("PerformBackup", mock.Anything, mock.Anything).
+				Return("", backupError).Once()
+			ctx := context.Background()
+			resp, err := backupSvc.StartBackup(ctx, &backupv1beta1.StartBackupRequest{
+				ServiceId:     *agent.ServiceID,
+				LocationId:    "locationID",
+				Name:          "name",
+				Description:   "description",
+				RetryInterval: nil,
+				Retries:       0,
+			})
+			assert.Nil(t, resp)
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.FailedPrecondition, st.Code())
+			assert.Equal(t, backupError.Error(), st.Message())
+			require.Len(t, st.Details(), 1)
+			detailedError, ok := st.Details()[0].(*backupv1beta1.Error)
+			require.True(t, ok)
+			assert.Equal(t, tc.code, detailedError.Code)
+		})
+	}
+}
+
+func TestRestoreBackupErrors(t *testing.T) {
+	backupService := &mockBackupService{}
+	backupSvc := NewBackupsService(nil, backupService, nil)
+
+	for _, tc := range []struct {
+		testName    string
+		backupError error
+		code        backupv1beta1.ErrorCode
+	}{
+		{
+			testName:    "xtrabackup not installed",
+			backupError: backup.ErrXtrabackupNotInstalled,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_XTRABACKUP_NOT_INSTALLED,
+		},
+		{
+			testName:    "invalid xtrabackup",
+			backupError: backup.ErrInvalidXtrabackup,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_INVALID_XTRABACKUP,
+		},
+		{
+			testName:    "incompatible xtrabackup",
+			backupError: backup.ErrIncompatibleXtrabackup,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_INCOMPATIBLE_XTRABACKUP,
+		},
+		{
+			testName:    "target MySQL is not compatible",
+			backupError: backup.ErrIncompatibleTargetMySQL,
+			code:        backupv1beta1.ErrorCode_ERROR_CODE_INCOMPATIBLE_TARGET_MYSQL,
+		},
+	} {
+		t.Run(tc.testName, func(t *testing.T) {
+			backupError := fmt.Errorf("error: %w", tc.backupError)
+			backupService.On("RestoreBackup", mock.Anything, "serviceID1", "artifactID1").
+				Return("", backupError).Once()
+			ctx := context.Background()
+			resp, err := backupSvc.RestoreBackup(ctx, &backupv1beta1.RestoreBackupRequest{
+				ServiceId:  "serviceID1",
+				ArtifactId: "artifactID1",
+			})
+			assert.Nil(t, resp)
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.FailedPrecondition, st.Code())
+			assert.Equal(t, backupError.Error(), st.Message())
+			require.Len(t, st.Details(), 1)
+			detailedError, ok := st.Details()[0].(*backupv1beta1.Error)
+			require.True(t, ok)
+			assert.Equal(t, tc.code, detailedError.Code)
+		})
+	}
+}
+
 func TestScheduledBackups(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	backupService := &mockBackupService{}
+	backupService.On("SwitchMongoPITR", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	schedulerService := scheduler.New(db, backupService)
 	backupSvc := NewBackupsService(db, backupService, schedulerService)
 	t.Cleanup(func() {
@@ -105,6 +215,7 @@ func TestScheduledBackups(t *testing.T) {
 			Name:           t.Name(),
 			Description:    t.Name(),
 			Enabled:        true,
+			Mode:           backupv1beta1.BackupMode_SNAPSHOT,
 			Retries:        maxRetriesAttempts - 1,
 			RetryInterval:  durationpb.New(maxRetryInterval),
 		}
@@ -160,7 +271,6 @@ func TestScheduledBackups(t *testing.T) {
 		task, err := models.CreateScheduledTask(db.Querier, models.CreateScheduledTaskParams{
 			CronExpression: "* * * * *",
 			Type:           models.ScheduledMySQLBackupTask,
-			Data:           models.ScheduledTaskData{},
 		})
 		require.NoError(t, err)
 
@@ -171,8 +281,9 @@ func TestScheduledBackups(t *testing.T) {
 			Vendor:     "mysql",
 			LocationID: locationRes.ID,
 			ServiceID:  *agent.ServiceID,
-			DataModel:  "physical",
-			Status:     "pending",
+			DataModel:  models.PhysicalDataModel,
+			Mode:       models.Snapshot,
+			Status:     models.PendingBackupStatus,
 			ScheduleID: id,
 		})
 		require.NoError(t, err)
@@ -193,4 +304,77 @@ func TestScheduledBackups(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, artifacts, 0)
 	})
+}
+
+func TestGetLogs(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	backupService := &mockBackupService{}
+	schedulerService := &mockScheduleService{}
+	backupSvc := NewBackupsService(db, backupService, schedulerService)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	job, err := models.CreateJob(db.Querier, models.CreateJobParams{
+		PMMAgentID: "agent",
+		Type:       models.MongoDBBackupJob,
+		Data: &models.JobData{
+			MongoDBBackup: &models.MongoDBBackupJobData{
+				ServiceID:  "svc",
+				ArtifactID: "artifact",
+			},
+		},
+	})
+	require.NoError(t, err)
+	for chunkID := 0; chunkID < 5; chunkID++ {
+		_, err = models.CreateJobLog(db.Querier, models.CreateJobLogParams{
+			JobID:   job.ID,
+			ChunkID: chunkID,
+			Data:    "not important",
+		})
+		assert.NoError(t, err)
+	}
+
+	type testCase struct {
+		offset uint32
+		limit  uint32
+		expect []uint32
+	}
+	testCases := []testCase{
+		{
+			expect: []uint32{0, 1, 2, 3, 4},
+		},
+		{
+			offset: 3,
+			expect: []uint32{3, 4},
+		},
+		{
+			limit:  2,
+			expect: []uint32{0, 1},
+		},
+		{
+			offset: 1,
+			limit:  3,
+			expect: []uint32{1, 2, 3},
+		},
+		{
+			offset: 5,
+			expect: []uint32{},
+		},
+	}
+	for _, tc := range testCases {
+		logs, err := backupSvc.GetLogs(ctx, &backupv1beta1.GetLogsRequest{
+			ArtifactId: "artifact",
+			Offset:     tc.offset,
+			Limit:      tc.limit,
+		})
+		assert.NoError(t, err)
+		chunkIDs := make([]uint32, 0, len(logs.Logs))
+		for _, log := range logs.Logs {
+			chunkIDs = append(chunkIDs, log.ChunkId)
+		}
+		assert.Equal(t, tc.expect, chunkIDs)
+	}
 }
