@@ -416,7 +416,7 @@ func TestSettings(t *testing.T) {
 				},
 			})
 			assert.True(t, errors.As(err, &errInvalidArgument))
-			assert.EqualError(t, err, "invalid argument: invalid \"from\" email")
+			assert.EqualError(t, err, "invalid argument: invalid \"from\" email \"from\"")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EmailAlertingSettings: &models.EmailAlertingSettings{
