@@ -32,6 +32,7 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
+// ErrInvalidArgument returned when some passed argument is invalid.
 type ErrInvalidArgument struct {
 	Details string
 }
@@ -40,6 +41,7 @@ func (e *ErrInvalidArgument) Error() string {
 	return "invalid argument: " + e.Details
 }
 
+// NewInvalidArgument creates ErrInvalidArgument with given formatting.
 func NewInvalidArgument(format string, a ...interface{}) *ErrInvalidArgument {
 	return &ErrInvalidArgument{Details: fmt.Sprintf(format, a...)}
 }
