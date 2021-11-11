@@ -382,7 +382,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	}
 
 	params := &models.CreateRuleParams{
-		Summary:           req.Summary,
+		Summary:           req.Name,
 		TemplateName:      req.TemplateName,
 		TemplateSummary:   template.Summary,
 		Disabled:          req.Disabled,

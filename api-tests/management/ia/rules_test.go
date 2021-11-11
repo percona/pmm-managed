@@ -390,7 +390,7 @@ func TestRulesAPI(t *testing.T) {
 		for _, r := range list.Payload.Rules {
 			if r.RuleID == rule.Payload.RuleID {
 				assert.True(t, r.Disabled)
-				assert.Equal(t, params.Body.Summary, r.Summary)
+				assert.Equal(t, params.Body.Name, r.Name)
 				assert.Len(t, r.ParamsValues, 2)
 				assert.Equal(t, params.Body.Params[0].Type, r.ParamsValues[1].Type)
 				assert.Equal(t, params.Body.Params[0].Name, r.ParamsValues[1].Name)
@@ -503,7 +503,7 @@ func createAlertRuleParams(templateName, channelID, paramName string, filter *ru
 		Body: rules.CreateAlertRuleBody{
 			TemplateName: templateName,
 			Disabled:     true,
-			Summary:      "example summary",
+			Name:         "example rule",
 			Params: []*rules.ParamsItems0{{
 				Name:  paramName,
 				Type:  pointer.ToString("FLOAT"),

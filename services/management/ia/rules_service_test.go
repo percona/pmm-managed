@@ -91,7 +91,7 @@ func TestCreateAlertRule(t *testing.T) {
 		resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
 			Disabled:     false,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,
@@ -169,7 +169,7 @@ groups:
 		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
 			Disabled:     false,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{
 				{
 					Name: "param2",
@@ -214,7 +214,7 @@ groups:
 		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
 			Disabled:     false,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params:       nil,
 			For:          durationpb.New(2 * time.Second),
 			Severity:     managementpb.Severity_SEVERITY_INFO,
@@ -245,7 +245,7 @@ groups:
 		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
 			Disabled:     false,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_BOOL,
@@ -282,7 +282,7 @@ groups:
 		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "unknown template",
 			Disabled:     false,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,
@@ -322,7 +322,7 @@ groups:
 		resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
 			Disabled:     true,
-			Summary:      "some testing rule",
+			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{{
 				Name: "param2",
 				Type: iav1beta1.ParamType_FLOAT,

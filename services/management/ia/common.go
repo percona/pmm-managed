@@ -56,7 +56,7 @@ func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel)
 		RuleId:          rule.ID,
 		Disabled:        rule.Disabled,
 		Summary:         rule.TemplateSummary,
-		Comment:         rule.Summary,
+		Name:            rule.Summary,
 		ExprTemplate:    rule.Expr,
 		DefaultSeverity: managementpb.Severity(rule.DefaultSeverity),
 		Severity:        managementpb.Severity(rule.Severity),
