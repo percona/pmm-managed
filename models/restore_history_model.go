@@ -41,7 +41,7 @@ func (rs RestoreStatus) Validate() error {
 	case SuccessRestoreStatus:
 	case ErrorRestoreStatus:
 	default:
-		return NewInvalidArgument("invalid status %q", rs)
+		return NewInvalidArgumentError("invalid status %q", rs)
 	}
 
 	return nil

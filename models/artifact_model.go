@@ -39,9 +39,9 @@ func (dm DataModel) Validate() error {
 	case PhysicalDataModel:
 	case LogicalDataModel:
 	case "":
-		return NewInvalidArgument("empty data model")
+		return NewInvalidArgumentError("empty data model")
 	default:
-		return NewInvalidArgument("invalid data model '%s'", dm)
+		return NewInvalidArgumentError("invalid data model '%s'", dm)
 	}
 
 	return nil
@@ -72,7 +72,7 @@ func (bs BackupStatus) Validate() error {
 	case DeletingBackupStatus:
 	case FailedToDeleteBackupStatus:
 	default:
-		return NewInvalidArgument("invalid status '%s'", bs)
+		return NewInvalidArgumentError("invalid status '%s'", bs)
 	}
 
 	return nil
@@ -109,9 +109,9 @@ func (m BackupMode) Validate() error {
 	case Incremental:
 	case PITR:
 	case "":
-		return NewInvalidArgument("empty backup mode")
+		return NewInvalidArgumentError("empty backup mode")
 	default:
-		return NewInvalidArgument("invalid backup mode '%s'", m)
+		return NewInvalidArgumentError("invalid backup mode '%s'", m)
 	}
 
 	return nil

@@ -111,10 +111,10 @@ type CreateRestoreHistoryItemParams struct {
 // Validate validates params used for creating a restore history item.
 func (p *CreateRestoreHistoryItemParams) Validate() error {
 	if p.ArtifactID == "" {
-		return NewInvalidArgument("artifact_id shouldn't be empty")
+		return NewInvalidArgumentError("artifact_id shouldn't be empty")
 	}
 	if p.ServiceID == "" {
-		return NewInvalidArgument("service_id shouldn't be empty")
+		return NewInvalidArgumentError("service_id shouldn't be empty")
 	}
 
 	return p.Status.Validate()

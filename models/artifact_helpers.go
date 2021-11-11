@@ -41,8 +41,8 @@ func (e *ErrInvalidArgument) Error() string {
 	return "invalid argument: " + e.Details
 }
 
-// NewInvalidArgument creates ErrInvalidArgument with given formatting.
-func NewInvalidArgument(format string, a ...interface{}) *ErrInvalidArgument {
+// NewInvalidArgumentError creates ErrInvalidArgument with given formatting.
+func NewInvalidArgumentError(format string, a ...interface{}) *ErrInvalidArgument {
 	return &ErrInvalidArgument{Details: fmt.Sprintf(format, a...)}
 }
 
@@ -198,16 +198,16 @@ type CreateArtifactParams struct {
 // Validate validates params used for creating an artifact entry.
 func (p *CreateArtifactParams) Validate() error {
 	if p.Name == "" {
-		return NewInvalidArgument("name shouldn't be empty")
+		return NewInvalidArgumentError("name shouldn't be empty")
 	}
 	if p.Vendor == "" {
-		return NewInvalidArgument("vendor shouldn't be empty")
+		return NewInvalidArgumentError("vendor shouldn't be empty")
 	}
 	if p.LocationID == "" {
-		return NewInvalidArgument("location_id shouldn't be empty")
+		return NewInvalidArgumentError("location_id shouldn't be empty")
 	}
 	if p.ServiceID == "" {
-		return NewInvalidArgument("service_id shouldn't be empty")
+		return NewInvalidArgumentError("service_id shouldn't be empty")
 	}
 
 	if err := p.Mode.Validate(); err != nil {
