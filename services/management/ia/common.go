@@ -69,12 +69,8 @@ func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel)
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}
 
-	params, err := processExprParameters(rule.ParamsDefinitions, rule.ParamsValues)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to process expression parameters")
-	}
-
-	r.Expr, err = fillExprWithParams(rule.Expr, params.AsStringMap())
+	var err error
+	r.Expr, err = fillExprWithParams(rule.Expr, rule.ParamsValues.AsStringMap())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fill expression template with parameters values")
 	}
@@ -147,53 +143,40 @@ func fillExprWithParams(expr string, values map[string]string) (string, error) {
 	return buf.String(), nil
 }
 
-func processExprParameters(definitions models.ParamsDefinitions, values models.ParamsValues) (models.ParamsValues, error) {
-	unknownParams := make(map[string]struct{}, len(values))
-	for _, p := range values {
-		unknownParams[p.Name] = struct{}{}
+func validateParameters(definitions models.ParamsDefinitions, values models.ParamsValues) error {
+	if len(definitions) != len(values) {
+		return status.Errorf(codes.InvalidArgument, "Expression requires %d parameters, but got %d.",
+			len(definitions), len(values))
 	}
 
-	params := make(models.ParamsValues, 0, len(definitions))
+	valuesM := make(map[string]models.ParamValue)
+	for _, v := range values {
+		valuesM[v.Name] = v
+	}
+
 	for _, d := range definitions {
-		var filled bool
-		for _, rp := range values {
-			if rp.Name == d.Name {
-				if string(d.Type) != string(rp.Type) {
-					return nil, status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", d.Name, rp.Type, d.Type)
-				}
-				delete(unknownParams, rp.Name)
-				filled = true
-				params = append(params, rp)
-				break
-			}
+		value, ok := valuesM[d.Name]
+		if !ok {
+			return status.Errorf(codes.InvalidArgument, "Parameter %s is missing.", d.Name)
 		}
 
-		if !filled {
-			p := models.ParamValue{
-				Name: d.Name,
-				Type: d.Type,
+		if string(d.Type) != string(value.Type) {
+			return status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", d.Name, value.Type, d.Type)
+		}
+
+		switch d.Type {
+		case models.Float:
+			v := d.FloatParam
+			fv := float64(value.FloatValue)
+			if v.Min != nil && pointer.GetFloat64(v.Min) > fv {
+				return status.Errorf(codes.InvalidArgument, "Parameter %s value is less than required minimum.", d.Name)
 			}
 
-			switch d.Type {
-			case models.Float:
-				v := d.FloatParam
-				if v.Default == nil {
-					return nil, status.Errorf(codes.InvalidArgument, "Parameter %s doesn't have "+
-						"default value, so it should be specified explicitly", d.Name)
-				}
-				p.FloatValue = float32(pointer.GetFloat64(v.Default))
+			if v.Max != nil && pointer.GetFloat64(v.Max) < fv {
+				return status.Errorf(codes.InvalidArgument, "Parameter %s value is greater than required maximum.", d.Name)
 			}
-			params = append(params, p)
 		}
 	}
 
-	names := make([]string, 0, len(unknownParams))
-	for name := range unknownParams {
-		names = append(names, name)
-	}
-	if len(names) != 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Unknown parameters %s.", names)
-	}
-
-	return params, nil
+	return nil
 }

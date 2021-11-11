@@ -166,16 +166,12 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 			Annotations: make(map[string]string),
 		}
 
-		params, err := processExprParameters(ruleM.ParamsDefinitions, ruleM.ParamsValues)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to template rule expression")
-		}
+		params := ruleM.ParamsValues.AsStringMap()
 
-		paramsM := params.AsStringMap()
-
-		r.Expr, err = fillExprWithParams(ruleM.Expr, paramsM)
+		var err error
+		r.Expr, err = fillExprWithParams(ruleM.Expr, params)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Failed to template rule expression: %s", err)
+			return nil, errors.Wrap(err, "failed to fill rule expression with parameters")
 		}
 
 		annotations, err := ruleM.GetAnnotations()
@@ -183,7 +179,7 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 			return nil, errors.Wrap(err, "failed to read rule annotations")
 		}
 		// Copy annotations form template
-		if err = transformMaps(annotations, r.Annotations, paramsM); err != nil {
+		if err = transformMaps(annotations, r.Annotations, params); err != nil {
 			return nil, errors.Wrap(err, "failed to fill template annotations placeholders")
 		}
 
@@ -195,7 +191,7 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 		}
 
 		// Copy labels form template
-		if err = transformMaps(labels, r.Labels, paramsM); err != nil {
+		if err = transformMaps(labels, r.Labels, params); err != nil {
 			return nil, errors.Wrap(err, "failed to fill template labels placeholders")
 		}
 
@@ -205,7 +201,7 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 		}
 
 		// Add rule labels
-		if err = transformMaps(customLabels, r.Labels, paramsM); err != nil {
+		if err = transformMaps(customLabels, r.Labels, params); err != nil {
 			return nil, errors.Wrap(err, "failed to fill rule labels placeholders")
 		}
 
@@ -370,13 +366,12 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
-	// Check that we can compile given expression with given parameters
-	p, err := processExprParameters(definitions, values)
-	if err != nil {
+	if err := validateParameters(definitions, values); err != nil {
 		return nil, err
 	}
 
-	_, err = fillExprWithParams(template.Expr, p.AsStringMap())
+	// Check that we can compile expression with given parameters
+	_, err = fillExprWithParams(template.Expr, values.AsStringMap())
 	if err != nil {
 		return nil, err
 	}
@@ -442,14 +437,12 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 			return err
 		}
 
-		// Check that we can compile given expression with given parameters
-		values, err := processExprParameters(rule.ParamsDefinitions, params.ParamsValues)
-		if err != nil {
+		if err = validateParameters(rule.ParamsDefinitions, params.ParamsValues); err != nil {
 			return err
 		}
 
-		_, err = fillExprWithParams(rule.Expr, values.AsStringMap())
-		if err != nil {
+		// Check that we can compile expression with given parameters
+		if _, err = fillExprWithParams(rule.Expr, params.ParamsValues.AsStringMap()); err != nil {
 			return errors.Wrap(err, "failed to fill expression template with parameters values")
 		}
 

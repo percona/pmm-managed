@@ -92,13 +92,18 @@ func TestCreateAlertRule(t *testing.T) {
 			TemplateName: "test_template",
 			Disabled:     false,
 			Name:         "some testing rule",
-			Params: []*iav1beta1.ParamValue{{
-				Name: "param2",
-				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.ParamValue_Float{
-					Float: 1.22,
+			Params: []*iav1beta1.ParamValue{
+				{
+					Name:  "param1",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 85},
 				},
-			}},
+				{
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 1.22},
+				},
+			},
 			For:      durationpb.New(2 * time.Second),
 			Severity: managementpb.Severity_SEVERITY_INFO,
 			CustomLabels: map[string]string{
@@ -125,7 +130,7 @@ groups:
     - name: PMM Integrated Alerting
       rules:
         - alert: %s
-          expr: 1.22 * 100 > 80
+          expr: 1.22 * 100 > 85
           for: 2s
           labels:
             baz: faz
@@ -136,7 +141,7 @@ groups:
             template_name: test_template
           annotations:
             description: |-
-                Test template with param1=80 and param2=1.22
+                Test template with param1=85 and param2=1.22
                 VALUE = {{ $value }}
                 LABELS: {{ $labels }}
             rule: some testing rule
@@ -153,6 +158,47 @@ groups:
 
 		assert.Empty(t, matches)
 		assert.NoError(t, err)
+	})
+
+	t.Run("wrong parameter value", func(t *testing.T) {
+		testDir, err := ioutil.TempDir("", "")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			err = os.RemoveAll(testDir)
+			require.NoError(t, err)
+		})
+
+		// Create test rule
+		rules := NewRulesService(db, templates, vmAlert, alertManager)
+		rules.rulesPath = testDir
+		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
+			TemplateName: "test_template",
+			Disabled:     false,
+			Name:         "some testing rule",
+			Params: []*iav1beta1.ParamValue{
+				{
+					Name:  "param1",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 123},
+				}, {
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 1.22},
+				},
+			},
+			For:      durationpb.New(2 * time.Second),
+			Severity: managementpb.Severity_SEVERITY_INFO,
+			CustomLabels: map[string]string{
+				"baz": "faz",
+			},
+			Filters: []*iav1beta1.Filter{{
+				Type:  iav1beta1.FilterType_EQUAL,
+				Key:   "some_key",
+				Value: "'60'",
+			}},
+			ChannelIds: []string{channelID},
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Parameter param1 value is greater than required maximum."), err)
 	})
 
 	t.Run("wrong parameter", func(t *testing.T) {
@@ -172,17 +218,13 @@ groups:
 			Name:         "some testing rule",
 			Params: []*iav1beta1.ParamValue{
 				{
-					Name: "param2",
-					Type: iav1beta1.ParamType_FLOAT,
-					Value: &iav1beta1.ParamValue_Float{
-						Float: 22.1,
-					},
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 22.1},
 				}, {
-					Name: "unknown parameter",
-					Type: iav1beta1.ParamType_FLOAT,
-					Value: &iav1beta1.ParamValue_Float{
-						Float: 1.22,
-					},
+					Name:  "unknown parameter",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 1.22},
 				},
 			},
 			For:      durationpb.New(2 * time.Second),
@@ -197,7 +239,7 @@ groups:
 			}},
 			ChannelIds: []string{channelID},
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Unknown parameters [unknown parameter]."), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Parameter param1 is missing."), err)
 	})
 
 	t.Run("missing parameter", func(t *testing.T) {
@@ -215,9 +257,15 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     false,
 			Name:         "some testing rule",
-			Params:       nil,
-			For:          durationpb.New(2 * time.Second),
-			Severity:     managementpb.Severity_SEVERITY_INFO,
+			Params: []*iav1beta1.ParamValue{
+				{
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 22.1},
+				},
+			},
+			For:      durationpb.New(2 * time.Second),
+			Severity: managementpb.Severity_SEVERITY_INFO,
 			CustomLabels: map[string]string{
 				"baz": "faz",
 			},
@@ -228,7 +276,7 @@ groups:
 			}},
 			ChannelIds: []string{channelID},
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Parameter param2 doesn't have default value, so it should be specified explicitly"), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Expression requires 2 parameters, but got 1."), err)
 	})
 
 	t.Run("wrong parameter type", func(t *testing.T) {
@@ -246,13 +294,18 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     false,
 			Name:         "some testing rule",
-			Params: []*iav1beta1.ParamValue{{
-				Name: "param2",
-				Type: iav1beta1.ParamType_BOOL,
-				Value: &iav1beta1.ParamValue_Bool{
-					Bool: true,
+			Params: []*iav1beta1.ParamValue{
+				{
+					Name:  "param1",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 1.22},
 				},
-			}},
+				{
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_BOOL,
+					Value: &iav1beta1.ParamValue_Bool{Bool: true},
+				},
+			},
 			For:      durationpb.New(2 * time.Second),
 			Severity: managementpb.Severity_SEVERITY_INFO,
 			CustomLabels: map[string]string{
@@ -323,13 +376,18 @@ groups:
 			TemplateName: "test_template",
 			Disabled:     true,
 			Name:         "some testing rule",
-			Params: []*iav1beta1.ParamValue{{
-				Name: "param2",
-				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.ParamValue_Float{
-					Float: 1.22,
+			Params: []*iav1beta1.ParamValue{
+				{
+					Name:  "param1",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 85},
 				},
-			}},
+				{
+					Name:  "param2",
+					Type:  iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.ParamValue_Float{Float: 1.22},
+				},
+			},
 			For:      durationpb.New(2 * time.Second),
 			Severity: managementpb.Severity_SEVERITY_INFO,
 			CustomLabels: map[string]string{
