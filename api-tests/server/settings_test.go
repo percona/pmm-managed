@@ -111,7 +111,7 @@ func TestSettings(t *testing.T) {
 						Context: pmmapitests.Context,
 					})
 					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-						`invalid argument: both enable_updates and disable_updates are present`)
+						`Invalid argument: both enable_updates and disable_updates are present.`)
 					assert.Empty(t, res)
 				})
 			})
@@ -185,7 +185,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: both slack_alerting_settings and remove_slack_alerting_settings are present`)
+					`Invalid argument: both slack_alerting_settings and remove_slack_alerting_settings are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -207,7 +207,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: both email_alerting_settings and remove_email_alerting_settings are present`)
+					`Invalid argument: both email_alerting_settings and remove_email_alerting_settings are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -222,7 +222,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: both enable_stt and disable_stt are present`)
+					`Invalid argument: both enable_stt and disable_stt are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -258,7 +258,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: cannot enable STT while disabling telemetry`)
+					`Invalid argument: cannot enable STT while disabling telemetry.`)
 				assert.Empty(t, res)
 			})
 
@@ -452,7 +452,7 @@ func TestSettings(t *testing.T) {
 						Context: pmmapitests.Context,
 					})
 					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-						`invalid argument: cannot disable telemetry while STT is enabled`)
+						`Invalid argument: cannot disable telemetry while STT is enabled.`)
 					assert.Empty(t, res)
 				})
 			})
@@ -484,7 +484,7 @@ func TestSettings(t *testing.T) {
 						Context: pmmapitests.Context,
 					})
 					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-						`invalid argument: cannot enable STT while telemetry is disabled`)
+						`Invalid argument: cannot enable STT while telemetry is disabled.`)
 					assert.Empty(t, res)
 
 					resg, err := serverClient.Default.Server.GetSettings(nil)
@@ -523,7 +523,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: both enable_telemetry and disable_telemetry are present`)
+					`Invalid argument: both enable_telemetry and disable_telemetry are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -537,7 +537,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: aws_partitions: partition "aws-123" is invalid`)
+					`Invalid argument: aws_partitions: partition "aws-123" is invalid.`)
 				assert.Empty(t, res)
 			})
 
@@ -551,7 +551,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: aws_partitions: list is too long`)
+					`Invalid argument: aws_partitions: list is too long.`)
 				assert.Empty(t, res)
 			})
 
@@ -583,7 +583,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: hr: minimal resolution is 1s`)
+					`Invalid argument: hr: minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 
@@ -599,7 +599,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: hr: should be a natural number of seconds`)
+					`Invalid argument: hr: should be a natural number of seconds.`)
 				assert.Empty(t, res)
 			})
 
@@ -631,7 +631,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: standard_interval: minimal resolution is 1s`)
+					`Invalid argument: standard_interval: minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 
@@ -647,7 +647,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: rare_interval: should be a natural number of seconds`)
+					`Invalid argument: rare_interval: should be a natural number of seconds.`)
 				assert.Empty(t, res)
 			})
 
@@ -675,7 +675,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: data_retention: minimal resolution is 24h`)
+					`Invalid argument: data_retention: minimal resolution is 24h.`)
 				assert.Empty(t, res)
 			})
 
@@ -689,7 +689,7 @@ func TestSettings(t *testing.T) {
 					Context: pmmapitests.Context,
 				})
 				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-					`invalid argument: data_retention: should be a natural number of days`)
+					`Invalid argument: data_retention: should be a natural number of days.`)
 				assert.Empty(t, res)
 			})
 
@@ -884,7 +884,7 @@ func TestSettings(t *testing.T) {
 						Context: pmmapitests.Context,
 					})
 					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
-						`invalid argument: both alert_manager_url and remove_alert_manager_url are present`)
+						`Invalid argument: both alert_manager_url and remove_alert_manager_url are present.`)
 
 					gets, err := serverClient.Default.Server.GetSettings(nil)
 					require.NoError(t, err)

@@ -87,14 +87,15 @@ func TestSettings(t *testing.T) {
 				AWSPartitions: []string{"foo"},
 			}
 			_, err := models.UpdateSettings(sqlDB, s)
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: aws_partitions: partition "foo" is invalid`)
 
 			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
 			}
 			_, err = models.UpdateSettings(sqlDB, s)
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: aws_partitions: list is too long`)
 
 			s = &models.ChangeSettingsParams{
@@ -121,27 +122,28 @@ func TestSettings(t *testing.T) {
 			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "mailto:hello@example.com",
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "1.2.3.4:1234",
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "1.2.3.4",
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: invalid alert_manager_url: 1.2.3.4 - missing protocol scheme`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "1.2.3.4//",
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: invalid alert_manager_url: 1.2.3.4// - missing protocol scheme`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://",
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: invalid alert_manager_url: https:// - missing host`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://1.2.3.4",
@@ -158,26 +160,27 @@ func TestSettings(t *testing.T) {
 			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				MetricsResolutions: mr,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: mr: minimal resolution is 1s`)
 
 			mr = models.MetricsResolutions{MR: 2*time.Second + 5e8*time.Nanosecond} // 2.5s
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				MetricsResolutions: mr,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: mr: should be a natural number of seconds`)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DataRetention: 90000 * time.Second, // 25h
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: data_retention: should be a natural number of days`)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DataRetention: 43200 * time.Second, // 12h
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: data_retention: minimal resolution is 24h`)
 		})
 
@@ -192,7 +195,8 @@ func TestSettings(t *testing.T) {
 				EnableUpdates:  true,
 				DisableUpdates: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: both enable_updates and disable_updates are present`)
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -216,21 +220,22 @@ func TestSettings(t *testing.T) {
 				EnableTelemetry:  true,
 				DisableTelemetry: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: both enable_telemetry and disable_telemetry are present`)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT:  true,
 				DisableSTT: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: both enable_stt and disable_stt are present`)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT:        true,
 				DisableTelemetry: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: cannot enable STT while disabling telemetry`)
 
 			// enable both
@@ -245,7 +250,7 @@ func TestSettings(t *testing.T) {
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DisableTelemetry: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: cannot disable telemetry while STT is enabled`)
 
 			// disable both
@@ -260,7 +265,7 @@ func TestSettings(t *testing.T) {
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT: true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, `invalid argument: cannot enable STT while telemetry is disabled`)
 
 			// restore initial default state
@@ -400,7 +405,8 @@ func TestSettings(t *testing.T) {
 				RemoveEmailAlertingSettings: true,
 				EmailAlertingSettings:       emailSettings,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: both email_alerting_settings and remove_email_alerting_settings are present")
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EmailAlertingSettings: &models.EmailAlertingSettings{
@@ -409,7 +415,7 @@ func TestSettings(t *testing.T) {
 					Hello:     "example.com",
 				},
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: invalid \"from\" email")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -419,7 +425,7 @@ func TestSettings(t *testing.T) {
 					Hello:     "example.com",
 				},
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: invalid server address, expected format host:port")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -429,14 +435,14 @@ func TestSettings(t *testing.T) {
 					Hello:     "%",
 				},
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: invalid hello field, expected valid host")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				RemoveSlackAlertingSettings: true,
 				SlackAlertingSettings:       slackSettings,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: both slack_alerting_settings and remove_slack_alerting_settings are present")
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -444,7 +450,7 @@ func TestSettings(t *testing.T) {
 					URL: "invalid@url",
 				},
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: invalid url value")
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -460,7 +466,7 @@ func TestSettings(t *testing.T) {
 				DisableAlerting: true,
 				EnableAlerting:  true,
 			})
-			assert.True(t, errors.Is(err, models.ErrInvalidArgument))
+			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: both enable_alerting and disable_alerting are present")
 		})
 	})

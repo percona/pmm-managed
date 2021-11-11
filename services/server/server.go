@@ -638,11 +638,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
+		var errInvalidArgument *models.ErrInvalidArgument
 		newSettings, err = models.UpdateSettings(tx, settingsParams)
 		switch {
 		case err == nil:
-		case errors.Is(err, models.ErrInvalidArgument):
-			return status.Error(codes.InvalidArgument, err.Error())
+		case errors.As(err, &errInvalidArgument):
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid argument: %s.", errInvalidArgument.Details))
 		default:
 			return errors.WithStack(err)
 		}

@@ -143,7 +143,8 @@ func TestServer(t *testing.T) {
 				"METRICS_RESOLUTION=5ns",
 			})
 			require.Len(t, errs, 1)
-			assert.True(t, errors.Is(errs[0], models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
 			require.EqualError(t, errs[0], `invalid argument: hr: minimal resolution is 1s`)
 			assert.Zero(t, s.envSettings.MetricsResolutions.HR)
 		})
@@ -154,7 +155,8 @@ func TestServer(t *testing.T) {
 				"DATA_RETENTION=12h",
 			})
 			require.Len(t, errs, 1)
-			assert.True(t, errors.Is(errs[0], models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
 			require.EqualError(t, errs[0], `invalid argument: data_retention: minimal resolution is 24h`)
 			assert.Zero(t, s.envSettings.DataRetention)
 		})
@@ -165,7 +167,8 @@ func TestServer(t *testing.T) {
 				"DATA_RETENTION=30h",
 			})
 			require.Len(t, errs, 1)
-			assert.True(t, errors.Is(errs[0], models.ErrInvalidArgument))
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
 			require.EqualError(t, errs[0], `invalid argument: data_retention: should be a natural number of days`)
 			assert.Zero(t, s.envSettings.DataRetention)
 		})

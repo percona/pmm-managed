@@ -129,7 +129,7 @@ type ChangeSettingsParams struct {
 func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
 	err := ValidateSettings(params)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		return nil, NewInvalidArgument(err.Error())
 	}
 
 	settings, err := GetSettings(q)
@@ -138,7 +138,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if err := validateSettingsConflicts(params, settings); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		return nil, NewInvalidArgument(err.Error())
 	}
 
 	if params.DisableUpdates {
