@@ -351,7 +351,6 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 					Name:        t.Name,
 					Version:     t.Version,
 					Summary:     t.Summary,
-					Tiers:       t.Tiers,
 					Expr:        t.Expr,
 					Params:      params,
 					For:         promconfig.Duration(t.For),

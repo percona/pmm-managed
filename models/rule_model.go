@@ -30,11 +30,11 @@ import (
 //reform:ia_rules
 type Rule struct {
 	ID                string            `reform:"id,pk"`
+	Name              string            `reform:"name"`
 	Summary           string            `reform:"summary"`
 	TemplateName      string            `reform:"template_name"`
-	TemplateSummary   string            `reform:"template_summary"`
 	Disabled          bool              `reform:"disabled"`
-	Expr              string            `reform:"expr"`
+	ExprTemplate      string            `reform:"expr_template"`
 	ParamsDefinitions ParamsDefinitions `reform:"params_definitions"`
 	ParamsValues      ParamsValues      `reform:"params_values"`
 	DefaultFor        time.Duration     `reform:"default_for"`

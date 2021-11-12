@@ -29,11 +29,11 @@ func (v *ruleTableType) Name() string {
 func (v *ruleTableType) Columns() []string {
 	return []string{
 		"id",
+		"name",
 		"summary",
 		"template_name",
-		"template_summary",
 		"disabled",
-		"expr",
+		"expr_template",
 		"params_definitions",
 		"params_values",
 		"default_for",
@@ -72,11 +72,11 @@ var RuleTable = &ruleTableType{
 		SQLName: "ia_rules",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
+			{Name: "Name", Type: "string", Column: "name"},
 			{Name: "Summary", Type: "string", Column: "summary"},
 			{Name: "TemplateName", Type: "string", Column: "template_name"},
-			{Name: "TemplateSummary", Type: "string", Column: "template_summary"},
 			{Name: "Disabled", Type: "bool", Column: "disabled"},
-			{Name: "Expr", Type: "string", Column: "expr"},
+			{Name: "ExprTemplate", Type: "string", Column: "expr_template"},
 			{Name: "ParamsDefinitions", Type: "ParamsDefinitions", Column: "params_definitions"},
 			{Name: "ParamsValues", Type: "ParamsValues", Column: "params_values"},
 			{Name: "DefaultFor", Type: "time.Duration", Column: "default_for"},
@@ -100,11 +100,11 @@ var RuleTable = &ruleTableType{
 func (s Rule) String() string {
 	res := make([]string, 19)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
-	res[1] = "Summary: " + reform.Inspect(s.Summary, true)
-	res[2] = "TemplateName: " + reform.Inspect(s.TemplateName, true)
-	res[3] = "TemplateSummary: " + reform.Inspect(s.TemplateSummary, true)
+	res[1] = "Name: " + reform.Inspect(s.Name, true)
+	res[2] = "Summary: " + reform.Inspect(s.Summary, true)
+	res[3] = "TemplateName: " + reform.Inspect(s.TemplateName, true)
 	res[4] = "Disabled: " + reform.Inspect(s.Disabled, true)
-	res[5] = "Expr: " + reform.Inspect(s.Expr, true)
+	res[5] = "ExprTemplate: " + reform.Inspect(s.ExprTemplate, true)
 	res[6] = "ParamsDefinitions: " + reform.Inspect(s.ParamsDefinitions, true)
 	res[7] = "ParamsValues: " + reform.Inspect(s.ParamsValues, true)
 	res[8] = "DefaultFor: " + reform.Inspect(s.DefaultFor, true)
@@ -126,11 +126,11 @@ func (s Rule) String() string {
 func (s *Rule) Values() []interface{} {
 	return []interface{}{
 		s.ID,
+		s.Name,
 		s.Summary,
 		s.TemplateName,
-		s.TemplateSummary,
 		s.Disabled,
-		s.Expr,
+		s.ExprTemplate,
 		s.ParamsDefinitions,
 		s.ParamsValues,
 		s.DefaultFor,
@@ -152,11 +152,11 @@ func (s *Rule) Values() []interface{} {
 func (s *Rule) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
+		&s.Name,
 		&s.Summary,
 		&s.TemplateName,
-		&s.TemplateSummary,
 		&s.Disabled,
-		&s.Expr,
+		&s.ExprTemplate,
 		&s.ParamsDefinitions,
 		&s.ParamsValues,
 		&s.DefaultFor,

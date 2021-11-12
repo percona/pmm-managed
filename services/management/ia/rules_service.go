@@ -169,7 +169,7 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 		params := ruleM.ParamsValues.AsStringMap()
 
 		var err error
-		r.Expr, err = fillExprWithParams(ruleM.Expr, params)
+		r.Expr, err = fillExprWithParams(ruleM.ExprTemplate, params)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fill rule expression with parameters")
 		}
@@ -183,7 +183,7 @@ func (s *RulesService) prepareRulesFiles(rules []*models.Rule) ([]ruleFile, erro
 			return nil, errors.Wrap(err, "failed to fill template annotations placeholders")
 		}
 
-		r.Annotations["rule"] = ruleM.Summary
+		r.Annotations["rule"] = ruleM.Name
 
 		labels, err := ruleM.GetLabels()
 		if err != nil {
@@ -367,11 +367,11 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	}
 
 	params := &models.CreateRuleParams{
-		Summary:           req.Name,
+		Name:              req.Name,
 		TemplateName:      req.TemplateName,
-		TemplateSummary:   template.Summary,
+		Summary:           template.Summary,
 		Disabled:          req.Disabled,
-		Expr:              template.Expr,
+		ExprTemplate:      template.Expr,
 		ParamsDefinitions: definitions,
 		ParamsValues:      values,
 		DefaultFor:        time.Duration(template.For),
@@ -403,7 +403,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 // UpdateAlertRule updates Integrated Alerting rule.
 func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.UpdateAlertRuleRequest) (*iav1beta1.UpdateAlertRuleResponse, error) {
 	params := &models.ChangeRuleParams{
-		Summary:      req.Summary,
+		Name:         req.Summary,
 		Disabled:     req.Disabled,
 		For:          req.For.AsDuration(),
 		Severity:     models.Severity(req.Severity),
@@ -432,7 +432,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		}
 
 		// Check that we can compile expression with given parameters
-		if _, err = fillExprWithParams(rule.Expr, params.ParamsValues.AsStringMap()); err != nil {
+		if _, err = fillExprWithParams(rule.ExprTemplate, params.ParamsValues.AsStringMap()); err != nil {
 			return errors.Wrap(err, "failed to fill expression template with parameters values")
 		}
 

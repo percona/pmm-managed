@@ -102,11 +102,11 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 
 // CreateRuleParams are params for creating new Rule.
 type CreateRuleParams struct {
-	Summary           string
+	Name              string
 	TemplateName      string
-	TemplateSummary   string
+	Summary           string
 	Disabled          bool
-	Expr              string
+	ExprTemplate      string
 	ParamsDefinitions ParamsDefinitions
 	ParamsValues      ParamsValues
 	DefaultFor        time.Duration
@@ -130,11 +130,11 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 
 	row := &Rule{
 		ID:                id,
-		Summary:           params.Summary,
+		Name:              params.Name,
 		TemplateName:      params.TemplateName,
-		TemplateSummary:   params.TemplateSummary,
+		Summary:           params.Summary,
 		Disabled:          params.Disabled,
-		Expr:              params.Expr,
+		ExprTemplate:      params.ExprTemplate,
 		ParamsDefinitions: params.ParamsDefinitions,
 		ParamsValues:      params.ParamsValues,
 		DefaultFor:        params.DefaultFor,
@@ -180,7 +180,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 
 // ChangeRuleParams is params for updating existing Rule.
 type ChangeRuleParams struct {
-	Summary      string
+	Name         string
 	Disabled     bool
 	ParamsValues ParamsValues
 	For          time.Duration
@@ -208,12 +208,12 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
 	}
 
+	row.Name = params.Name
 	row.Disabled = params.Disabled
 	row.For = params.For
 	row.Severity = params.Severity
 	row.Filters = params.Filters
 	row.ParamsValues = params.ParamsValues
-	row.Summary = params.Summary
 
 	labels, err := json.Marshal(params.CustomLabels)
 	if err != nil {

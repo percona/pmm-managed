@@ -163,9 +163,9 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		channelID := createChannel(t, q).ID
+		channel := createChannel(t, q)
 
-		err = models.RemoveChannel(q, channelID)
+		err = models.RemoveChannel(q, channel.ID)
 		require.NoError(t, err)
 
 		cs, err := models.FindChannels(q)

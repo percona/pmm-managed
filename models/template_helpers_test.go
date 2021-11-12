@@ -58,7 +58,6 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, params.Template.Name, created.Name)
 		assert.Equal(t, params.Template.Version, created.Version)
 		assert.Equal(t, params.Template.Summary, created.Summary)
-		assert.ElementsMatch(t, params.Template.Tiers, created.Tiers)
 		assert.Equal(t, params.Template.Expr, created.Expr)
 		assert.Equal(t,
 			models.ParamsDefinitions{{
@@ -109,7 +108,6 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, updateParams.Template.Name, updated.Name)
 		assert.Equal(t, updateParams.Template.Version, updated.Version)
 		assert.Equal(t, updateParams.Template.Summary, updated.Summary)
-		assert.ElementsMatch(t, updateParams.Template.Tiers, updated.Tiers)
 		assert.Equal(t, updateParams.Template.Expr, updated.Expr)
 		assert.Equal(t,
 			models.ParamsDefinitions{{
@@ -194,9 +192,9 @@ func TestRuleTemplates(t *testing.T) {
 		template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
 		require.NoError(t, err)
 
-		channelID := createChannel(t, q).ID
+		channel := createChannel(t, q)
 
-		_ = createRule(t, q, channelID, template)
+		_ = createRule(t, q, channel.ID, template)
 
 		err = models.RemoveTemplate(q, template.Name)
 		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary), err)
@@ -228,7 +226,6 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, created.Name, actual.Name)
 		assert.Equal(t, created.Version, actual.Version)
 		assert.Equal(t, created.Summary, actual.Summary)
-		assert.ElementsMatch(t, created.Tiers, actual.Tiers)
 		assert.Equal(t, created.Expr, actual.Expr)
 		assert.Equal(t, created.Params, actual.Params)
 		assert.EqualValues(t, created.For, actual.For)
@@ -255,7 +252,7 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 				Range:   []interface{}{float64(10), float64(100)},
 				Value:   float64(50),
 			}},
-			For:         3,
+			For:         promconfig.Duration(7 * time.Second),
 			Severity:    common.Warning,
 			Labels:      map[string]string{"foo": "bar"},
 			Annotations: nil,

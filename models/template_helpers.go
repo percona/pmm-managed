@@ -104,7 +104,6 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		Name:     template.Name,
 		Version:  template.Version,
 		Summary:  template.Summary,
-		Tiers:    template.Tiers,
 		Expr:     template.Expr,
 		Params:   p,
 		For:      time.Duration(template.For),
@@ -159,7 +158,6 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Name = template.Name
 	row.Version = template.Version
 	row.Summary = template.Summary
-	row.Tiers = template.Tiers
 	row.Expr = template.Expr
 	row.Params = p
 	row.For = time.Duration(template.For)

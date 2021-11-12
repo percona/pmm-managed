@@ -32,7 +32,6 @@ type Template struct {
 	Name        string            `reform:"name,pk"`
 	Version     uint32            `reform:"version"`
 	Summary     string            `reform:"summary"`
-	Tiers       Tiers             `reform:"tiers"` // TODO remove? It seems it's always empty
 	Expr        string            `reform:"expr"`
 	Params      ParamsDefinitions `reform:"params"`
 	For         time.Duration     `reform:"for"`

@@ -56,9 +56,9 @@ func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel)
 		RuleId:          rule.ID,
 		TemplateName:    rule.TemplateName,
 		Disabled:        rule.Disabled,
-		Summary:         rule.TemplateSummary,
-		Name:            rule.Summary,
-		ExprTemplate:    rule.Expr,
+		Summary:         rule.Summary,
+		Name:            rule.Name,
+		ExprTemplate:    rule.ExprTemplate,
 		DefaultSeverity: managementpb.Severity(rule.DefaultSeverity),
 		Severity:        managementpb.Severity(rule.Severity),
 		DefaultFor:      durationpb.New(rule.DefaultFor),
@@ -66,12 +66,12 @@ func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel)
 		CreatedAt:       timestamppb.New(rule.CreatedAt),
 	}
 
-	if err := r.CreatedAt.CheckValid(); err != nil {
+	var err error
+	if err = r.CreatedAt.CheckValid(); err != nil {
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}
 
-	var err error
-	r.Expr, err = fillExprWithParams(rule.Expr, rule.ParamsValues.AsStringMap())
+	r.Expr, err = fillExprWithParams(rule.ExprTemplate, rule.ParamsValues.AsStringMap())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fill expression template with parameters values")
 	}

@@ -651,17 +651,21 @@ var databaseSchema = [][]string{
 			);`,
 	},
 	51: {
+		`DELETE FROM ia_rules`,
 		`ALTER TABLE ia_rules
 			RENAME COLUMN params TO params_values`,
 		`ALTER TABLE ia_rules
-			ADD COLUMN template_summary VARCHAR NOT NULL,	
-			ADD COLUMN expr	VARCHAR NOT NULL, 
+			ADD COLUMN name VARCHAR NOT NULL,
+			ADD COLUMN expr_template VARCHAR NOT NULL,
 			ADD COLUMN params_definitions JSONB,
 			ADD COLUMN default_for BIGINT,
 			ADD COLUMN default_severity VARCHAR NOT NULL,
 			ADD COLUMN labels TEXT,
-			ADD COLUMN annotations TEXT
-		`,
+			ADD COLUMN annotations TEXT`,
+	},
+	52: {
+		`ALTER TABLE ia_templates
+			DROP COLUMN tiers`,
 	},
 }
 
