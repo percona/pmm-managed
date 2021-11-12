@@ -500,17 +500,17 @@ func convertModelToParamsDefinitions(definitions models.ParamsDefinitions) ([]*i
 			float := definition.FloatParam
 			if float.Default != nil {
 				value.HasDefault = true
-				value.Default = float32(pointer.GetFloat64(float.Default))
+				value.Default = pointer.GetFloat64(float.Default)
 			}
 
 			if float.Min != nil {
 				value.HasMin = true
-				value.Min = float32(pointer.GetFloat64(float.Min))
+				value.Min = pointer.GetFloat64(float.Min)
 			}
 
 			if float.Max != nil {
 				value.HasMax = true
-				value.Max = float32(pointer.GetFloat64(float.Max))
+				value.Max = pointer.GetFloat64(float.Max)
 			}
 			p.Value = &iav1beta1.ParamDefinition_Float{Float: &value}
 		case alert.Bool, alert.String:

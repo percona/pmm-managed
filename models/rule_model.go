@@ -169,7 +169,7 @@ type ParamValue struct {
 	Name        string    `json:"name"`
 	Type        ParamType `json:"type"`
 	BoolValue   bool      `json:"bool"`
-	FloatValue  float32   `json:"float"`
+	FloatValue  float64   `json:"float"`
 	StringValue string    `json:"string"`
 }
 

@@ -667,28 +667,24 @@ func convertParamDefinitions(l *logrus.Entry, params []alert.Parameter) ([]*iav1
 			Type:    convertParamType(p.Type),
 		}
 
+		var err error
 		switch p.Type {
 		case alert.Float:
 			var fp iav1beta1.FloatParamDefinition
 			if p.Value != nil {
-				value, err := p.GetValueForFloat()
+				fp.Default, err = p.GetValueForFloat()
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to get value for float parameter")
 				}
 				fp.HasDefault = true
-				fp.Default = float32(value) // TODO eliminate conversion
 			}
 
 			if len(p.Range) != 0 {
-				min, max, err := p.GetRangeForFloat()
+				fp.Min, fp.Max, err = p.GetRangeForFloat()
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to get range for float parameter")
 				}
-
-				fp.HasMin = true
-				fp.Min = float32(min) // TODO eliminate conversion.,
-				fp.HasMax = true
-				fp.Max = float32(max) // TODO eliminate conversion.,
+				fp.HasMin, fp.HasMax = true, true
 			}
 
 			pd.Value = &iav1beta1.ParamDefinition_Float{Float: &fp}
