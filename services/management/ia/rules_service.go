@@ -270,29 +270,6 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	rules, pageTotals, err := s.getAlertRulesPage(pageIndex, pageSize)
-	if err != nil {
-		return nil, err
-	}
-
-	return &iav1beta1.ListAlertRulesResponse{Rules: rules, Totals: pageTotals}, nil
-}
-
-func (s *RulesService) convertAlertRules(rules []*models.Rule, channels []*models.Channel) ([]*iav1beta1.Rule, error) {
-	res := make([]*iav1beta1.Rule, 0, len(rules))
-	for _, rule := range rules {
-		r, err := convertRule(s.l, rule, channels)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		res = append(res, r)
-	}
-
-	return res, nil
-}
-
-// getAlertRulesPage returns a page with list of available alert rules.
-func (s *RulesService) getAlertRulesPage(pageIndex, pageSize int) ([]*iav1beta1.Rule, *iav1beta1.PageTotals, error) {
 	var rules []*models.Rule
 	var channels []*models.Channel
 	var totalItems int
@@ -323,12 +300,12 @@ func (s *RulesService) getAlertRulesPage(pageIndex, pageSize int) ([]*iav1beta1.
 		return nil
 	})
 	if errTx != nil {
-		return nil, nil, errors.WithStack(errTx)
+		return nil, errors.WithStack(errTx)
 	}
 
 	res, err := s.convertAlertRules(rules, channels)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	totalPages := totalItems / pageSize
@@ -341,7 +318,20 @@ func (s *RulesService) getAlertRulesPage(pageIndex, pageSize int) ([]*iav1beta1.
 		TotalPages: int32(totalPages),
 	}
 
-	return res, totals, nil
+	return &iav1beta1.ListAlertRulesResponse{Rules: res, Totals: totals}, nil
+}
+
+func (s *RulesService) convertAlertRules(rules []*models.Rule, channels []*models.Channel) ([]*iav1beta1.Rule, error) {
+	res := make([]*iav1beta1.Rule, 0, len(rules))
+	for _, rule := range rules {
+		r, err := convertRule(s.l, rule, channels)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 // CreateAlertRule creates Integrated Alerting rule.
