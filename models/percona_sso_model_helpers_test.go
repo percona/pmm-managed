@@ -63,15 +63,24 @@ func TestPerconaSSODetails(t *testing.T) {
 			ClientSecret: expectedSSODetails.ClientSecret,
 			Scope:        expectedSSODetails.Scope,
 		}
-		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
+		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
 		require.NoError(t, err)
 		ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
 		require.NoError(t, err)
+
 		assert.NotNil(t, ssoDetails)
 		assert.Equal(t, expectedSSODetails.ClientID, ssoDetails.ClientID)
 		assert.Equal(t, expectedSSODetails.ClientSecret, ssoDetails.ClientSecret)
 		assert.Equal(t, expectedSSODetails.IssuerURL, ssoDetails.IssuerURL)
 		assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
+
+		assert.NotNil(t, ssoDetails.AccessToken)
+		assert.NotNil(t, ssoDetails.AccessToken.AccessToken)
+		assert.NotNil(t, ssoDetails.AccessToken.ExpiresAt)
+		assert.NotNil(t, ssoDetails.AccessToken.ExpiresIn)
+		assert.NotNil(t, ssoDetails.AccessToken.Scope)
+		assert.NotNil(t, ssoDetails.AccessToken.TokenType)
+
 		err = models.DeletePerconaSSODetails(db.Querier)
 		require.NoError(t, err)
 		ssoDetails, err = models.GetPerconaSSODetails(ctx, db.Querier)
@@ -93,7 +102,7 @@ func TestPerconaSSODetails(t *testing.T) {
 			ClientSecret: "wrongClientSecret",
 			Scope:        "percona",
 		}
-		err := models.InsertPerconaSSODetails(ctx, db.Querier, InsertSSODetails)
+		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
 		require.NoError(t, err)
 		_, err = models.GetPerconaSSODetails(ctx, db.Querier)
 		require.Error(t, err)

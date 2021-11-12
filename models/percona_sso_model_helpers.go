@@ -85,6 +85,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
 		var accessToken *PerconaSSOAccessToken
@@ -127,7 +128,7 @@ func DeletePerconaSSODetails(q *reform.Querier) error {
 }
 
 // InsertPerconaSSODetails inserts a new Percona SSO details.
-func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails *PerconaSSODetailsInsert) error {
+func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetailsInsert) error {
 	details := &PerconaSSODetails{
 		IssuerURL:    ssoDetails.IssuerURL,
 		ClientID:     ssoDetails.ClientID,
@@ -135,8 +136,7 @@ func InsertPerconaSSODetails(ctx context.Context, q *reform.Querier, ssoDetails 
 		Scope:        ssoDetails.Scope,
 	}
 
-	err := q.Save(details)
-	if err != nil {
+	if err := q.Save(details); err != nil {
 		return errors.Wrap(err, "failed to insert Percona SSO Details")
 	}
 
