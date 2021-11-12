@@ -187,9 +187,14 @@ func TestRulesAPI(t *testing.T) {
 			var found bool
 			for _, r := range list.Payload.Rules {
 				if r.RuleID == rule.Payload.RuleID {
+					assert.Equal(t, params.Body.Name, r.Name)
+					assert.Equal(t, "Test summary", r.Summary)
 					assert.Equal(t, templateName, r.TemplateName)
 					assert.False(t, r.Disabled)
+					assert.Equal(t, "300s", r.DefaultFor)
 					assert.Equal(t, "10s", r.For)
+					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.DefaultSeverity))
+					assert.Equal(t, params.Body.Severity, r.Severity)
 					assert.Len(t, r.ParamsValues, 2)
 					assert.Equal(t, params.Body.Params[0].Type, r.ParamsValues[0].Type)
 					assert.Equal(t, params.Body.Params[0].Name, r.ParamsValues[0].Name)
@@ -201,6 +206,8 @@ func TestRulesAPI(t *testing.T) {
 					assert.Equal(t, params.Body.Params[1].Float, r.ParamsValues[1].Float)
 					assert.Equal(t, params.Body.Params[1].Bool, r.ParamsValues[1].Bool)
 					assert.Equal(t, params.Body.Params[1].String, r.ParamsValues[1].String)
+					assert.Equal(t, "[[ .param1 ]] > 2 and 2 < [[ .param2 ]]", r.ExprTemplate)
+					assert.Equal(t, "3.14 > 2 and 2 < 21", r.Expr)
 					found = true
 				}
 			}
@@ -421,6 +428,7 @@ func TestRulesAPI(t *testing.T) {
 		for _, r := range list.Payload.Rules {
 			if r.RuleID == rule.Payload.RuleID {
 				assert.Equal(t, params.Body.TemplateName, r.TemplateName)
+				assert.Equal(t, "Test summary", r.Summary)
 				assert.True(t, r.Disabled)
 				assert.Equal(t, params.Body.Name, r.Name)
 				assert.Len(t, r.ParamsValues, 2)
@@ -434,7 +442,9 @@ func TestRulesAPI(t *testing.T) {
 				assert.Equal(t, params.Body.Params[1].Float, r.ParamsValues[1].Float)
 				assert.Equal(t, params.Body.Params[1].Bool, r.ParamsValues[1].Bool)
 				assert.Equal(t, params.Body.Params[1].String, r.ParamsValues[1].String)
+				assert.Equal(t, "300s", r.DefaultFor)
 				assert.Equal(t, params.Body.For, r.For)
+				assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.DefaultSeverity))
 				assert.Equal(t, params.Body.Severity, r.Severity)
 				assert.Equal(t, params.Body.CustomLabels, r.CustomLabels)
 				assert.Len(t, params.Body.Filters, 1)
@@ -443,7 +453,8 @@ func TestRulesAPI(t *testing.T) {
 				assert.Equal(t, params.Body.Filters[0].Value, r.Filters[0].Value)
 				assert.Len(t, r.Channels, 1)
 				assert.Equal(t, r.Channels[0].ChannelID, channelID)
-				assert.Equal(t, "5 > 2 and 2 < 12", r.Expr)
+				assert.Equal(t, "[[ .param1 ]] > 2 and 2 < [[ .param2 ]]", r.ExprTemplate)
+				assert.Equal(t, "4 > 2 and 2 < 12", r.Expr)
 				found = true
 			}
 		}
@@ -523,11 +534,13 @@ func TestRulesAPI(t *testing.T) {
 }
 
 func deleteRule(t *testing.T, client rules.ClientService, id string) {
+	t.Helper()
+
 	_, err := client.DeleteAlertRule(&rules.DeleteAlertRuleParams{
 		Body:    rules.DeleteAlertRuleBody{RuleID: id},
 		Context: pmmapitests.Context,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func createAlertRuleParams(templateName, channelID string, filter *rules.FiltersItems0) *rules.CreateAlertRuleParams {
@@ -540,7 +553,7 @@ func createAlertRuleParams(templateName, channelID string, filter *rules.Filters
 				{
 					Name:  "param1",
 					Type:  pointer.ToString("FLOAT"),
-					Float: 3.14,
+					Float: 4,
 				},
 				{
 					Name:  "param2",
@@ -567,11 +580,13 @@ func createAlertRuleParams(templateName, channelID string, filter *rules.Filters
 }
 
 func createTemplate(t *testing.T) string {
+	t.Helper()
+
 	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
 	require.NoError(t, err)
 
 	templateName := gofakeit.UUID()
-	expression := "5 > 2 and 2 < [[ .param2 ]]"
+	expression := "'[[ .param1 ]] > 2 and 2 < [[ .param2 ]]'"
 	_, err = client.Default.Templates.CreateTemplate(&templates.CreateTemplateParams{
 		Body: templates.CreateTemplateBody{
 			Yaml: fmt.Sprintf(string(b), templateName, expression, "%", "s"),
@@ -584,6 +599,8 @@ func createTemplate(t *testing.T) string {
 }
 
 func createChannel(t *testing.T) (string, channels.AddChannelBody) {
+	t.Helper()
+
 	body := channels.AddChannelBody{
 		Summary:  gofakeit.Quote(),
 		Disabled: gofakeit.Bool(),

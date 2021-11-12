@@ -403,7 +403,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 // UpdateAlertRule updates Integrated Alerting rule.
 func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.UpdateAlertRuleRequest) (*iav1beta1.UpdateAlertRuleResponse, error) {
 	params := &models.ChangeRuleParams{
-		Name:         req.Summary,
+		Name:         req.Name,
 		Disabled:     req.Disabled,
 		For:          req.For.AsDuration(),
 		Severity:     models.Severity(req.Severity),
