@@ -57,13 +57,13 @@ func TestPerconaSSODetails(t *testing.T) {
 			ClientSecret: clientSecret,
 			Scope:        "percona",
 		}
-		InsertSSODetails := &models.PerconaSSODetailsInsert{
+		insertSSODetails := &models.PerconaSSODetailsInsert{
 			IssuerURL:    expectedSSODetails.IssuerURL,
 			ClientID:     expectedSSODetails.ClientID,
 			ClientSecret: expectedSSODetails.ClientSecret,
 			Scope:        expectedSSODetails.Scope,
 		}
-		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
+		err := models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
 		require.NoError(t, err)
 		ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
 		require.NoError(t, err)

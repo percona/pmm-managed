@@ -85,7 +85,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint:errcheck
 
 	if res.StatusCode == http.StatusOK {
 		var accessToken *PerconaSSOAccessToken
