@@ -187,6 +187,7 @@ func TestRulesAPI(t *testing.T) {
 			var found bool
 			for _, r := range list.Payload.Rules {
 				if r.RuleID == rule.Payload.RuleID {
+					assert.Equal(t, templateName, r.TemplateName)
 					assert.False(t, r.Disabled)
 					assert.Equal(t, "10s", r.For)
 					assert.Len(t, r.ParamsValues, 2)
@@ -419,6 +420,7 @@ func TestRulesAPI(t *testing.T) {
 		var found bool
 		for _, r := range list.Payload.Rules {
 			if r.RuleID == rule.Payload.RuleID {
+				assert.Equal(t, params.Body.TemplateName, r.TemplateName)
 				assert.True(t, r.Disabled)
 				assert.Equal(t, params.Body.Name, r.Name)
 				assert.Len(t, r.ParamsValues, 2)

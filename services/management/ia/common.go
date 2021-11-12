@@ -54,6 +54,7 @@ func convertParamUnit(u alert.Unit) iav1beta1.ParamUnit {
 func convertRule(l *logrus.Entry, rule *models.Rule, channels []*models.Channel) (*iav1beta1.Rule, error) {
 	r := &iav1beta1.Rule{
 		RuleId:          rule.ID,
+		TemplateName:    rule.TemplateName,
 		Disabled:        rule.Disabled,
 		Summary:         rule.TemplateSummary,
 		Name:            rule.Summary,
