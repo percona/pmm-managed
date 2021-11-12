@@ -633,6 +633,24 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	50: {
+		`INSERT INTO job_logs(
+			job_id,
+			chunk_id,
+			data,
+			last_chunk
+		)
+        SELECT
+            id AS job_id,
+            0 AS chunk_id,
+            '' AS data,
+            TRUE AS last_chunk
+        FROM jobs j
+			WHERE type = 'mongodb_backup' AND NOT EXISTS (
+				SELECT FROM job_logs
+				WHERE job_id = j.id
+			);`,
+	},
+	51: {
 		`ALTER TABLE services
 			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
 	},
