@@ -17,6 +17,6 @@ templates:
     for: 5m
     severity: warning
     annotations:
-      summary: Memory available on a node ({{ $labels.node_name }}) less than a threshold
+      summary: Lack of available memory on a Node ({{ $labels.node_name }})
       description: |-
         {{ $labels.node_name }} memory is filling up (less than [[ .threshold ]]% left).
