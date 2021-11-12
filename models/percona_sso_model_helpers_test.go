@@ -41,6 +41,7 @@ func setupDB(t *testing.T) (*reform.DB, func()) {
 
 func TestPerconaSSODetails(t *testing.T) {
 	ctx := context.Background()
+	issuerURL := "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
 
 	t.Run("CorrectCredentials", func(t *testing.T) {
 		clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
@@ -52,7 +53,7 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		expectedSSODetails := &models.PerconaSSODetails{
-			IssuerURL:    "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope=",
+			IssuerURL:    issuerURL,
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			Scope:        "percona",
@@ -97,7 +98,7 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		InsertSSODetails := &models.PerconaSSODetailsInsert{
-			IssuerURL:    "https://id-dev.percona.com",
+			IssuerURL:    issuerURL,
 			ClientID:     "wrongClientID",
 			ClientSecret: "wrongClientSecret",
 			Scope:        "percona",
