@@ -120,387 +120,396 @@ func assertTemplate(t *testing.T, expectedTemplate alert.Template, listTemplates
 
 	assert.NotEmpty(t, tmpl.CreatedAt)
 }
-func TestAddTemplate(t *testing.T) {
+
+func TestTemplatesAPI(t *testing.T) {
 	client := templatesClient.Default.Templates
 
-	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
+	templateData, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
 	require.NoError(t, err)
 
-	t.Run("normal", func(t *testing.T) {
-		name := gofakeit.UUID()
-		expr := gofakeit.UUID()
-		alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(b), name, expr, "%", "s"))
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: yml,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, client, name)
-
-		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body: templates.ListTemplatesBody{
-				Reload: true,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
-	})
-
-	t.Run("duplicate", func(t *testing.T) {
-		name := gofakeit.UUID()
-		yaml := fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%")
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: yaml,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, client, name)
-
-		_, err = client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: yaml,
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, fmt.Sprintf("Template with name \"%s\" already exists.", name))
-	})
-
-	t.Run("invalid yaml", func(t *testing.T) {
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: "not a yaml",
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
-	})
-
-	t.Run("invalid template", func(t *testing.T) {
-		b, err := ioutil.ReadFile("../../testdata/ia/invalid-template.yaml")
-		require.NoError(t, err)
-		name := gofakeit.UUID()
-		_, err = client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
-			},
-			Context: pmmapitests.Context,
-		})
-
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
-	})
-}
-
-func TestChangeTemplate(t *testing.T) {
-	client := templatesClient.Default.Templates
-
-	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
+	invalidTemplateData, err := ioutil.ReadFile("../../testdata/ia/invalid-template.yaml")
 	require.NoError(t, err)
 
-	t.Run("normal", func(t *testing.T) {
-		name := gofakeit.UUID()
-		expr := gofakeit.UUID()
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, expr, "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, client, name)
+	t.Run("add", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			t.Parallel()
 
-		newExpr := gofakeit.UUID()
-		alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(b), name, newExpr, "s", "%"))
-		_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
-			Body: templates.UpdateTemplateBody{
-				Name: name,
-				Yaml: yml,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body: templates.ListTemplatesBody{
-				Reload: true,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
-	})
-
-	t.Run("unknown template", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
-			Body: templates.UpdateTemplateBody{
-				Name: name,
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf("Template with name \"%s\" not found.", name))
-	})
-
-	t.Run("invalid yaml", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, client, name)
-
-		_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
-			Body: templates.UpdateTemplateBody{
-				Name: name,
-				Yaml: "not a yaml",
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
-	})
-
-	t.Run("invalid template", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err = client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, client, name)
-
-		b, err = ioutil.ReadFile("../../testdata/ia/invalid-template.yaml")
-		_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
-			Body: templates.UpdateTemplateBody{
-				Name: name,
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
-	})
-}
-
-func TestDeleteTemplate(t *testing.T) {
-	client := templatesClient.Default.Templates
-
-	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
-	require.NoError(t, err)
-
-	t.Run("normal", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
-			Body: templates.DeleteTemplateBody{
-				Name: name,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body: templates.ListTemplatesBody{
-				Reload: true,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		for _, template := range resp.Payload.Templates {
-			assert.NotEqual(t, name, template.Name)
-		}
-	})
-
-	t.Run("template in use", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
-			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		defer deleteTemplate(t, templatesClient.Default.Templates, name)
-
-		channelID, _ := createChannel(t)
-		defer deleteChannel(t, templatesClient.Default.Channels, channelID)
-
-		params := createAlertRuleParams(name, channelID, &rules.FiltersItems0{
-			Type:  pointer.ToString("EQUAL"),
-			Key:   "threshold",
-			Value: "12",
-		})
-
-		rule, err := templatesClient.Default.Rules.CreateAlertRule(params)
-		require.NoError(t, err)
-		defer deleteRule(t, templatesClient.Default.Rules, rule.Payload.RuleID)
-
-		_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
-			Body: templates.DeleteTemplateBody{
-				Name: name,
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, "Test summary")
-
-		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body: templates.ListTemplatesBody{
-				Reload: true,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		var found bool
-		for _, template := range resp.Payload.Templates {
-			if name == template.Name {
-				found = true
-			}
-		}
-		assert.Truef(t, found, "Template with id %s not found", name)
-	})
-
-	t.Run("unknown template", func(t *testing.T) {
-		name := gofakeit.UUID()
-		_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
-			Body: templates.DeleteTemplateBody{
-				Name: name,
-			},
-			Context: pmmapitests.Context,
-		})
-		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf("Template with name \"%s\" not found.", name))
-	})
-}
-
-func TestListTemplate(t *testing.T) {
-	client := templatesClient.Default.Templates
-
-	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
-	require.NoError(t, err)
-
-	name := gofakeit.UUID()
-	expr := gofakeit.UUID()
-	alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(b), name, expr, "%", "s"))
-	_, err = client.CreateTemplate(&templates.CreateTemplateParams{
-		Body: templates.CreateTemplateBody{
-			Yaml: yml,
-		},
-		Context: pmmapitests.Context,
-	})
-	require.NoError(t, err)
-	defer deleteTemplate(t, client, name)
-
-	t.Run("without pagination", func(t *testing.T) {
-		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body: templates.ListTemplatesBody{
-				Reload: true,
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
-	})
-
-	t.Run("with pagination", func(t *testing.T) {
-		const templatesCount = 5
-
-		templateNames := make(map[string]struct{})
-
-		for i := 0; i < templatesCount; i++ {
 			name := gofakeit.UUID()
 			expr := gofakeit.UUID()
-			_, yml := formatTemplateYaml(t, fmt.Sprintf(string(b), name, expr, "%", "s"))
+			alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, expr, "%", "s"))
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: yml,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
+
+			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body: templates.ListTemplatesBody{
+					Reload: true,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
+		})
+
+		t.Run("duplicate", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			yaml := fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%")
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: yaml,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
+
+			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: yaml,
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, fmt.Sprintf("Template with name \"%s\" already exists.", name))
+		})
+
+		t.Run("invalid yaml", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: "not a yaml",
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
+		})
+
+		t.Run("invalid template", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(invalidTemplateData), name, gofakeit.UUID()),
+				},
+				Context: pmmapitests.Context,
+			})
+
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
+		})
+	})
+
+	t.Run("change", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			expr := gofakeit.UUID()
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(templateData), name, expr, "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
+
+			newExpr := gofakeit.UUID()
+			alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, newExpr, "s", "%"))
+			_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
+				Body: templates.UpdateTemplateBody{
+					Name: name,
+					Yaml: yml,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body: templates.ListTemplatesBody{
+					Reload: true,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
+		})
+
+		t.Run("unknown template", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
+				Body: templates.UpdateTemplateBody{
+					Name: name,
+					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf("Template with name \"%s\" not found.", name))
+		})
+
+		t.Run("invalid yaml", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
+
+			_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
+				Body: templates.UpdateTemplateBody{
+					Name: name,
+					Yaml: "not a yaml",
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
+		})
+
+		t.Run("invalid template", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
+
+			_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
+				Body: templates.UpdateTemplateBody{
+					Name: name,
+					Yaml: fmt.Sprintf(string(invalidTemplateData), name, gofakeit.UUID()),
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Failed to parse rule template.")
+		})
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
+				Body: templates.DeleteTemplateBody{
+					Name: name,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body: templates.ListTemplatesBody{
+					Reload: true,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			for _, template := range resp.Payload.Templates {
+				assert.NotEqual(t, name, template.Name)
+			}
+		})
+
+		t.Run("template in use", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+				Body: templates.CreateTemplateBody{
+					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, templatesClient.Default.Templates, name)
+
+			channelID, _ := createChannel(t)
+			defer deleteChannel(t, templatesClient.Default.Channels, channelID)
+
+			params := createAlertRuleParams(name, channelID, &rules.FiltersItems0{
+				Type:  pointer.ToString("EQUAL"),
+				Key:   "threshold",
+				Value: "12",
+			})
+
+			rule, err := templatesClient.Default.Rules.CreateAlertRule(params)
+			require.NoError(t, err)
+			defer deleteRule(t, templatesClient.Default.Rules, rule.Payload.RuleID)
+
+			_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
+				Body: templates.DeleteTemplateBody{
+					Name: name,
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, "Test summary")
+
+			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body: templates.ListTemplatesBody{
+					Reload: true,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			var found bool
+			for _, template := range resp.Payload.Templates {
+				if name == template.Name {
+					found = true
+				}
+			}
+			assert.Truef(t, found, "Template with id %s not found", name)
+		})
+
+		t.Run("unknown template", func(t *testing.T) {
+			t.Parallel()
+
+			name := gofakeit.UUID()
+			_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
+				Body: templates.DeleteTemplateBody{
+					Name: name,
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf("Template with name \"%s\" not found.", name))
+		})
+	})
+
+	t.Run("list", func(t *testing.T) {
+		t.Run("without pagination", func(t *testing.T) {
+			name := gofakeit.UUID()
+			expr := gofakeit.UUID()
+			alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, expr, "%", "s"))
 			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
 				Body: templates.CreateTemplateBody{
 					Yaml: yml,
 				},
 				Context: pmmapitests.Context,
 			})
+			require.NoError(t, err)
+			defer deleteTemplate(t, client, name)
 
-			templateNames[name] = struct{}{}
-		}
-		defer func() {
-			for name := range templateNames {
-				deleteTemplate(t, client, name)
-			}
-		}()
-
-		// list rules, so they are all on the first page
-		body := templates.ListTemplatesBody{
-			PageParams: &templates.ListTemplatesParamsBodyPageParams{
-				PageSize: 20,
-				Index:    0,
-			},
-		}
-		listAllTemplates, err := client.ListTemplates(&templates.ListTemplatesParams{
-			Body:    body,
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		assert.GreaterOrEqual(t, len(listAllTemplates.Payload.Templates), templatesCount)
-		assert.Equal(t, int32(len(listAllTemplates.Payload.Templates)), listAllTemplates.Payload.Totals.TotalItems)
-		assert.Equal(t, int32(1), listAllTemplates.Payload.Totals.TotalPages)
-
-		assertFindTemplate := func(list []*templates.TemplatesItems0, name string) func() bool {
-			return func() bool {
-				for _, tmpl := range list {
-					if tmpl.Name == name {
-						return true
-					}
-				}
-				return false
-			}
-		}
-
-		for name := range templateNames {
-			assert.Conditionf(t, assertFindTemplate(listAllTemplates.Payload.Templates, name), "template %s not found", name)
-		}
-
-		// paginate page over page with page size 1 and check the order - it should be the same as in listAllTemplates.
-		// last iteration checks that there is no elements for not existing page.
-		for pageIndex := 0; pageIndex <= len(listAllTemplates.Payload.Templates); pageIndex++ {
-			body := templates.ListTemplatesBody{
-				PageParams: &templates.ListTemplatesParamsBodyPageParams{
-					PageSize: 1,
-					Index:    int32(pageIndex),
+			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body: templates.ListTemplatesBody{
+					Reload: true,
 				},
-			}
-			listOneTemplate, err := client.ListTemplates(&templates.ListTemplatesParams{
-				Body: body, Context: pmmapitests.Context,
+				Context: pmmapitests.Context,
 			})
 			require.NoError(t, err)
 
-			assert.Equal(t, listAllTemplates.Payload.Totals.TotalItems, listOneTemplate.Payload.Totals.TotalItems)
-			assert.GreaterOrEqual(t, listOneTemplate.Payload.Totals.TotalPages, int32(templatesCount))
+			assertTemplate(t, alertTemplates[0], resp.Payload.Templates)
+		})
 
-			if pageIndex != len(listAllTemplates.Payload.Templates) {
-				require.Len(t, listOneTemplate.Payload.Templates, 1)
-				assert.Equal(t, listAllTemplates.Payload.Templates[pageIndex].Name, listOneTemplate.Payload.Templates[0].Name)
-			} else {
-				assert.Len(t, listOneTemplate.Payload.Templates, 0)
+		t.Run("with pagination", func(t *testing.T) {
+			const templatesCount = 5
+
+			templateNames := make(map[string]struct{})
+
+			for i := 0; i < templatesCount; i++ {
+				name := gofakeit.UUID()
+				expr := gofakeit.UUID()
+				_, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, expr, "%", "s"))
+				_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+					Body: templates.CreateTemplateBody{
+						Yaml: yml,
+					},
+					Context: pmmapitests.Context,
+				})
+
+				templateNames[name] = struct{}{}
 			}
-		}
+			defer func() {
+				for name := range templateNames {
+					deleteTemplate(t, client, name)
+				}
+			}()
 
+			// list rules, so they are all on the first page
+			body := templates.ListTemplatesBody{
+				PageParams: &templates.ListTemplatesParamsBodyPageParams{
+					PageSize: 20,
+					Index:    0,
+				},
+			}
+			listAllTemplates, err := client.ListTemplates(&templates.ListTemplatesParams{
+				Body:    body,
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			assert.GreaterOrEqual(t, len(listAllTemplates.Payload.Templates), templatesCount)
+			assert.Equal(t, int32(len(listAllTemplates.Payload.Templates)), listAllTemplates.Payload.Totals.TotalItems)
+			assert.Equal(t, int32(1), listAllTemplates.Payload.Totals.TotalPages)
+
+			assertFindTemplate := func(list []*templates.TemplatesItems0, name string) func() bool {
+				return func() bool {
+					for _, tmpl := range list {
+						if tmpl.Name == name {
+							return true
+						}
+					}
+					return false
+				}
+			}
+
+			for name := range templateNames {
+				assert.Conditionf(t, assertFindTemplate(listAllTemplates.Payload.Templates, name), "template %s not found", name)
+			}
+
+			// paginate page over page with page size 1 and check the order - it should be the same as in listAllTemplates.
+			// last iteration checks that there is no elements for not existing page.
+			for pageIndex := 0; pageIndex <= len(listAllTemplates.Payload.Templates); pageIndex++ {
+				body := templates.ListTemplatesBody{
+					PageParams: &templates.ListTemplatesParamsBodyPageParams{
+						PageSize: 1,
+						Index:    int32(pageIndex),
+					},
+				}
+				listOneTemplate, err := client.ListTemplates(&templates.ListTemplatesParams{
+					Body: body, Context: pmmapitests.Context,
+				})
+				require.NoError(t, err)
+
+				assert.Equal(t, listAllTemplates.Payload.Totals.TotalItems, listOneTemplate.Payload.Totals.TotalItems)
+				assert.GreaterOrEqual(t, listOneTemplate.Payload.Totals.TotalPages, int32(templatesCount))
+
+				if pageIndex != len(listAllTemplates.Payload.Templates) {
+					require.Len(t, listOneTemplate.Payload.Templates, 1)
+					assert.Equal(t, listAllTemplates.Payload.Templates[pageIndex].Name, listOneTemplate.Payload.Templates[0].Name)
+				} else {
+					assert.Len(t, listOneTemplate.Payload.Templates, 0)
+				}
+			}
+		})
 	})
 }
 
