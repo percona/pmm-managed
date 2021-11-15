@@ -169,7 +169,7 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, err
 	}
 
-	if pxcOperatorVersion != nil && (clusterInfo.Operators == nil || clusterInfo.Operators.XtradbOperatorVersion == "") {
+	if pxcOperatorVersion != nil && (clusterInfo.Operators == nil || clusterInfo.Operators.PxcOperatorVersion == "") {
 		_, err = k.dbaasClient.InstallPXCOperator(ctx, &dbaascontrollerv1beta1.InstallPXCOperatorRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: req.KubeAuth.Kubeconfig,
