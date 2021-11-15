@@ -376,7 +376,7 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 		return nil, err
 	}
 
-	bodyBytes, err := saasdial.Dial(ctx, s.host, ssoDetails.AccessToken.AccessToken)
+	bodyBytes, err := saasdial.Dial(ctx, s.host, ssoDetails.AccessToken.AccessToken, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

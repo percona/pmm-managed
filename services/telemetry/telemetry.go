@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -345,7 +346,12 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		return err
 	}
 
-	_, err = saasdial.Dial(ctx, s.v2Host, ssoDetails.AccessToken.AccessToken)
+	reqByte, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	_, err = saasdial.Dial(ctx, s.v2Host, ssoDetails.AccessToken.AccessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

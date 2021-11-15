@@ -20,6 +20,7 @@ package saasdial
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -31,7 +32,7 @@ import (
 const dialTimeout = 10 * time.Second
 
 // Dial creates http/https POST request to Percona Platform
-func Dial(ctx context.Context, endpoint, accessToken string) ([]byte, error) {
+func Dial(ctx context.Context, endpoint, accessToken string, body io.Reader) ([]byte, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -43,7 +44,7 @@ func Dial(ctx context.Context, endpoint, accessToken string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, body)
 	if err != nil {
 		return nil, err
 	}
