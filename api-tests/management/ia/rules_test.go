@@ -53,13 +53,8 @@ func TestRulesAPI(t *testing.T) {
 	channelID, _ := createChannel(t)
 	defer deleteChannel(t, channelsClient, channelID)
 
-	newChannelID, _ := createChannel(t)
-	defer deleteChannel(t, channelsClient, newChannelID)
-
 	t.Run("add", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
@@ -69,8 +64,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("without channels and filters", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams(templateName, "", nil)
 			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
@@ -80,8 +73,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("builtin_template", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams("pmm_mongodb_restarted", channelID, dummyFilter)
 			params.Body.Params = []*rules.ParamsItems0{{
 				Name:  "threshold",
@@ -96,8 +87,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("use default value for parameter", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
@@ -107,8 +96,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("unknown template", func(t *testing.T) {
-			t.Parallel()
-
 			templateName := gofakeit.UUID()
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := rulesClient.CreateAlertRule(params)
@@ -116,8 +103,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
-			t.Parallel()
-
 			channelID := gofakeit.UUID()
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := rulesClient.CreateAlertRule(params)
@@ -125,8 +110,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("wrong parameter", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			params.Body.Params = append(
 				params.Body.Params,
@@ -140,8 +123,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("wrong parameter type", func(t *testing.T) {
-			t.Parallel()
-
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			params.Body.Params = []*rules.ParamsItems0{
 				{
@@ -160,9 +141,10 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("update", func(t *testing.T) {
-		t.Run("normal", func(t *testing.T) {
-			t.Parallel()
+		newChannelID, _ := createChannel(t)
+		defer deleteChannel(t, channelsClient, newChannelID)
 
+		t.Run("normal", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
@@ -236,8 +218,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
-			t.Parallel()
-
 			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
@@ -276,8 +256,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("wrong parameter", func(t *testing.T) {
-			t.Parallel()
-
 			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
@@ -313,8 +291,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("missing parameters", func(t *testing.T) {
-			t.Parallel()
-
 			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
@@ -342,8 +318,6 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("wrong parameter type", func(t *testing.T) {
-			t.Parallel()
-
 			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
@@ -382,84 +356,9 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("toggle", func(t *testing.T) {
-		cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
-		rule, err := rulesClient.CreateAlertRule(cParams)
-		require.NoError(t, err)
-		defer deleteRule(t, rulesClient, rule.Payload.RuleID)
-
-		list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
-		require.NoError(t, err)
-
-		var found bool
-		for _, r := range list.Payload.Rules {
-			if r.RuleID == rule.Payload.RuleID {
-				assert.True(t, r.Disabled)
-				assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
-				found = true
-			}
-		}
-		assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
-
-		_, err = rulesClient.ToggleAlertRule(&rules.ToggleAlertRuleParams{
-			Body: rules.ToggleAlertRuleBody{
-				RuleID:   rule.Payload.RuleID,
-				Disabled: pointer.ToString(rules.ToggleAlertRuleBodyDisabledFALSE),
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-
-		list, err = rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
-		require.NoError(t, err)
-
-		found = false
-		for _, r := range list.Payload.Rules {
-			if r.RuleID == rule.Payload.RuleID {
-				assert.False(t, r.Disabled)
-				assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
-				found = true
-			}
-		}
-		assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
-	})
-
-	t.Run("delete", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			t.Parallel()
-
-			params := createAlertRuleParams(templateName, channelID, dummyFilter)
-			rule, err := rulesClient.CreateAlertRule(params)
-			require.NoError(t, err)
-
-			_, err = rulesClient.DeleteAlertRule(&rules.DeleteAlertRuleParams{
-				Body:    rules.DeleteAlertRuleBody{RuleID: rule.Payload.RuleID},
-				Context: pmmapitests.Context,
-			})
-			require.NoError(t, err)
-
-			list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
-			require.NoError(t, err)
-
-			for _, r := range list.Payload.Rules {
-				assert.NotEqual(t, rule.Payload.RuleID, r.RuleID)
-			}
-		})
-
-		t.Run("missing rule", func(t *testing.T) {
-			t.Parallel()
-			ruleID := gofakeit.UUID()
-			_, err := rulesClient.DeleteAlertRule(&rules.DeleteAlertRuleParams{
-				Body:    rules.DeleteAlertRuleBody{RuleID: ruleID},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Rule with ID %q not found.", ruleID)
-		})
-	})
-
-	t.Run("list without pagination", func(t *testing.T) {
-		t.Run("without pagination", func(t *testing.T) {
-			params := createAlertRuleParams(templateName, channelID, dummyFilter)
-			rule, err := rulesClient.CreateAlertRule(params)
+			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
@@ -469,112 +368,173 @@ func TestRulesAPI(t *testing.T) {
 			var found bool
 			for _, r := range list.Payload.Rules {
 				if r.RuleID == rule.Payload.RuleID {
-					assert.Equal(t, params.Body.TemplateName, r.TemplateName)
-					assert.Equal(t, "Test summary", r.Summary)
 					assert.True(t, r.Disabled)
-					assert.Equal(t, params.Body.Name, r.Name)
-					assert.Len(t, r.ParamsValues, 2)
-					assert.Equal(t, params.Body.Params[0].Type, r.ParamsValues[0].Type)
-					assert.Equal(t, params.Body.Params[0].Name, r.ParamsValues[0].Name)
-					assert.Equal(t, params.Body.Params[0].Float, r.ParamsValues[0].Float)
-					assert.Equal(t, params.Body.Params[0].Bool, r.ParamsValues[0].Bool)
-					assert.Equal(t, params.Body.Params[0].String, r.ParamsValues[0].String)
-					assert.Equal(t, params.Body.Params[1].Type, r.ParamsValues[1].Type)
-					assert.Equal(t, params.Body.Params[1].Name, r.ParamsValues[1].Name)
-					assert.Equal(t, params.Body.Params[1].Float, r.ParamsValues[1].Float)
-					assert.Equal(t, params.Body.Params[1].Bool, r.ParamsValues[1].Bool)
-					assert.Equal(t, params.Body.Params[1].String, r.ParamsValues[1].String)
-					assert.Equal(t, "300s", r.DefaultFor)
-					assert.Equal(t, params.Body.For, r.For)
-					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.DefaultSeverity))
-					assert.Equal(t, params.Body.Severity, r.Severity)
-					assert.Equal(t, params.Body.CustomLabels, r.CustomLabels)
-					assert.Equal(t, map[string]string{"foo": "bar"}, r.Labels)
-					assert.Equal(t, map[string]string{"description": "test description", "summary": "test summary"}, r.Annotations)
-					assert.Len(t, params.Body.Filters, 1)
-					assert.Equal(t, params.Body.Filters[0].Type, r.Filters[0].Type)
-					assert.Equal(t, params.Body.Filters[0].Key, r.Filters[0].Key)
-					assert.Equal(t, params.Body.Filters[0].Value, r.Filters[0].Value)
-					assert.Len(t, r.Channels, 1)
-					assert.Equal(t, r.Channels[0].ChannelID, channelID)
-					assert.Equal(t, "[[ .param1 ]] > 2 and 2 < [[ .param2 ]]", r.ExprTemplate)
-					assert.Equal(t, "4 > 2 and 2 < 12", r.Expr)
+					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
+					found = true
+				}
+			}
+			assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
+
+			_, err = rulesClient.ToggleAlertRule(&rules.ToggleAlertRuleParams{
+				Body: rules.ToggleAlertRuleBody{
+					RuleID:   rule.Payload.RuleID,
+					Disabled: pointer.ToString(rules.ToggleAlertRuleBodyDisabledFALSE),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			list, err = rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+
+			found = false
+			for _, r := range list.Payload.Rules {
+				if r.RuleID == rule.Payload.RuleID {
+					assert.False(t, r.Disabled)
+					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
 					found = true
 				}
 			}
 			assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
 		})
+	})
 
-		t.Run("with pagination", func(t *testing.T) {
-			const rulesCount = 5
+	t.Run("delete", func(t *testing.T) {
+		params := createAlertRuleParams(templateName, channelID, dummyFilter)
+		rule, err := rulesClient.CreateAlertRule(params)
+		require.NoError(t, err)
 
-			ruleIDs := make(map[string]struct{})
+		_, err = rulesClient.DeleteAlertRule(&rules.DeleteAlertRuleParams{
+			Body:    rules.DeleteAlertRuleBody{RuleID: rule.Payload.RuleID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
 
-			for i := 0; i < rulesCount; i++ {
-				params := createAlertRuleParams(templateName, channelID, dummyFilter)
-				rule, err := rulesClient.CreateAlertRule(params)
-				require.NoError(t, err)
+		list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+		require.NoError(t, err)
 
-				ruleIDs[rule.Payload.RuleID] = struct{}{}
+		for _, r := range list.Payload.Rules {
+			assert.NotEqual(t, rule.Payload.RuleID, r.RuleID)
+		}
+	})
+
+	t.Run("list without pagination", func(t *testing.T) {
+		params := createAlertRuleParams(templateName, channelID, dummyFilter)
+		rule, err := rulesClient.CreateAlertRule(params)
+		require.NoError(t, err)
+		defer deleteRule(t, rulesClient, rule.Payload.RuleID)
+
+		list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+		require.NoError(t, err)
+
+		var found bool
+		for _, r := range list.Payload.Rules {
+			if r.RuleID == rule.Payload.RuleID {
+				assert.Equal(t, params.Body.TemplateName, r.TemplateName)
+				assert.Equal(t, "Test summary", r.Summary)
+				assert.True(t, r.Disabled)
+				assert.Equal(t, params.Body.Name, r.Name)
+				assert.Len(t, r.ParamsValues, 2)
+				assert.Equal(t, params.Body.Params[0].Type, r.ParamsValues[0].Type)
+				assert.Equal(t, params.Body.Params[0].Name, r.ParamsValues[0].Name)
+				assert.Equal(t, params.Body.Params[0].Float, r.ParamsValues[0].Float)
+				assert.Equal(t, params.Body.Params[0].Bool, r.ParamsValues[0].Bool)
+				assert.Equal(t, params.Body.Params[0].String, r.ParamsValues[0].String)
+				assert.Equal(t, params.Body.Params[1].Type, r.ParamsValues[1].Type)
+				assert.Equal(t, params.Body.Params[1].Name, r.ParamsValues[1].Name)
+				assert.Equal(t, params.Body.Params[1].Float, r.ParamsValues[1].Float)
+				assert.Equal(t, params.Body.Params[1].Bool, r.ParamsValues[1].Bool)
+				assert.Equal(t, params.Body.Params[1].String, r.ParamsValues[1].String)
+				assert.Equal(t, "300s", r.DefaultFor)
+				assert.Equal(t, params.Body.For, r.For)
+				assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.DefaultSeverity))
+				assert.Equal(t, params.Body.Severity, r.Severity)
+				assert.Equal(t, params.Body.CustomLabels, r.CustomLabels)
+				assert.Equal(t, map[string]string{"foo": "bar"}, r.Labels)
+				assert.Equal(t, map[string]string{"description": "test description", "summary": "test summary"}, r.Annotations)
+				assert.Len(t, params.Body.Filters, 1)
+				assert.Equal(t, params.Body.Filters[0].Type, r.Filters[0].Type)
+				assert.Equal(t, params.Body.Filters[0].Key, r.Filters[0].Key)
+				assert.Equal(t, params.Body.Filters[0].Value, r.Filters[0].Value)
+				assert.Len(t, r.Channels, 1)
+				assert.Equal(t, r.Channels[0].ChannelID, channelID)
+				assert.Equal(t, "[[ .param1 ]] > 2 and 2 < [[ .param2 ]]", r.ExprTemplate)
+				assert.Equal(t, "4 > 2 and 2 < 12", r.Expr)
+				found = true
 			}
-			defer func() {
-				for id := range ruleIDs {
-					deleteRule(t, rulesClient, id)
-				}
-			}()
+		}
+		assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
+	})
 
-			// list rules, so they are all on the first page
-			body := rules.ListAlertRulesBody{
-				PageParams: &rules.ListAlertRulesParamsBodyPageParams{
-					PageSize: 20,
-					Index:    0,
-				},
-			}
-			list1, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+	t.Run("list pagination", func(t *testing.T) {
+		const rulesCount = 5
+
+		ruleIDs := make(map[string]struct{})
+
+		for i := 0; i < rulesCount; i++ {
+			params := createAlertRuleParams(templateName, channelID, dummyFilter)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
 
-			lp1 := list1.Payload
-			// some tests didn't remove rules, so expect more elements than created in current test
-			assert.GreaterOrEqual(t, len(lp1.Rules), rulesCount)
-			assert.Equal(t, int32(len(lp1.Rules)), lp1.Totals.TotalItems)
-			assert.Equal(t, int32(1), lp1.Totals.TotalPages)
+			ruleIDs[rule.Payload.RuleID] = struct{}{}
+		}
+		defer func() {
 			for id := range ruleIDs {
-				var found bool
-				for _, r := range list1.Payload.Rules {
-					if r.RuleID == id {
-						found = true
+				deleteRule(t, rulesClient, id)
+			}
+		}()
 
-						break
-					}
+		// list rules, so they are all on the first page
+		body := rules.ListAlertRulesBody{
+			PageParams: &rules.ListAlertRulesParamsBodyPageParams{
+				PageSize: 20,
+				Index:    0,
+			},
+		}
+		list1, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+		require.NoError(t, err)
+
+		lp1 := list1.Payload
+		// some tests didn't remove rules, so expect more elements than created in current test
+		assert.GreaterOrEqual(t, len(lp1.Rules), rulesCount)
+		assert.Equal(t, int32(len(lp1.Rules)), lp1.Totals.TotalItems)
+		assert.Equal(t, int32(1), lp1.Totals.TotalPages)
+		for id := range ruleIDs {
+			var found bool
+			for _, r := range list1.Payload.Rules {
+				if r.RuleID == id {
+					found = true
+
+					break
 				}
-
-				assert.Truef(t, found, "rule (%s) not found", id)
 			}
 
-			// paginate page over page with page size 1 and check the order - it should be the same as in list1.
-			// last iteration checks that there is no elements for not existing page.
-			for pageIndex := 0; pageIndex <= len(lp1.Rules); pageIndex++ {
-				body := rules.ListAlertRulesBody{
-					PageParams: &rules.ListAlertRulesParamsBodyPageParams{
-						PageSize: 1,
-						Index:    int32(pageIndex),
-					},
-				}
-				list2, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
-				require.NoError(t, err)
+			assert.Truef(t, found, "rule (%s) not found", id)
+		}
 
-				lp2 := list2.Payload
-				assert.Equal(t, lp1.Totals.TotalItems, lp2.Totals.TotalItems)
-				assert.GreaterOrEqual(t, lp2.Totals.TotalPages, int32(rulesCount))
-
-				if pageIndex != len(lp1.Rules) {
-					require.Len(t, lp2.Rules, 1)
-					assert.Equal(t, lp1.Rules[pageIndex].RuleID, lp2.Rules[0].RuleID)
-				} else {
-					assert.Len(t, lp2.Rules, 0)
-				}
+		// paginate page over page with page size 1 and check the order - it should be the same as in list1.
+		// last iteration checks that there is no elements for not existing page.
+		for pageIndex := 0; pageIndex <= len(lp1.Rules); pageIndex++ {
+			body := rules.ListAlertRulesBody{
+				PageParams: &rules.ListAlertRulesParamsBodyPageParams{
+					PageSize: 1,
+					Index:    int32(pageIndex),
+				},
 			}
-		})
+			list2, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+			require.NoError(t, err)
+
+			lp2 := list2.Payload
+			assert.Equal(t, lp1.Totals.TotalItems, lp2.Totals.TotalItems)
+			assert.GreaterOrEqual(t, lp2.Totals.TotalPages, int32(rulesCount))
+
+			if pageIndex != len(lp1.Rules) {
+				require.Len(t, lp2.Rules, 1)
+				assert.Equal(t, lp1.Rules[pageIndex].RuleID, lp2.Rules[0].RuleID)
+			} else {
+				assert.Len(t, lp2.Rules, 0)
+			}
+		}
 	})
 }
 

@@ -168,7 +168,7 @@ func validateParameters(definitions models.ParamsDefinitions, values models.Para
 		switch d.Type {
 		case models.Float:
 			v := d.FloatParam
-			fv := value.FloatValue
+			fv := float64(value.FloatValue)
 			if v.Min != nil && pointer.GetFloat64(v.Min) > fv {
 				return status.Errorf(codes.InvalidArgument, "Parameter %s value is less than required minimum.", d.Name)
 			}
