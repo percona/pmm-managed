@@ -64,15 +64,13 @@ func (t *PerconaSSOAccessToken) Scan(src interface{}) error { return jsonScan(t,
 
 // BeforeInsert implements reform.BeforeInserter interface.
 func (s *PerconaSSODetails) BeforeInsert() error {
-	now := Now()
-	s.CreatedAt = now.UTC()
+	s.CreatedAt = Now().UTC()
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 func (s *PerconaSSODetails) BeforeUpdate() error {
-	now := Now()
-	s.CreatedAt = now.UTC()
+	s.CreatedAt = Now().UTC()
 	return nil
 }
 

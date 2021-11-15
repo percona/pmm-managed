@@ -41,7 +41,8 @@ func setupDB(t *testing.T) (*reform.DB, func()) {
 
 func TestPerconaSSODetails(t *testing.T) {
 	ctx := context.Background()
-	issuerURL := "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1/token?grant_type=client_credentials&scope="
+	issuerURL := "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
+	wrongIssuerURL := "https://id-dev.percona.com/wrong"
 
 	t.Run("CorrectCredentials", func(t *testing.T) {
 		clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
@@ -101,6 +102,27 @@ func TestPerconaSSODetails(t *testing.T) {
 			IssuerURL:    issuerURL,
 			ClientID:     "wrongClientID",
 			ClientSecret: "wrongClientSecret",
+			Scope:        "percona",
+		}
+		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
+		require.NoError(t, err)
+		_, err = models.GetPerconaSSODetails(ctx, db.Querier)
+		require.Error(t, err)
+	})
+
+	t.Run("WrongURL", func(t *testing.T) {
+		clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
+		if clientID == "" || clientSecret == "" {
+			t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
+		}
+
+		db, cleanup := setupDB(t)
+		defer cleanup()
+
+		InsertSSODetails := &models.PerconaSSODetailsInsert{
+			IssuerURL:    wrongIssuerURL,
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
 			Scope:        "percona",
 		}
 		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)

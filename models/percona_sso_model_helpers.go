@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -56,19 +57,13 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 	return details, nil
 }
 
-// GetPerconaSSOAccessToken returns PerconaSSOAccessToken if there is GetPerconaSSODetails, error otherwise.
-func GetPerconaSSOAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
-	ssoDetails, err := GetPerconaSSODetails(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-
-	return ssoDetails.AccessToken, nil
-}
-
 func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {
-	url := fmt.Sprintf("%s%s", sso.IssuerURL, sso.Scope)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	values := url.Values{
+		"grant_type": []string{"client_credentials"},
+		"scope":      []string{sso.Scope},
+	}
+	requestUrl := fmt.Sprintf("%s/token?%s", sso.IssuerURL, values.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -87,27 +82,27 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	}
 	defer res.Body.Close() //nolint:errcheck
 
-	if res.StatusCode == http.StatusOK {
-		var accessToken *PerconaSSOAccessToken
-		bodyBytes, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(bodyBytes, &accessToken); err != nil {
-			return nil, err
-		}
-
-		accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
-		sso.AccessToken = accessToken
-
-		if err := q.UpdateColumns(sso, "access_token"); err != nil {
-			return nil, err
-		}
-
-		return accessToken, nil
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("get access token of Percona SSO Details failed, status code: %d", res.StatusCode)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get access token, response body: %s", bodyBytes)
+	}
+
+	var accessToken *PerconaSSOAccessToken
+	if err := json.Unmarshal(bodyBytes, &accessToken); err != nil {
+		return nil, err
+	}
+	accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
+	sso.AccessToken = accessToken
+
+	if err := q.UpdateColumns(sso, "access_token"); err != nil {
+		return nil, err
+	}
+
+	return accessToken, nil
 }
 
 func (sso *PerconaSSODetails) isAccessTokenExpired() bool {
@@ -115,7 +110,7 @@ func (sso *PerconaSSODetails) isAccessTokenExpired() bool {
 		return true
 	}
 
-	return time.Now().After(sso.AccessToken.ExpiresAt)
+	return time.Now().After(sso.AccessToken.ExpiresAt.Add(-time.Minute * 5))
 }
 
 // DeletePerconaSSODetails removes all stored DeletePerconaSSODetails.
