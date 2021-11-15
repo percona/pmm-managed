@@ -444,7 +444,6 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AwsPartitions:        settings.AWSPartitions,
 		AlertManagerUrl:      settings.AlertManagerURL,
 		SttEnabled:           settings.SaaS.STTEnabled,
-		PlatformEmail:        settings.SaaS.Email,
 		DbaasEnabled:         settings.DBaaS.Enabled,
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
