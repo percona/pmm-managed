@@ -23,6 +23,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/percona/pmm/api/managementpb/ia/json/client"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/channels"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/rules"
@@ -109,7 +110,7 @@ func TestRulesAPI(t *testing.T) {
 		t.Run("unknown template", func(t *testing.T) {
 			t.Parallel()
 
-			templateName := gofakeit.UUID()
+			templateName := uuid.New().String()
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Unknown template %s.", templateName)
@@ -118,7 +119,7 @@ func TestRulesAPI(t *testing.T) {
 		t.Run("unknown channel", func(t *testing.T) {
 			t.Parallel()
 
-			channelID := gofakeit.UUID()
+			channelID := uuid.New().String()
 			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", channelID)
@@ -243,7 +244,7 @@ func TestRulesAPI(t *testing.T) {
 			require.NoError(t, err)
 			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
-			unknownChannelID := gofakeit.UUID()
+			unknownChannelID := uuid.New().String()
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
 					RuleID:   rule.Payload.RuleID,
@@ -447,7 +448,7 @@ func TestRulesAPI(t *testing.T) {
 
 		t.Run("missing rule", func(t *testing.T) {
 			t.Parallel()
-			ruleID := gofakeit.UUID()
+			ruleID := uuid.New().String()
 			_, err := rulesClient.DeleteAlertRule(&rules.DeleteAlertRuleParams{
 				Body:    rules.DeleteAlertRuleBody{RuleID: ruleID},
 				Context: pmmapitests.Context,
@@ -630,7 +631,7 @@ func createTemplate(t *testing.T) string {
 	b, err := ioutil.ReadFile("../../testdata/ia/template.yaml")
 	require.NoError(t, err)
 
-	templateName := gofakeit.UUID()
+	templateName := uuid.New().String()
 	expression := "'[[ .param1 ]] > 2 and 2 < [[ .param2 ]]'"
 	_, err = client.Default.Templates.CreateTemplate(&templates.CreateTemplateParams{
 		Body: templates.CreateTemplateBody{

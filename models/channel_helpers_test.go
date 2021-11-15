@@ -19,7 +19,7 @@ package models_test
 import (
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -182,7 +182,7 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
+		template, err := models.CreateTemplate(q, createTemplateParams(uuid.New().String()))
 		require.NoError(t, err)
 
 		channel := createChannel(t, q)

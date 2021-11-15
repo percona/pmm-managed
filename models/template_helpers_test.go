@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/promconfig"
@@ -50,7 +51,7 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		params := createTemplateParams(gofakeit.UUID())
+		params := createTemplateParams(uuid.New().String())
 
 		created, err := models.CreateTemplate(q, params)
 		require.NoError(t, err)
@@ -95,7 +96,7 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		name := gofakeit.UUID()
+		name := uuid.New().String()
 
 		createParams := createTemplateParams(name)
 		_, err = models.CreateTemplate(q, createParams)
@@ -145,14 +146,14 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		name := gofakeit.UUID()
+		name := uuid.New().String()
 
 		createParams := createTemplateParams(name)
 		_, err = models.CreateTemplate(q, createParams)
 		require.NoError(t, err)
 
 		updateParams := changeTemplateParams(name)
-		updateParams.Name = gofakeit.UUID()
+		updateParams.Name = uuid.New().String()
 		_, err = models.ChangeTemplate(q, updateParams)
 		require.NotNil(t, err)
 	})
@@ -166,7 +167,7 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		name := gofakeit.UUID()
+		name := uuid.New().String()
 
 		_, err = models.CreateTemplate(q, createTemplateParams(name))
 		require.NoError(t, err)
@@ -189,7 +190,7 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
+		template, err := models.CreateTemplate(q, createTemplateParams(uuid.New().String()))
 		require.NoError(t, err)
 
 		channel := createChannel(t, q)
@@ -214,7 +215,7 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		created, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
+		created, err := models.CreateTemplate(q, createTemplateParams(uuid.New().String()))
 		require.NoError(t, err)
 
 		templates, err := models.FindTemplates(q)
@@ -245,7 +246,7 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 			Tiers:   []common.Tier{common.Anonymous},
 			Expr:    gofakeit.Quote(),
 			Params: []alert.Parameter{{
-				Name:    gofakeit.UUID(),
+				Name:    uuid.New().String(),
 				Summary: gofakeit.Quote(),
 				Unit:    alert.Percentage,
 				Type:    alert.Float,
@@ -271,7 +272,7 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 			Tiers:   []common.Tier{common.Anonymous},
 			Expr:    gofakeit.Quote(),
 			Params: []alert.Parameter{{
-				Name:    gofakeit.UUID(),
+				Name:    uuid.New().String(),
 				Summary: gofakeit.Quote(),
 				Unit:    alert.Seconds,
 				Type:    alert.Float,

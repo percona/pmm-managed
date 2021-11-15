@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -144,7 +144,7 @@ func TestRules(t *testing.T) {
 			q := tx.Querier
 
 			template := createTemplate(t, q)
-			channelID := gofakeit.UUID()
+			channelID := uuid.New().String()
 
 			params := createCreateRuleParams(t, template, channelID, nonEmptyFilters)
 			_, err = models.CreateRule(q, params)
@@ -215,7 +215,7 @@ func TestRules(t *testing.T) {
 			rule, err := models.CreateRule(q, createCreateRuleParams(t, template, channel.ID, nonEmptyFilters))
 			require.NoError(t, err)
 
-			newChannelID := gofakeit.UUID()
+			newChannelID := uuid.New().String()
 
 			params := &models.ChangeRuleParams{
 				Disabled:     false,
@@ -333,7 +333,7 @@ func createCreateRuleParams(t *testing.T, template *models.Template, channelID s
 func createTemplate(t *testing.T, q *reform.Querier) *models.Template {
 	t.Helper()
 
-	template, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
+	template, err := models.CreateTemplate(q, createTemplateParams(uuid.New().String()))
 	require.NoError(t, err)
 	return template
 }

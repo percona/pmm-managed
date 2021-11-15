@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -302,7 +303,7 @@ func TestSettings(t *testing.T) {
 
 		t.Run("Percona Platform auth", func(t *testing.T) {
 			email := tests.GenEmail(t)
-			sessionID := gofakeit.UUID()
+			sessionID := uuid.New().String()
 
 			// User logged in
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -323,7 +324,7 @@ func TestSettings(t *testing.T) {
 			// Logout with session ID update
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut:    true,
-				SessionID: gofakeit.UUID(),
+				SessionID: uuid.New().String(),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
 
@@ -331,7 +332,7 @@ func TestSettings(t *testing.T) {
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut:    true,
 				Email:     tests.GenEmail(t),
-				SessionID: gofakeit.UUID(),
+				SessionID: uuid.New().String(),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
 

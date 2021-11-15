@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/channels"
 	"github.com/stretchr/testify/assert"
@@ -109,8 +110,8 @@ func TestChannelsAPI(t *testing.T) {
 			require.NoError(t, err)
 			defer deleteChannel(t, client, resp1.Payload.ChannelID)
 
-			slackChannel := gofakeit.UUID()
-			newSummary := gofakeit.UUID()
+			slackChannel := uuid.New().String()
+			newSummary := uuid.New().String()
 			_, err = client.ChangeChannel(&channels.ChangeChannelParams{
 				Body: channels.ChangeChannelBody{
 					ChannelID: resp1.Payload.ChannelID,
@@ -151,7 +152,7 @@ func TestChannelsAPI(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
-			summary := gofakeit.UUID()
+			summary := uuid.New().String()
 			resp1, err := client.AddChannel(&channels.AddChannelParams{
 				Body: channels.AddChannelBody{
 					Summary:  summary,
@@ -200,7 +201,7 @@ func TestChannelsAPI(t *testing.T) {
 
 			_, err = client.RemoveChannel(&channels.RemoveChannelParams{
 				Body: channels.RemoveChannelBody{
-					ChannelID: gofakeit.UUID(),
+					ChannelID: uuid.New().String(),
 				},
 				Context: pmmapitests.Context,
 			})
@@ -247,7 +248,7 @@ func TestChannelsAPI(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		client := channelsClient.Default.Channels
 
-		summary := gofakeit.UUID()
+		summary := uuid.New().String()
 		email := gofakeit.Email()
 		disabled := gofakeit.Bool()
 		resp1, err := client.AddChannel(&channels.AddChannelParams{
