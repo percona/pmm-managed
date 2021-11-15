@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -1052,7 +1053,13 @@ func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
-	bodyBytes, err := saasdial.Dial(ctx, s.host)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllChecks", s.host)
+	bodyBytes, err := saasdial.Dial(ctx, endpoint, ssoDetails.AccessToken.AccessToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

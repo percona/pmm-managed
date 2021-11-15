@@ -340,7 +340,12 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	_, err := saasdial.Dial(ctx, s.v2Host)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		return err
+	}
+
+	_, err = saasdial.Dial(ctx, s.v2Host, ssoDetails.AccessToken.AccessToken)
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

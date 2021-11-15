@@ -31,8 +31,8 @@ import (
 const dialTimeout = 10 * time.Second
 
 // Dial creates gRPC connection to Percona Platform
-func Dial(ctx context.Context, hostPort string) ([]byte, error) {
-	u, err := url.Parse(hostPort)
+func Dial(ctx context.Context, endpoint, accessToken string) ([]byte, error) {
+	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -40,19 +40,22 @@ func Dial(ctx context.Context, hostPort string) ([]byte, error) {
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.ServerName = u.Host
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, hostPort, nil)
+	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	h := req.Header
 	h.Add("Content-Type", "application/json")
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: dialTimeout,
 	}
 	res, err := client.Do(req)
 	if err != nil {
@@ -67,7 +70,7 @@ func Dial(ctx context.Context, hostPort string) ([]byte, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to dial %s, response body: %s", hostPort, bodyBytes)
+		return nil, fmt.Errorf("failed to dial %s, response body: %s", endpoint, bodyBytes)
 	}
 
 	return bodyBytes, nil

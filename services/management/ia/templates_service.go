@@ -371,7 +371,12 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Template, error) {
 	s.l.Infof("Downloading templates from %s ...", s.host)
 
-	bodyBytes, err := saasdial.Dial(ctx, s.host)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyBytes, err := saasdial.Dial(ctx, s.host, ssoDetails.AccessToken.AccessToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
