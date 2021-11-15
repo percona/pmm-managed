@@ -77,7 +77,6 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/minio"
-	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/services/server"
@@ -664,11 +663,6 @@ func main() {
 
 	prom.MustRegister(checksService)
 
-	platformService, err := platform.New(db)
-	if err != nil {
-		l.Fatalf("Could not create platform service: %s", err)
-	}
-
 	// Integrated alerts services
 	templatesService, err := ia.NewTemplatesService(db)
 	if err != nil {
@@ -696,7 +690,6 @@ func main() {
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
-		PlatformService:      platformService,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -828,12 +821,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		checksService.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		platformService.Run(ctx)
 	}()
 
 	wg.Add(1)
