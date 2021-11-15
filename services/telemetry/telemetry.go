@@ -340,26 +340,11 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return err
-	}
-
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.v2Host)
+	_, err := saasdial.Dial(ctx, s.v2Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
-	defer cc.Close() //nolint:errcheck
 
-	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
-		// if credentials are invalid then force a logout so that the next retry can
-		// successfully send the telemetry event to platform.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-		return errors.Wrap(err, "failed to report")
-	}
 	return nil
 }
 

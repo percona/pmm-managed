@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	devChecksHost      = "check-dev.percona.com:443"
+	devChecksHost      = "https://check-dev.percona.com/v1/check/GetAllChecks"
 	devChecksPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
 	testChecksFile     = "../../testdata/checks/checks.yml"
 )

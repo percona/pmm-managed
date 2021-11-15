@@ -19,46 +19,56 @@ package saasdial
 
 import (
 	"context"
-	"net"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/percona/pmm/utils/tlsconfig"
-	"github.com/percona/pmm/version"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 const dialTimeout = 10 * time.Second
 
 // Dial creates gRPC connection to Percona Platform
-func Dial(ctx context.Context, sessionID string, hostPort string) (*grpc.ClientConn, error) {
-	host, _, err := net.SplitHostPort(hostPort)
+func Dial(ctx context.Context, hostPort string) ([]byte, error) {
+	u, err := url.Parse(hostPort)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set percona platform host")
+		return nil, err
 	}
+
 	tlsConfig := tlsconfig.Get()
-	tlsConfig.ServerName = host
+	tlsConfig.ServerName = u.Host
 
-	opts := []grpc.DialOption{
-		// replacement is marked as experimental
-		grpc.WithBackoffMaxDelay(dialTimeout), //nolint:staticcheck
-
-		grpc.WithBlock(),
-		grpc.WithUserAgent("pmm-managed/" + version.Version),
-		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
-	}
-
-	if sessionID != "" {
-		opts = append(opts, grpc.WithPerRPCCredentials(&platformAuth{sessionID: sessionID}))
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
-	defer cancel()
-	cc, err := grpc.DialContext(ctx, hostPort, opts...)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, hostPort, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to dial")
+		return nil, err
 	}
 
-	return cc, nil
+	h := req.Header
+	h.Add("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: dialTimeout,
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close() //nolint:errcheck
+
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to dial %s, response body: %s", hostPort, bodyBytes)
+	}
+
+	return bodyBytes, nil
 }

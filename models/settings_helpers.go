@@ -102,13 +102,6 @@ type ChangeSettingsParams struct {
 	// If true removes Slack alerting settings.
 	RemoveSlackAlertingSettings bool
 
-	// Percona Platform user email
-	Email string
-	// Percona Platform session Id
-	SessionID string
-	// LogOut user from Percona Platform, i.e. remove user email and session id
-	LogOut bool
-
 	// EnableVMCache enables caching for vmdb search queries
 	EnableVMCache bool
 	// DisableVMCache disables caching for vmdb search queries
@@ -221,19 +214,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 
 	if params.DisableDBaaS {
 		settings.DBaaS.Enabled = false
-	}
-
-	if params.LogOut {
-		settings.SaaS.SessionID = ""
-		settings.SaaS.Email = ""
-	}
-
-	if params.SessionID != "" {
-		settings.SaaS.SessionID = params.SessionID
-	}
-
-	if params.Email != "" {
-		settings.SaaS.Email = params.Email
 	}
 
 	if params.DisableVMCache {
@@ -470,9 +450,6 @@ func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings)
 	}
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
 		return errors.New("cannot disable telemetry while STT is enabled")
-	}
-	if params.LogOut && (params.Email != "" || params.SessionID != "") {
-		return errors.New("cannot logout while updating Percona Platform user data")
 	}
 
 	return nil

@@ -1052,26 +1052,14 @@ func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return nil, err
-	}
-
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	bodyBytes, err := saasdial.Dial(ctx, s.host)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
-	defer cc.Close() //nolint:errcheck
 
-	resp, err := api.NewRetrievalAPIClient(cc).GetAllChecks(ctx, &api.GetAllChecksRequest{})
-	if err != nil {
-		// if credentials are invalid then force a logout so that the next check download
-		// attempt can be successful.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-		return nil, errors.Wrap(err, "failed to request checks service")
+	var resp *api.GetAllChecksResponse
+	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+		return nil, err
 	}
 
 	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {

@@ -19,6 +19,7 @@ package ia
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -370,26 +371,14 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Template, error) {
 	s.l.Infof("Downloading templates from %s ...", s.host)
 
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return nil, err
-	}
-
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	bodyBytes, err := saasdial.Dial(ctx, s.host)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
-	defer cc.Close() //nolint:errcheck
 
-	resp, err := api.NewRetrievalAPIClient(cc).GetAllAlertRuleTemplates(ctx, &api.GetAllAlertRuleTemplatesRequest{})
-	if err != nil {
-		// if credentials are invalid then force a logout so that the next check download
-		// attempt can be successful.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-		return nil, errors.Wrap(err, "failed to request checks service")
+	var resp *api.GetAllAlertRuleTemplatesResponse
+	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+		return nil, err
 	}
 
 	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {

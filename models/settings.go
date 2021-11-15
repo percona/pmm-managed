@@ -31,10 +31,6 @@ type MetricsResolutions struct {
 
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
-	// Percona Platform user email
-	Email string `json:"email"`
-	// Percona Platform session Id
-	SessionID string `json:"session_id"`
 	// Security Threat Tool enabled
 	STTEnabled bool `json:"stt_enabled"`
 	// List of disabled STT checks
