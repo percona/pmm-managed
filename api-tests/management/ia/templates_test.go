@@ -31,9 +31,8 @@ import (
 	"github.com/percona/pmm/api/managementpb/ia/json/client/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
-
 	"google.golang.org/grpc/codes"
+	"gopkg.in/yaml.v3"
 
 	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
@@ -195,10 +194,9 @@ func TestTemplatesAPI(t *testing.T) {
 		t.Run("invalid template", func(t *testing.T) {
 			t.Parallel()
 
-			name := gofakeit.UUID()
-			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 				Body: templates.CreateTemplateBody{
-					Yaml: fmt.Sprintf(string(invalidTemplateData), name, gofakeit.UUID()),
+					Yaml: fmt.Sprintf(string(invalidTemplateData), gofakeit.UUID(), gofakeit.UUID()),
 				},
 				Context: pmmapitests.Context,
 			})
@@ -248,7 +246,7 @@ func TestTemplatesAPI(t *testing.T) {
 			t.Parallel()
 
 			name := gofakeit.UUID()
-			_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
+			_, err := client.UpdateTemplate(&templates.UpdateTemplateParams{
 				Body: templates.UpdateTemplateBody{
 					Name: name,
 					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
@@ -285,7 +283,7 @@ func TestTemplatesAPI(t *testing.T) {
 			t.Parallel()
 
 			name := gofakeit.UUID()
-			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 				Body: templates.CreateTemplateBody{
 					Yaml: fmt.Sprintf(string(templateData), name, gofakeit.UUID(), "s", "%"),
 				},
@@ -394,7 +392,7 @@ func TestTemplatesAPI(t *testing.T) {
 			t.Parallel()
 
 			name := gofakeit.UUID()
-			_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
+			_, err := client.DeleteTemplate(&templates.DeleteTemplateParams{
 				Body: templates.DeleteTemplateBody{
 					Name: name,
 				},
@@ -409,7 +407,7 @@ func TestTemplatesAPI(t *testing.T) {
 			name := gofakeit.UUID()
 			expr := gofakeit.UUID()
 			alertTemplates, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, expr, "%", "s"))
-			_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+			_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 				Body: templates.CreateTemplateBody{
 					Yaml: yml,
 				},
@@ -438,12 +436,13 @@ func TestTemplatesAPI(t *testing.T) {
 				name := gofakeit.UUID()
 				expr := gofakeit.UUID()
 				_, yml := formatTemplateYaml(t, fmt.Sprintf(string(templateData), name, expr, "%", "s"))
-				_, err = client.CreateTemplate(&templates.CreateTemplateParams{
+				_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 					Body: templates.CreateTemplateBody{
 						Yaml: yml,
 					},
 					Context: pmmapitests.Context,
 				})
+				require.NoError(t, err)
 
 				templateNames[name] = struct{}{}
 			}
