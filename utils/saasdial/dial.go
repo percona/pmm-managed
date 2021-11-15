@@ -30,7 +30,7 @@ import (
 
 const dialTimeout = 10 * time.Second
 
-// Dial creates gRPC connection to Percona Platform
+// Dial creates http/https POST request to Percona Platform
 func Dial(ctx context.Context, endpoint, accessToken string) ([]byte, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
