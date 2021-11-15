@@ -75,7 +75,6 @@ func TestKubernetesServer(t *testing.T) {
 		require.Empty(t, clusters.KubernetesClusters)
 
 		dc.On("InstallPXCOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPXCOperatorResponse{}, nil)
-		dc.On("InstallPSMDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPSMDBOperatorResponse{}, nil)
 
 		kubernetesClusterName := "test-cluster"
 		registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
