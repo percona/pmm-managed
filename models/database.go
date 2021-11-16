@@ -651,6 +651,10 @@ var databaseSchema = [][]string{
 			);`,
 	},
 	51: {
+		`ALTER TABLE services
+			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
+	},
+	52: {
 		`ALTER TABLE percona_sso_details
 			ADD COLUMN access_token VARCHAR`,
 	},
