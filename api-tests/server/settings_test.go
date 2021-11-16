@@ -108,7 +108,8 @@ func TestSettings(t *testing.T) {
 						},
 						Context: pmmapitests.Context,
 					})
-					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both enable_updates and disable_updates are present.`)
+					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+						`Invalid argument: both enable_updates and disable_updates are present.`)
 					assert.Empty(t, res)
 				})
 			})
@@ -164,7 +165,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `Alerting is enabled via ENABLE_ALERTING environment variable.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition,
+					`Alerting is enabled via ENABLE_ALERTING environment variable.`)
 				assert.Empty(t, res)
 			})
 
@@ -180,7 +182,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both slack_alerting_settings and remove_slack_alerting_settings are present.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: both slack_alerting_settings and remove_slack_alerting_settings are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -201,7 +204,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both email_alerting_settings and remove_email_alerting_settings are present.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: both email_alerting_settings and remove_email_alerting_settings are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -215,7 +219,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both enable_stt and disable_stt are present.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: both enable_stt and disable_stt are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -508,7 +513,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both enable_telemetry and disable_telemetry are present.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: both enable_telemetry and disable_telemetry are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -521,7 +527,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `aws_partitions: partition "aws-123" is invalid`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: aws_partitions: partition "aws-123" is invalid.`)
 				assert.Empty(t, res)
 			})
 
@@ -534,7 +541,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `aws_partitions: list is too long`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: aws_partitions: list is too long.`)
 				assert.Empty(t, res)
 			})
 
@@ -549,7 +557,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `bad Duration: time: missing unit in duration "1"`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`bad Duration: time: missing unit in duration "1"`)
 				assert.Empty(t, res)
 			})
 
@@ -564,7 +573,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `hr: minimal resolution is 1s`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: hr: minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 
@@ -579,7 +589,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `hr: should be a natural number of seconds`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: hr: should be a natural number of seconds.`)
 				assert.Empty(t, res)
 			})
 
@@ -594,7 +605,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `bad Duration: time: missing unit in duration "1"`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`bad Duration: time: missing unit in duration "1"`)
 				assert.Empty(t, res)
 			})
 
@@ -609,7 +621,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `standard_interval: minimal resolution is 1s`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: standard_interval: minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 
@@ -624,7 +637,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `rare_interval: should be a natural number of seconds`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: rare_interval: should be a natural number of seconds.`)
 				assert.Empty(t, res)
 			})
 
@@ -637,7 +651,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `bad Duration: time: missing unit in duration "1"`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`bad Duration: time: missing unit in duration "1"`)
 				assert.Empty(t, res)
 			})
 
@@ -650,7 +665,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `data_retention: minimal resolution is 24h`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: data_retention: minimal resolution is 24h.`)
 				assert.Empty(t, res)
 			})
 
@@ -663,7 +679,8 @@ func TestSettings(t *testing.T) {
 					},
 					Context: pmmapitests.Context,
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `data_retention: should be a natural number of days`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+					`Invalid argument: data_retention: should be a natural number of days.`)
 				assert.Empty(t, res)
 			})
 
@@ -683,7 +700,11 @@ func TestSettings(t *testing.T) {
 			t.Run("NoAdminUserForSSH", func(t *testing.T) {
 				defer restoreSettingsDefaults(t)
 
-				sshKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQClY/8sz3w03vA2bY6mBFgUzrvb2FIoHw8ZjUXGGClJzJg5HC3jW1m5df7TOIkx0bt6Da2UOhuCvS4o27IT1aiHXVFydppp6ghQRB6saiiW2TKlQ7B+mXatwVaOIkO381kEjgijAs0LJnNRGpqQW0ZEAxVMz4a8puaZmVNicYSVYs4kV3QZsHuqn7jHbxs5NGAO+uRRSjcuPXregsyd87RAUHkGmNrwNFln/XddMzdGMwqZOuZWuxIXBqSrSX927XGHAJlUaOmLz5etZXHzfAY1Zxfu39r66Sx95bpm3JBmc/Ewfr8T2WL0cqynkpH+3QQBCjweTHzBE+lpXHdR2se1 qsandbox"
+				sshKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQClY/8sz3w03vA2bY6mBFgUzrvb2FIoHw8ZjUXGGClJzJg5HC" +
+					"3jW1m5df7TOIkx0bt6Da2UOhuCvS4o27IT1aiHXVFydppp6ghQRB6saiiW2TKlQ7B+mXatwVaOIkO381kEjgijAs0LJn" +
+					"NRGpqQW0ZEAxVMz4a8puaZmVNicYSVYs4kV3QZsHuqn7jHbxs5NGAO+uRRSjcuPXregsyd87RAUHkGmNrwNFln/XddMz" +
+					"dGMwqZOuZWuxIXBqSrSX927XGHAJlUaOmLz5etZXHzfAY1Zxfu39r66Sx95bpm3JBmc/Ewfr8T2WL0cqynkpH+3QQBCj" +
+					"weTHzBE+lpXHdR2se1 qsandbox"
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
 						SSHKey: sshKey,
@@ -853,7 +874,8 @@ func TestSettings(t *testing.T) {
 						},
 						Context: pmmapitests.Context,
 					})
-					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both alert_manager_url and remove_alert_manager_url are present.`)
+					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument,
+						`Invalid argument: both alert_manager_url and remove_alert_manager_url are present.`)
 
 					gets, err := serverClient.Default.Server.GetSettings(nil)
 					require.NoError(t, err)
