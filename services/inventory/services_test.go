@@ -372,6 +372,7 @@ func TestServices(t *testing.T) {
 			expectedPostgreSQLService := &inventorypb.PostgreSQLService{
 				ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 				ServiceName: "test-postgres",
+				DatabaseName: "",
 				NodeId:      models.PMMServerNodeID,
 				Address:     "127.0.0.1",
 				Port:        5432,
@@ -411,6 +412,7 @@ func TestServices(t *testing.T) {
 			expectedPostgreSQLService := &inventorypb.PostgreSQLService{
 				ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 				ServiceName: "test-postgres",
+				DatabaseName: "",
 				NodeId:      models.PMMServerNodeID,
 				Socket:      "/var/run/postgresql",
 			}
