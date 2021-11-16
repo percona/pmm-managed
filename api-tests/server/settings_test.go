@@ -461,6 +461,8 @@ func TestSettings(t *testing.T) {
 				assert.False(t, resg.Payload.Settings.SttEnabled)
 
 				t.Run("EnableSTTWhileTelemetryDisabled", func(t *testing.T) {
+					defer restoreSettingsDefaults(t)
+
 					res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 						Body: server.ChangeSettingsBody{
 							EnableStt: true,
