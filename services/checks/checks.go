@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -43,7 +44,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm-managed/utils/saasreq"
 	"github.com/percona/pmm-managed/utils/signatures"
 )
 
@@ -1059,7 +1060,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllChecks", s.host)
-	bodyBytes, err := saasdial.Dial(ctx, endpoint, ssoDetails.AccessToken.AccessToken, nil)
+	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, ssoDetails.AccessToken.AccessToken, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

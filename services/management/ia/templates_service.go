@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -43,7 +45,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm-managed/utils/saasreq"
 	"github.com/percona/pmm-managed/utils/signatures"
 )
 
@@ -376,7 +378,8 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 		return nil, err
 	}
 
-	bodyBytes, err := saasdial.Dial(ctx, s.host, ssoDetails.AccessToken.AccessToken, nil)
+	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllAlertRuleTemplates", s.host)
+	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, ssoDetails.AccessToken.AccessToken, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

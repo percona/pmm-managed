@@ -45,7 +45,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm-managed/utils/saasreq"
 )
 
 const (
@@ -351,7 +351,8 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		return err
 	}
 
-	_, err = saasdial.Dial(ctx, s.v2Host, ssoDetails.AccessToken.AccessToken, bytes.NewReader(reqByte))
+	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, ssoDetails.AccessToken.AccessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

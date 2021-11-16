@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package saasdial provides gRPC connection setup for Percona Platform.
-package saasdial
+// Package saasreq provides http/https connection setup for Percona Platform.
+package saasreq
 
 import (
 	"context"
@@ -31,8 +31,8 @@ import (
 
 const dialTimeout = 10 * time.Second
 
-// Dial creates http/https POST request to Percona Platform
-func Dial(ctx context.Context, endpoint, accessToken string, body io.Reader) ([]byte, error) {
+// MakeRequest creates http/https POST request to Percona Platform
+func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader) ([]byte, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func Dial(ctx context.Context, endpoint, accessToken string, body io.Reader) ([]
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, body)
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {
 		return nil, err
 	}
