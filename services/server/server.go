@@ -455,13 +455,14 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		res.EmailAlertingSettings = &serverpb.EmailAlertingSettings{
-			From:      settings.IntegratedAlerting.EmailAlertingSettings.From,
-			Smarthost: settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
-			Hello:     settings.IntegratedAlerting.EmailAlertingSettings.Hello,
-			Username:  settings.IntegratedAlerting.EmailAlertingSettings.Username,
-			Password:  "",
-			Identity:  settings.IntegratedAlerting.EmailAlertingSettings.Identity,
-			Secret:    settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			From:       settings.IntegratedAlerting.EmailAlertingSettings.From,
+			Smarthost:  settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
+			Hello:      settings.IntegratedAlerting.EmailAlertingSettings.Hello,
+			Username:   settings.IntegratedAlerting.EmailAlertingSettings.Username,
+			Password:   "",
+			Identity:   settings.IntegratedAlerting.EmailAlertingSettings.Identity,
+			Secret:     settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			RequireTls: settings.IntegratedAlerting.EmailAlertingSettings.RequireTLS,
 		}
 	}
 
