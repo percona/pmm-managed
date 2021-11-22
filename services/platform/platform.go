@@ -18,10 +18,15 @@
 package platform
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"time"
 
+	platform "github.com/percona-platform/platform/gen/org"
 	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -42,13 +47,6 @@ const (
 
 var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
 var errConnectingToPortal = errors.New("failed to connect PMM to Portal")
-
-type ssoDetails struct {
-	ClientID     string
-	ClientSecret string
-	IssuerURL    string
-	Scope        string
-}
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
@@ -127,51 +125,58 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 		return errors.Wrap(err, "PMM server is already connected to Portal")
 	}
 
-	ssoParams, err := s.connect(ctx, serverName, email, password)
+	ssoParams, err := s.connect(ctx, &connectPMMParams{
+		serverName: serverName,
+		// TODO finish this tomorrow
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to connect PMM server to Portal")
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
-		ClientID:     ssoParams.ClientID,
+		ClientID:     ssoParams.ClientId,
 		ClientSecret: ssoParams.ClientSecret,
-		IssuerURL:    ssoParams.IssuerURL,
+		IssuerURL:    ssoParams.IssuerUrl,
 		Scope:        ssoParams.Scope,
 	})
 	return errors.Wrap(err, "failed to save session id")
 }
 
-// connect right now just reads environment variables that should contain Percona SSO details.
+// connect calls Portal API
 // It returns them if none of the environment variables is empty. Otherwise it returns an error.
 // TODO Change this implementation to the one that uses real Portal API to fetch SSO details when the API is ready.
-func (s *Service) connect(ctx context.Context, serverName, email, password string) (*ssoDetails, error) {
-	clientID := os.Getenv("PERCONA_SSO_CLIENT_ID")
-	if clientID == "" {
-		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_CLIENT_ID is not set")
+type connectPMMParams struct {
+	pmmServerURL, pmmServerOAuthCallbackURL, telemetryID, serverName, email, password string
+}
 
+func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*platform.PMMServerSSODetails, error) {
+	endpoint := fmt.Sprintf("%s/v1/orgs/inventory", s.host)
+
+	marshaled, err := json.Marshal(platform.ConnectPMMRequest{
+		PmmServerId:               params.telemetryID,
+		PmmServerName:             params.serverName,
+		PmmServerUrl:              params.pmmServerURL,
+		PmmServerOauthCallbackUrl: params.pmmServerOAuthCallbackURL,
+	},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal request data")
 	}
-
-	clientSecret := os.Getenv("PERCONA_SSO_CLIENT_SECRET")
-	if clientSecret == "" {
-		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_CLIENT_SECRET is not set")
+	// TODO use client with some timeouts
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build request")
 	}
-
-	issuerURL := os.Getenv("PERCONA_SSO_ISSUER_URL")
-	if issuerURL == "" {
-		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_ISSUER_URL is not set")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to execute request")
 	}
-
-	scope := os.Getenv("PERCONA_SSO_SCOPE")
-	if scope == "" {
-		return nil, errors.Wrap(errConnectingToPortal, "PERCONA_SSO_SCOPE is not set")
+	defer resp.Body.Close()
+	var response platform.ConnectPMMResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, errors.Wrap(err, "failed to decode response into SSO details")
 	}
-
-	return &ssoDetails{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		IssuerURL:    issuerURL,
-		Scope:        scope,
-	}, nil
+	return response.SsoDetails, nil
 }
 
 // SignOut logouts that instance from Percona Platform account and removes session id.
