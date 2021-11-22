@@ -33,7 +33,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
+	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
@@ -733,6 +735,48 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(newSettings),
 	}, nil
+}
+
+// TestEmailAlertingSettings tests email alerting SMTP settings by sending testing email.
+func (s *Server) TestEmailAlertingSettings(
+	ctx context.Context,
+	req *serverpb.TestEmailAlertingSettingsRequest,
+) (*serverpb.TestEmailAlertingSettingsResponse, error) {
+	settings := &models.EmailAlertingSettings{
+		From:      req.Settings.From,
+		Smarthost: req.Settings.Smarthost,
+		Hello:     req.Settings.Hello,
+		Username:  req.Settings.Username,
+		Password:  req.Settings.Password,
+		Identity:  req.Settings.Identity,
+		Secret:    req.Settings.Secret,
+	}
+
+	var errInvalidArgument models.ErrInvalidArgument
+	err := settings.Validate()
+	switch {
+	case err == nil:
+	case errors.As(err, &errInvalidArgument):
+		return nil, status.Error(codes.InvalidArgument,
+			fmt.Sprintf("Invalid argument: %s.", errInvalidArgument.Details))
+	default:
+		return nil, errors.WithStack(err)
+	}
+
+	if !govalidator.IsEmail(req.EmailTo) {
+		return nil, errors.Errorf("invalid \"emailTo\" email %q", req.EmailTo)
+	}
+
+	e := &alertmanager.Emailer{
+		Settings: settings,
+		Logger:   s.l,
+	}
+
+	if err := e.Send(ctx, req.EmailTo); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.TestEmailAlertingSettingsResponse{}, nil
 }
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
