@@ -30,63 +30,87 @@ import (
 )
 
 func TestPostgresExporterConfig(t *testing.T) {
-	pmmAgentVersion := version.MustParse("2.15.1")
-	postgresql := &models.Service{
-		Address: pointer.ToString("1.2.3.4"),
-		Port:    pointer.ToUint16(5432),
-	}
-	exporter := &models.Agent{
-		AgentID:       "agent-id",
-		AgentType:     models.PostgresExporterType,
-		Username:      pointer.ToString("username"),
-		Password:      pointer.ToString("s3cur3 p@$$w0r4."),
-		AgentPassword: pointer.ToString("agent-password"),
-	}
-	actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
-	expected := &agentpb.SetStateRequest_AgentProcess{
-		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
-		TemplateLeftDelim:  "{{",
-		TemplateRightDelim: "}}",
-		Args: []string{
-			"--collect.custom_query.hr",
-			"--collect.custom_query.hr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/high-resolution",
-			"--collect.custom_query.lr",
-			"--collect.custom_query.lr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/low-resolution",
-			"--collect.custom_query.mr",
-			"--collect.custom_query.mr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/medium-resolution",
-			"--web.listen-address=:{{ .listen_port }}",
-		},
-		Env: []string{
-			"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
-			"HTTP_AUTH=pmm:agent-password",
-		},
-		RedactWords: []string{"s3cur3 p@$$w0r4.", "agent-password"},
-	}
-	requireNoDuplicateFlags(t, actual.Args)
-	require.Equal(t, expected.Args, actual.Args)
-	require.Equal(t, expected.Env, actual.Env)
-	require.Equal(t, expected, actual)
 
-	t.Run("DatabaseName", func(t *testing.T) {
+	pmmAgentVersion := version.MustParse("2.15.1")
+	var postgresql *models.Service
+	var exporter *models.Agent
+	var expected *agentpb.SetStateRequest_AgentProcess
+
+	setup := func() {
+		postgresql = &models.Service{
+			Address: pointer.ToString("1.2.3.4"),
+			Port:    pointer.ToUint16(5432),
+		}
+		exporter = &models.Agent{
+			AgentID:       "agent-id",
+			AgentType:     models.PostgresExporterType,
+			Username:      pointer.ToString("username"),
+			Password:      pointer.ToString("s3cur3 p@$$w0r4."),
+			AgentPassword: pointer.ToString("agent-password"),
+		}
+		expected = &agentpb.SetStateRequest_AgentProcess{
+			Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
+			TemplateLeftDelim:  "{{",
+			TemplateRightDelim: "}}",
+			Args: []string{
+				"--collect.custom_query.hr",
+				"--collect.custom_query.hr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/high-resolution",
+				"--collect.custom_query.lr",
+				"--collect.custom_query.lr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/low-resolution",
+				"--collect.custom_query.mr",
+				"--collect.custom_query.mr.directory=" + pathsBase(pointer.GetString(exporter.Version), "{{", "}}") + "/collectors/custom-queries/postgresql/medium-resolution",
+				"--web.listen-address=:{{ .listen_port }}",
+			},
+			Env: []string{
+				"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
+				"HTTP_AUTH=pmm:agent-password",
+			},
+			RedactWords: []string{"s3cur3 p@$$w0r4.", "agent-password"},
+		}
+	}
+
+	run := func(name string, f func(t *testing.T)) bool {
+		setup()
+		return t.Run(name, f)
+	}
+
+	run("Config", func(t *testing.T) {
+		actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
+		requireNoDuplicateFlags(t, actual.Args)
+		require.Equal(t, expected.Args, actual.Args)
+		require.Equal(t, expected.Env, actual.Env)
+		require.Equal(t, expected, actual)
+	})
+
+	run("DatabaseName", func(t *testing.T) {
 		postgresql.DatabaseName = "db1"
 		expected.Env[0] = "DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/db1?connect_timeout=1&sslmode=disable"
 		actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
 		require.Equal(t, expected.Env, actual.Env)
 	})
 
-	t.Run("EmptyPassword", func(t *testing.T) {
+	run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets, pmmAgentVersion)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://username@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 
-	t.Run("EmptyUsername", func(t *testing.T) {
+	run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
+		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets, pmmAgentVersion)
+		assert.Equal(t, "DATA_SOURCE_NAME=postgres://:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
+	})
+
+	run("EmptyUsernameAndPassword", func(t *testing.T) {
+		exporter.Username = nil
+		exporter.Password = nil
 		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets, pmmAgentVersion)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 
-	t.Run("Socket", func(t *testing.T) {
+	run("Socket", func(t *testing.T) {
+		exporter.Username = nil
+		exporter.Password = nil
 		postgresql.Address = nil
 		postgresql.Port = nil
 		postgresql.Socket = pointer.ToString("/var/run/postgres")
@@ -94,7 +118,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres:///postgres?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable", actual.Env[0])
 	})
 
-	t.Run("DisabledCollectors", func(t *testing.T) {
+	run("DisabledCollectors", func(t *testing.T) {
 		postgresql.Address = nil
 		postgresql.Port = nil
 		postgresql.Socket = pointer.ToString("/var/run/postgres")
@@ -116,7 +140,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		require.Equal(t, expected.Args, actual.Args)
 	})
 
-	t.Run("AutoDiscovery", func(t *testing.T) {
+	run("AutoDiscovery", func(t *testing.T) {
 		pmmAgentVersion := version.MustParse("2.16.0")
 
 		postgresql := &models.Service{
@@ -130,7 +154,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 			Password:  pointer.ToString("s3cur3 p@$$w0r4."),
 		}
 
-		actual = postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
+		actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
 		expected = &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -158,7 +182,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		require.Equal(t, expected, actual)
 	})
 
-	t.Run("AzureTimeout", func(t *testing.T) {
+	run("AzureTimeout", func(t *testing.T) {
 		pmmAgentVersion := version.MustParse("2.16.0")
 
 		postgresql := &models.Service{
@@ -179,7 +203,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 			},
 		}
 
-		actual = postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
+		actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
 		expected = &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
 			TemplateLeftDelim:  "{{",
