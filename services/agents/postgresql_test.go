@@ -67,6 +67,13 @@ func TestPostgresExporterConfig(t *testing.T) {
 	require.Equal(t, expected.Env, actual.Env)
 	require.Equal(t, expected, actual)
 
+	t.Run("DatabaseName", func(t *testing.T) {
+		postgresql.DatabaseName = "db1"
+		expected.Env[0] = "DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/db1?connect_timeout=1&sslmode=disable"
+		actual := postgresExporterConfig(postgresql, exporter, redactSecrets, pmmAgentVersion)
+		require.Equal(t, expected.Env, actual.Env)
+	})
+
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets, pmmAgentVersion)

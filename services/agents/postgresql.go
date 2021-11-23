@@ -79,7 +79,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, service.DatabaseName, nil)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, service.GetDatabaseNameOrDefault(), nil)),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 		},
 		TextFiles: exporter.Files(),
