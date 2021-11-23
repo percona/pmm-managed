@@ -69,9 +69,9 @@ func TestPostgresExporterConfig(t *testing.T) {
 		}
 	}
 
-	run := func(name string, f func(t *testing.T)) bool {
+	run := func(name string, f func(t *testing.T)) {
 		setup()
-		return t.Run(name, f)
+		t.Run(name, f)
 	}
 
 	run("Config", func(t *testing.T) {
