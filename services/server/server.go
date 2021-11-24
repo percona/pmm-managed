@@ -766,16 +766,15 @@ func (s *Server) TestEmailAlertingSettings(
 	}
 
 	if !govalidator.IsEmail(req.EmailTo) {
-		return nil, errors.Errorf("invalid \"emailTo\" email %q", req.EmailTo)
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid \"emailTo\" email %q", req.EmailTo))
 	}
 
 	e := &alertmanager.Emailer{
 		Settings: settings,
-		Logger:   s.l,
 	}
 
 	if err := e.Send(ctx, req.EmailTo); err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	return &serverpb.TestEmailAlertingSettingsResponse{}, nil

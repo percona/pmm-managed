@@ -24,30 +24,26 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-	"github.com/pkg/errors"
+	"github.com/percona/pmm-managed/models"
 	"github.com/prometheus/alertmanager/config"
+	"github.com/prometheus/alertmanager/notify/email"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
-	"github.com/sirupsen/logrus"
-
-	"github.com/percona/pmm-managed/models"
-	"github.com/prometheus/alertmanager/notify/email"
 )
 
 type Emailer struct {
 	Settings *models.EmailAlertingSettings
-	Logger   *logrus.Entry
 }
 
 func (e *Emailer) Send(ctx context.Context, emailTo string) error {
 	host, port, err := net.SplitHostPort(e.Settings.Smarthost)
 	if err != nil {
-		return err
+		return models.NewInvalidArgumentError("invalid smarthost: %q", err.Error())
 	}
 
 	if port == "" {
-		return errors.Errorf("address %q: port cannot be empty", port)
+		return models.NewInvalidArgumentError("address %q: port cannot be empty", port)
 	}
 
 	emailConfig := &config.EmailConfig{
@@ -64,32 +60,39 @@ func (e *Emailer) Send(ctx context.Context, emailTo string) error {
 		AuthSecret:   config.Secret(e.Settings.Secret),
 		AuthIdentity: e.Settings.Identity,
 		Headers: map[string]string{
-			"Subject": `[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]`,
+			"Subject": `Test alert.`,
 		},
-		HTML: emailTemplate,
-		// RequireTLS: e.settings.RequireTLS TODO: implement once https://jira.percona.com/browse/PMM-9068 get merged
+		HTML:       emailTemplate,
+		RequireTLS: &e.Settings.RequireTLS,
 	}
 
 	tmpl, err := template.FromGlobs()
 	if err != nil {
 		return err
 	}
-	tmpl.ExternalURL, _ = url.Parse("https://example.com")
+	tmpl.ExternalURL, err = url.Parse("https://example.com")
+	if err != nil {
+		return err
+	}
 
 	alertmanagerEmail := email.New(emailConfig, tmpl, kitlog.NewNopLogger())
 	if _, err := alertmanagerEmail.Notify(ctx, &types.Alert{
 		Alert: model.Alert{
 			Labels: model.LabelSet{
-				model.AlertNameLabel: model.LabelValue(fmt.Sprintf("This is a test alert %s", time.Now().String())),
+				model.AlertNameLabel: model.LabelValue(fmt.Sprintf("Test alert %s", time.Now().String())),
+				"severity":           "notice",
 			},
-			Annotations: model.LabelSet{},
-			StartsAt:    time.Now(),
-			EndsAt:      time.Now().Add(time.Minute),
+			Annotations: model.LabelSet{
+				"summary":     "This is a test alert.",
+				"description": "Long description.",
+				"rule":        "example-violated-rule",
+			},
+			StartsAt: time.Now(),
+			EndsAt:   time.Now().Add(time.Minute),
 		},
-		UpdatedAt: time.Time{},
-		Timeout:   false,
+		Timeout: true,
 	}); err != nil {
-		return err
+		return models.NewInvalidArgumentError("failed to send email: %s", err.Error())
 	}
 
 	return nil
