@@ -322,11 +322,7 @@ func validateEmailAlertingSettings(params *ChangeSettingsParams) error {
 		return nil
 	}
 
-	if err := params.EmailAlertingSettings.Validate(); err != nil {
-		return err
-	}
-
-	return nil
+	return params.EmailAlertingSettings.Validate()
 }
 
 // ValidateSettings validates settings changes.

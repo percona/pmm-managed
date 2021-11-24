@@ -24,20 +24,21 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-	"github.com/percona/pmm-managed/models"
 	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/notify/email"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
+
+	"github.com/percona/pmm-managed/models"
 )
 
-type Emailer struct {
-	Settings *models.EmailAlertingSettings
-}
+// Emailer is responsible for sending emails using alertmanger Email notifier.
+type Emailer struct{}
 
-func (e *Emailer) Send(ctx context.Context, emailTo string) error {
-	host, port, err := net.SplitHostPort(e.Settings.Smarthost)
+// Send sends an email to `emailTo` recipient using given settings.
+func (e *Emailer) Send(ctx context.Context, settings *models.EmailAlertingSettings, emailTo string) error {
+	host, port, err := net.SplitHostPort(settings.Smarthost)
 	if err != nil {
 		return models.NewInvalidArgumentError("invalid smarthost: %q", err.Error())
 	}
@@ -49,21 +50,21 @@ func (e *Emailer) Send(ctx context.Context, emailTo string) error {
 	emailConfig := &config.EmailConfig{
 		NotifierConfig: config.NotifierConfig{},
 		To:             emailTo,
-		From:           e.Settings.From,
-		Hello:          e.Settings.Hello,
+		From:           settings.From,
+		Hello:          settings.Hello,
 		Smarthost: config.HostPort{
 			Host: host,
 			Port: port,
 		},
-		AuthUsername: e.Settings.Username,
-		AuthPassword: config.Secret(e.Settings.Password),
-		AuthSecret:   config.Secret(e.Settings.Secret),
-		AuthIdentity: e.Settings.Identity,
+		AuthUsername: settings.Username,
+		AuthPassword: config.Secret(settings.Password),
+		AuthSecret:   config.Secret(settings.Secret),
+		AuthIdentity: settings.Identity,
 		Headers: map[string]string{
 			"Subject": `Test alert.`,
 		},
 		HTML:       emailTemplate,
-		RequireTLS: &e.Settings.RequireTLS,
+		RequireTLS: &settings.RequireTLS,
 	}
 
 	tmpl, err := template.FromGlobs()
@@ -92,7 +93,7 @@ func (e *Emailer) Send(ctx context.Context, emailTo string) error {
 		},
 		Timeout: true,
 	}); err != nil {
-		return models.NewInvalidArgumentError("failed to send email: %s", err.Error())
+		return models.NewInvalidArgumentError(err.Error())
 	}
 
 	return nil

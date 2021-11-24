@@ -37,6 +37,7 @@ import (
 //go:generate mockery -name=platformService -case=snake -inpkg -testonly
 //go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
+//go:generate mockery -name=emailer -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
 // service health for the Readiness check.
@@ -129,4 +130,8 @@ type agentsStateUpdater interface {
 type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
+}
+
+type emailer interface {
+	Send(ctx context.Context, settings *models.EmailAlertingSettings, emailTo string) error
 }

@@ -35,7 +35,6 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
-	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
@@ -70,6 +69,7 @@ type Server struct {
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
+	emailer              emailer
 
 	l *logrus.Entry
 
@@ -107,6 +107,7 @@ type Params struct {
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
+	Emailer              emailer
 }
 
 // NewServer returns new server for Server service.
@@ -132,6 +133,7 @@ func NewServer(params *Params) (*Server, error) {
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
 		dbaasClient:          params.DbaasClient,
+		emailer:              params.Emailer,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
@@ -745,36 +747,33 @@ func (s *Server) TestEmailAlertingSettings(
 	req *serverpb.TestEmailAlertingSettingsRequest,
 ) (*serverpb.TestEmailAlertingSettingsResponse, error) {
 	settings := &models.EmailAlertingSettings{
-		From:      req.Settings.From,
-		Smarthost: req.Settings.Smarthost,
-		Hello:     req.Settings.Hello,
-		Username:  req.Settings.Username,
-		Password:  req.Settings.Password,
-		Identity:  req.Settings.Identity,
-		Secret:    req.Settings.Secret,
+		From:       req.Settings.From,
+		Smarthost:  req.Settings.Smarthost,
+		Hello:      req.Settings.Hello,
+		Username:   req.Settings.Username,
+		Password:   req.Settings.Password,
+		Identity:   req.Settings.Identity,
+		Secret:     req.Settings.Secret,
+		RequireTLS: req.Settings.RequireTls,
 	}
 
-	var errInvalidArgument models.ErrInvalidArgument
-	err := settings.Validate()
-	switch {
-	case err == nil:
-	case errors.As(err, &errInvalidArgument):
-		return nil, status.Error(codes.InvalidArgument,
-			fmt.Sprintf("Invalid argument: %s.", errInvalidArgument.Details))
-	default:
-		return nil, errors.WithStack(err)
+	if err := settings.Validate(); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid argument: %s.", err.Error()))
 	}
 
 	if !govalidator.IsEmail(req.EmailTo) {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid \"emailTo\" email %q", req.EmailTo))
 	}
 
-	e := &alertmanager.Emailer{
-		Settings: settings,
-	}
-
-	if err := e.Send(ctx, req.EmailTo); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+	var errInvalidArgument *models.ErrInvalidArgument
+	err := s.emailer.Send(ctx, settings, req.EmailTo)
+	switch {
+	case err == nil:
+	case errors.As(err, &errInvalidArgument):
+		return nil, status.Error(codes.InvalidArgument,
+			fmt.Sprintf("Cannot send email: %s.", errInvalidArgument.Details))
+	default:
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Cannot send email: %s.", err.Error()))
 	}
 
 	return &serverpb.TestEmailAlertingSettingsResponse{}, nil

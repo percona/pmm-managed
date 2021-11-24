@@ -112,6 +112,7 @@ type EmailAlertingSettings struct {
 	RequireTLS bool   `json:"require_tls"`
 }
 
+// Validate validates structure's fields.
 func (e *EmailAlertingSettings) Validate() error {
 	if !govalidator.IsEmail(e.From) {
 		return errors.Errorf("invalid \"from\" email %q", e.From)
