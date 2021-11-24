@@ -99,15 +99,6 @@ func (s *Service) SetCustomLabels(m map[string]string) error {
 	return setLabels(m, &s.CustomLabels)
 }
 
-// GetDatabaseNameOrDefault retrieves database name.
-func (s *Service) GetDatabaseNameOrDefault() string {
-	if s.DatabaseName == "" {
-		return "postgres"
-	}
-
-	return s.DatabaseName
-}
-
 // UnifiedLabels returns combined standard and custom labels with empty labels removed.
 func (s *Service) UnifiedLabels() (map[string]string, error) {
 	custom, err := s.GetCustomLabels()

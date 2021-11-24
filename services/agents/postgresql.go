@@ -35,6 +35,11 @@ var postgresExporterAutodiscoveryVersion = version.MustParse("2.15.99")
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
 func postgresExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
 	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+
+	if service.DatabaseName == "" {
+		panic("database name not set")
+	}
+
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -79,7 +84,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, service.GetDatabaseNameOrDefault(), nil)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, service.DatabaseName, nil)),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 		},
 		TextFiles: exporter.Files(),
