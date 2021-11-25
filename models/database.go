@@ -660,7 +660,7 @@ var databaseSchema = [][]string{
 	},
 	53: {
 		`UPDATE services SET database_name = 'postgresql' 
-	  WHERE service_type = 'postgresql' and database_name = ''`,
+			WHERE service_type = 'postgresql' and database_name = ''`,
 	},
 }
 
