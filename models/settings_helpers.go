@@ -129,10 +129,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		return nil, err
 	}
 
-	if err := validateSettingsConflicts(params, settings); err != nil {
-		return nil, NewInvalidArgumentError(err.Error())
-	}
-
 	if params.DisableUpdates {
 		settings.Updates.Disabled = true
 	}
@@ -438,10 +434,6 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		return errors.New("both pmm_public_address and remove_pmm_public_address are present")
 	}
 
-	return nil
-}
-
-func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
 	return nil
 }
 
