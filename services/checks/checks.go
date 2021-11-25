@@ -1054,13 +1054,13 @@ func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
-	if err != nil {
-		return nil, err
+	var accessToken string
+	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllChecks", s.host)
-	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, ssoDetails.AccessToken.AccessToken, nil)
+	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

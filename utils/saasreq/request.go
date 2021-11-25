@@ -51,7 +51,9 @@ func MakeRequest(ctx context.Context, method string, endpoint, accessToken strin
 
 	h := req.Header
 	h.Add("Content-Type", "application/json")
-	h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	if accessToken != "" {
+		h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	}
 
 	client := &http.Client{
 		Transport: &http.Transport{

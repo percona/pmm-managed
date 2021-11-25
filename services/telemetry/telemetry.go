@@ -341,9 +341,9 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
-	if err != nil {
-		return err
+	var accessToken string
+	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
 	reqByte, err := json.Marshal(req)
@@ -352,7 +352,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, ssoDetails.AccessToken.AccessToken, bytes.NewReader(reqByte))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
