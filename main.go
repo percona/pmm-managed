@@ -686,6 +686,7 @@ func main() {
 	backupService := backup.NewService(db, jobsService, agentsRegistry, versioner)
 	schedulerService := scheduler.New(db, backupService)
 	versionCache := versioncache.New(db, versioner)
+	emailer := alertmanager.NewEmailer(logrus.WithField("component", "alertmanager-emailer").Logger)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -702,7 +703,7 @@ func main() {
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
-		Emailer:              &alertmanager.Emailer{},
+		Emailer:              emailer,
 	}
 
 	server, err := server.NewServer(serverParams)

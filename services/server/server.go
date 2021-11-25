@@ -646,7 +646,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		switch {
 		case err == nil:
 		case errors.As(err, &errInvalidArgument):
-			return status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid argument: %s.", errInvalidArgument.Details))
+			return status.Errorf(codes.InvalidArgument, "Invalid argument: %s.", errInvalidArgument.Details)
 		default:
 			return errors.WithStack(err)
 		}
@@ -746,34 +746,33 @@ func (s *Server) TestEmailAlertingSettings(
 	ctx context.Context,
 	req *serverpb.TestEmailAlertingSettingsRequest,
 ) (*serverpb.TestEmailAlertingSettingsResponse, error) {
+	eas := req.EmailAlertingSettings
 	settings := &models.EmailAlertingSettings{
-		From:       req.Settings.From,
-		Smarthost:  req.Settings.Smarthost,
-		Hello:      req.Settings.Hello,
-		Username:   req.Settings.Username,
-		Password:   req.Settings.Password,
-		Identity:   req.Settings.Identity,
-		Secret:     req.Settings.Secret,
-		RequireTLS: req.Settings.RequireTls,
+		From:       eas.From,
+		Smarthost:  eas.Smarthost,
+		Hello:      eas.Hello,
+		Username:   eas.Username,
+		Password:   eas.Password,
+		Identity:   eas.Identity,
+		Secret:     eas.Secret,
+		RequireTLS: eas.RequireTls,
 	}
 
 	if err := settings.Validate(); err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid argument: %s.", err.Error()))
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid argument: %s.", err.Error())
 	}
 
 	if !govalidator.IsEmail(req.EmailTo) {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid \"emailTo\" email %q", req.EmailTo))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid \"emailTo\" email %q", req.EmailTo)
 	}
 
-	var errInvalidArgument *models.ErrInvalidArgument
 	err := s.emailer.Send(ctx, settings, req.EmailTo)
-	switch {
-	case err == nil:
-	case errors.As(err, &errInvalidArgument):
-		return nil, status.Error(codes.InvalidArgument,
-			fmt.Sprintf("Cannot send email: %s.", errInvalidArgument.Details))
-	default:
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Cannot send email: %s.", err.Error()))
+	if err != nil {
+		var errInvalidArgument *models.ErrInvalidArgument
+		if errors.As(err, &errInvalidArgument) {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot send email: %s.", errInvalidArgument.Details)
+		}
+		return nil, status.Errorf(codes.Internal, "Cannot send email: %s.", err.Error())
 	}
 
 	return &serverpb.TestEmailAlertingSettingsResponse{}, nil

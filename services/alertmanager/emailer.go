@@ -23,18 +23,33 @@ import (
 	"net/url"
 	"time"
 
-	kitlog "github.com/go-kit/log"
 	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/notify/email"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 // Emailer is responsible for sending emails using alertmanger Email notifier.
-type Emailer struct{}
+type Emailer struct {
+	l *logrus.Logger
+}
+
+// NewEmailer creates Emailer instance.
+func NewEmailer(l *logrus.Logger) *Emailer {
+	return &Emailer{l: l}
+}
+
+type loggerFunc func(level logrus.Level, args ...interface{})
+
+// Log performs logging operation to logrus logger.
+func (f loggerFunc) Log(values ...interface{}) error {
+	f(logrus.DebugLevel, values)
+	return nil
+}
 
 // Send sends an email to `emailTo` recipient using given settings.
 func (e *Emailer) Send(ctx context.Context, settings *models.EmailAlertingSettings, emailTo string) error {
@@ -76,7 +91,7 @@ func (e *Emailer) Send(ctx context.Context, settings *models.EmailAlertingSettin
 		return err
 	}
 
-	alertmanagerEmail := email.New(emailConfig, tmpl, kitlog.NewNopLogger())
+	alertmanagerEmail := email.New(emailConfig, tmpl, loggerFunc(e.l.Log))
 	if _, err := alertmanagerEmail.Notify(ctx, &types.Alert{
 		Alert: model.Alert{
 			Labels: model.LabelSet{

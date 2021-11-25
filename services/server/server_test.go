@@ -288,7 +288,7 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 	ctx := context.TODO()
 
 	normalRequest := &serverpb.TestEmailAlertingSettingsRequest{
-		Settings: &serverpb.EmailAlertingSettings{
+		EmailAlertingSettings: &serverpb.EmailAlertingSettings{
 			From:       "me@example.com",
 			Smarthost:  "example.com:465",
 			Hello:      "example.com",
@@ -300,6 +300,7 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 		},
 		EmailTo: "to@example.com",
 	}
+	eas := normalRequest.EmailAlertingSettings
 
 	for _, tc := range []struct {
 		testName string
@@ -313,14 +314,14 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			respErr:  "",
 			mock: func() {
 				s := &models.EmailAlertingSettings{
-					From:       normalRequest.Settings.From,
-					Smarthost:  normalRequest.Settings.Smarthost,
-					Hello:      normalRequest.Settings.Hello,
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTLS: normalRequest.Settings.RequireTls,
+					From:       eas.From,
+					Smarthost:  eas.Smarthost,
+					Hello:      eas.Hello,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTLS: eas.RequireTls,
 				}
 				e.On("Send", mock.Anything, s, normalRequest.EmailTo).Return(nil).Once()
 			},
@@ -331,14 +332,14 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			respErr:  "rpc error: code = InvalidArgument desc = Cannot send email: invalid argument.",
 			mock: func() {
 				s := &models.EmailAlertingSettings{
-					From:       normalRequest.Settings.From,
-					Smarthost:  normalRequest.Settings.Smarthost,
-					Hello:      normalRequest.Settings.Hello,
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTLS: normalRequest.Settings.RequireTls,
+					From:       eas.From,
+					Smarthost:  eas.Smarthost,
+					Hello:      eas.Hello,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTLS: eas.RequireTls,
 				}
 				e.On("Send", mock.Anything, s, normalRequest.EmailTo).
 					Return(models.NewInvalidArgumentError("invalid argument")).Once()
@@ -349,15 +350,15 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			respErr: "rpc error: code = InvalidArgument desc = " +
 				"Invalid argument: invalid \"from\" email \"invalid-from\".",
 			req: &serverpb.TestEmailAlertingSettingsRequest{
-				Settings: &serverpb.EmailAlertingSettings{
+				EmailAlertingSettings: &serverpb.EmailAlertingSettings{
 					From:       "invalid-from",
-					Smarthost:  normalRequest.Settings.Smarthost,
-					Hello:      normalRequest.Settings.Hello,
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTls: normalRequest.Settings.RequireTls,
+					Smarthost:  eas.Smarthost,
+					Hello:      eas.Hello,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTls: eas.RequireTls,
 				},
 				EmailTo: normalRequest.EmailTo,
 			},
@@ -367,15 +368,15 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			respErr: "rpc error: code = InvalidArgument desc = " +
 				"Invalid argument: invalid server address, expected format host:port.",
 			req: &serverpb.TestEmailAlertingSettingsRequest{
-				Settings: &serverpb.EmailAlertingSettings{
-					From:       normalRequest.Settings.From,
+				EmailAlertingSettings: &serverpb.EmailAlertingSettings{
+					From:       eas.From,
 					Smarthost:  "invalid-smart-host",
-					Hello:      normalRequest.Settings.Hello,
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTls: normalRequest.Settings.RequireTls,
+					Hello:      eas.Hello,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTls: eas.RequireTls,
 				},
 				EmailTo: normalRequest.EmailTo,
 			},
@@ -385,15 +386,15 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			respErr: "rpc error: code = InvalidArgument desc = " +
 				"Invalid argument: invalid hello field, expected valid host.",
 			req: &serverpb.TestEmailAlertingSettingsRequest{
-				Settings: &serverpb.EmailAlertingSettings{
-					From:       normalRequest.Settings.From,
-					Smarthost:  normalRequest.Settings.Smarthost,
+				EmailAlertingSettings: &serverpb.EmailAlertingSettings{
+					From:       eas.From,
+					Smarthost:  eas.Smarthost,
 					Hello:      "@invalid hello",
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTls: normalRequest.Settings.RequireTls,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTls: eas.RequireTls,
 				},
 				EmailTo: normalRequest.EmailTo,
 			},
@@ -402,15 +403,15 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 			testName: "invalid argument: emailTo",
 			respErr:  "rpc error: code = InvalidArgument desc = invalid \"emailTo\" email \"invalid email\"",
 			req: &serverpb.TestEmailAlertingSettingsRequest{
-				Settings: &serverpb.EmailAlertingSettings{
-					From:       normalRequest.Settings.From,
-					Smarthost:  normalRequest.Settings.Smarthost,
-					Hello:      normalRequest.Settings.Hello,
-					Username:   normalRequest.Settings.Username,
-					Password:   normalRequest.Settings.Password,
-					Identity:   normalRequest.Settings.Identity,
-					Secret:     normalRequest.Settings.Secret,
-					RequireTls: normalRequest.Settings.RequireTls,
+				EmailAlertingSettings: &serverpb.EmailAlertingSettings{
+					From:       eas.From,
+					Smarthost:  eas.Smarthost,
+					Hello:      eas.Hello,
+					Username:   eas.Username,
+					Password:   eas.Password,
+					Identity:   eas.Identity,
+					Secret:     eas.Secret,
+					RequireTls: eas.RequireTls,
 				},
 				EmailTo: "invalid email",
 			},
