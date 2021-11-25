@@ -251,7 +251,7 @@ func TestChangeInterval(t *testing.T) {
 		}
 
 		t.Run("preserve intervals on restarts", func(t *testing.T) {
-			settings, err := models.GetSettings(db)
+			settings, err := models.GetSettings(db.Querier)
 			require.NoError(t, err)
 
 			settings.SaaS.STTEnabled = true
@@ -311,7 +311,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	t.Run("STT enabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
+		settings, err := models.GetSettings(db.Querier)
 		require.NoError(t, err)
 
 		settings.SaaS.STTEnabled = true
@@ -338,7 +338,7 @@ func TestStartChecks(t *testing.T) {
 	t.Run("unknown interval", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
+		settings, err := models.GetSettings(db.Querier)
 		require.NoError(t, err)
 
 		settings.SaaS.STTEnabled = true
@@ -355,7 +355,7 @@ func TestStartChecks(t *testing.T) {
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
+		settings, err := models.GetSettings(db.Querier)
 		require.NoError(t, err)
 
 		settings.SaaS.STTEnabled = true

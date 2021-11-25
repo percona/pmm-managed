@@ -705,7 +705,6 @@ command =
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
         {{- end}}
 
-
 user = grafana
 directory = /usr/share/grafana
 autorestart = true

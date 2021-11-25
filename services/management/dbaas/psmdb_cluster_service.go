@@ -56,7 +56,7 @@ func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClien
 
 // Enabled returns if service is enabled and can be used.
 func (s *PSMDBClusterService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		s.l.WithError(err).Error("can't get settings")
 		return false

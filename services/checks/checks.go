@@ -177,7 +177,7 @@ func (s *Service) Run(ctx context.Context) {
 	s.l.Info("Starting...")
 	defer s.l.Info("Done.")
 
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		s.l.Errorf("Failed to get settings: %+v.", err)
 		return
@@ -267,7 +267,7 @@ func (s *Service) restartChecks(ctx context.Context) {
 
 // GetSecurityCheckResults returns the results of the STT checks that were run. It returns services.ErrSTTDisabled if STT is disabled.
 func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 // StartChecks triggers STT checks downloading and execution. If intervalGroup specified only checks from that group
 // will be executed. If checkNames specified then only matched checks will be executed.
 func (s *Service) StartChecks(ctx context.Context, intervalGroup check.Interval, checkNames []string) error {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -369,7 +369,7 @@ func (s *Service) GetAllChecks() map[string]check.Check {
 
 // GetDisabledChecks returns disabled checks.
 func (s *Service) GetDisabledChecks() ([]string, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
@@ -1052,7 +1052,7 @@ func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}

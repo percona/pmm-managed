@@ -26,11 +26,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/validators"
 )
 
+const defaultPMMPostgreSQLService = "pmm-server-postgresql"
+
 // GetSettings returns current PMM Server settings.
-func GetSettings(q reform.DBTX) (*Settings, error) {
+func GetSettings(q *reform.Querier) (*Settings, error) {
 	var b []byte
 	if err := q.QueryRow("SELECT settings FROM settings").Scan(&b); err != nil {
 		return nil, errors.Wrap(err, "failed to select settings")
@@ -40,6 +43,21 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal settings")
+	}
+
+	// Extract UUID from default PMM PostgreSQL service ID to use it as an unique identifier for the PMM server.
+	// Service id example: /service_id/78fae40e-9dc8-4efd-a40c-972a208dd218
+	service, err := FindServiceByName(q, defaultPMMPostgreSQLService)
+	if err == nil {
+		// the service exists
+		idParts := strings.Split(service.ServiceID, "/")
+		if len(idParts) < 3 {
+			return nil, errors.Errorf("wrong format of service ID of defalt PMM PostgreSQL service: number of id parts is %d", len(idParts))
+		}
+		s.PMMServerID = idParts[len(idParts)-1] // uuid is at the end
+	} else {
+		// The default service will be added after first start of PMM Server, we should not return error if we fail to get it.
+		logger.Get(q.Context()).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", defaultPMMPostgreSQLService, err)
 	}
 
 	s.fillDefaults()
@@ -125,7 +143,7 @@ type ChangeSettingsParams struct {
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
-func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
+func UpdateSettings(q *reform.Querier, params *ChangeSettingsParams) (*Settings, error) {
 	err := ValidateSettings(params)
 	if err != nil {
 		return nil, err

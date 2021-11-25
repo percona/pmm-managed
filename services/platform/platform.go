@@ -20,13 +20,13 @@ package platform
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	platform "github.com/percona-platform/platform/gen/org"
 	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -46,7 +46,6 @@ const (
 )
 
 var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
-var errConnectingToPortal = errors.New("failed to connect PMM to Portal")
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
@@ -118,70 +117,101 @@ func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string)
 	return nil
 }
 
+var ErrAddressNotSet = errors.New("PMM server does not have an address set")
+
 // Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
 func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
 	_, err := models.GetPerconaSSODetails(s.db.Querier)
 	if err == nil {
 		return errors.Wrap(err, "PMM server is already connected to Portal")
 	}
-
+	settings, err := models.GetSettings(s.db.Querier)
+	if err != nil {
+		return errors.Wrap(ErrAddressNotSet, "failed to fetch PMM server ID and address of PMM server")
+	}
+	if settings.PMMPublicAddress == "" {
+		return ErrAddressNotSet
+	}
+	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 	ssoParams, err := s.connect(ctx, &connectPMMParams{
-		serverName: serverName,
-		// TODO finish this tomorrow
+		serverName:                serverName,
+		email:                     email,
+		password:                  password,
+		pmmServerURL:              pmmServerURL,
+		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
+		pmmServerID:               settings.PMMServerID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to connect PMM server to Portal")
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
-		ClientID:     ssoParams.ClientId,
+		ClientID:     ssoParams.ClientID,
 		ClientSecret: ssoParams.ClientSecret,
-		IssuerURL:    ssoParams.IssuerUrl,
+		IssuerURL:    ssoParams.IssuerURL,
 		Scope:        ssoParams.Scope,
 	})
 	return errors.Wrap(err, "failed to save session id")
 }
 
-// connect calls Portal API
-// It returns them if none of the environment variables is empty. Otherwise it returns an error.
-// TODO Change this implementation to the one that uses real Portal API to fetch SSO details when the API is ready.
 type connectPMMParams struct {
-	pmmServerURL, pmmServerOAuthCallbackURL, telemetryID, serverName, email, password string
+	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, email, password string
 }
 
-func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*platform.PMMServerSSODetails, error) {
-	endpoint := fmt.Sprintf("%s/v1/orgs/inventory", s.host)
+type connectPMMRequest struct {
+	PMMServerID               string `json:"pmm_server_id`
+	PMMServerName             string `json:"pmm_server_name`
+	PMMServerURL              string `json:"pmm_server_url`
+	PMMServerOAuthCallbackURL string `json:"pmm_server_oauth_callback_url`
+}
 
-	marshaled, err := json.Marshal(platform.ConnectPMMRequest{
-		PmmServerId:               params.telemetryID,
-		PmmServerName:             params.serverName,
-		PmmServerUrl:              params.pmmServerURL,
-		PmmServerOauthCallbackUrl: params.pmmServerOAuthCallbackURL,
-	},
-	)
+type ssoDetails struct {
+	ClientID     string `json:"client_id`
+	ClientSecret string `json:"client_secret`
+	Scope        string `json:"scope`
+	IssuerURL    string `json:"issuer_url"`
+}
+
+type connectPMMResponse struct {
+	SSODetails *ssoDetails `json:"sso_details"`
+}
+
+func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDetails, error) {
+	// TODO USE HTTPS
+	endpoint := fmt.Sprintf("http://%s/v1/orgs/inventory", s.host)
+
+	marshaled, err := json.Marshal(connectPMMRequest{
+		PMMServerID:               params.pmmServerID,
+		PMMServerName:             params.serverName,
+		PMMServerURL:              params.pmmServerURL,
+		PMMServerOAuthCallbackURL: params.pmmServerOAuthCallbackURL,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal request data")
 	}
+
 	// TODO use client with some timeouts
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build request")
 	}
+	encodedEmailPassword := base64.RawStdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", params.email, params.password)))
+	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", encodedEmailPassword))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute request")
 	}
 	defer resp.Body.Close()
-	var response platform.ConnectPMMResponse
+	var response connectPMMResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, errors.Wrap(err, "failed to decode response into SSO details")
 	}
-	return response.SsoDetails, nil
+	return response.SSODetails, nil
 }
 
 // SignOut logouts that instance from Percona Platform account and removes session id.
 func (s *Service) SignOut(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return err
 	}
@@ -218,7 +248,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 
 // refreshSession resets session timeout.
 func (s *Service) refreshSession(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return err
 	}

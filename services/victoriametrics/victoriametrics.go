@@ -320,7 +320,7 @@ func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 // populateConfig adds configuration from the database to cfg.
 func (svc *Service) populateConfig(cfg *config.Config) error {
 	return svc.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx)
+		settings, err := models.GetSettings(tx.Querier)
 		if err != nil {
 			return err
 		}
@@ -378,7 +378,7 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, error) {
 	var cfg config.Config
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx)
+		settings, err := models.GetSettings(tx.Querier)
 		if err != nil {
 			return err
 		}

@@ -96,6 +96,11 @@ type Settings struct {
 	BackupManagement struct {
 		Enabled bool `json:"enabled"`
 	} `json:"backup_management"`
+
+	// PMMServerID represents unique identifier of the PMM server. It's utilizes the fact that there is unique ID for
+	// the service called pmm-server-postgresql. It's the service that is guaranteed to exist in every PMM Server.
+	// That is why we don't have a key for the json tag, we get this separately and can't set it.
+	PMMServerID string `json:"-"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.

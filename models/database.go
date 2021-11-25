@@ -800,7 +800,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		}
 
 		// fill settings with defaults
-		s, err := GetSettings(tx)
+		s, err := GetSettings(tx.Querier)
 		if err != nil {
 			return err
 		}

@@ -42,7 +42,7 @@ func NewLogsService(db *reform.DB, client dbaasClient) dbaasv1beta1.LogsAPIServe
 
 // Enabled returns if service is enabled and can be used.
 func (s *LogsService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		s.l.WithError(err).Error("can't get settings")
 		return false

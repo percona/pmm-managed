@@ -47,6 +47,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -488,7 +489,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 	s.envRW.RLock()
 	defer s.envRW.RUnlock()
 
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +583,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
 
-		if oldSettings, e = models.GetSettings(tx); e != nil {
+		if oldSettings, e = models.GetSettings(tx.Querier); e != nil {
 			return errors.WithStack(e)
 		}
 
@@ -646,7 +647,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		if newSettings, e = models.UpdateSettings(tx, settingsParams); e != nil {
+		if newSettings, e = models.UpdateSettings(tx.Querier, settingsParams); e != nil {
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
@@ -745,7 +746,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
 func (s *Server) UpdateConfigurations() error {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}
@@ -849,6 +850,9 @@ func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConn
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
 	if err := s.platformService.Connect(nCtx, req.ServerName, req.Email, req.Password); err != nil {
+		if errors.Is(err, platform.ErrAddressNotSet) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
 		return nil, err
 	}
 
