@@ -454,13 +454,14 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		res.EmailAlertingSettings = &serverpb.EmailAlertingSettings{
-			From:      settings.IntegratedAlerting.EmailAlertingSettings.From,
-			Smarthost: settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
-			Hello:     settings.IntegratedAlerting.EmailAlertingSettings.Hello,
-			Username:  settings.IntegratedAlerting.EmailAlertingSettings.Username,
-			Password:  "",
-			Identity:  settings.IntegratedAlerting.EmailAlertingSettings.Identity,
-			Secret:    settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			From:       settings.IntegratedAlerting.EmailAlertingSettings.From,
+			Smarthost:  settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
+			Hello:      settings.IntegratedAlerting.EmailAlertingSettings.Hello,
+			Username:   settings.IntegratedAlerting.EmailAlertingSettings.Username,
+			Password:   "",
+			Identity:   settings.IntegratedAlerting.EmailAlertingSettings.Identity,
+			Secret:     settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			RequireTls: settings.IntegratedAlerting.EmailAlertingSettings.RequireTLS,
 		}
 	}
 
@@ -524,9 +525,6 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
 	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
-	}
-	if req.EnableStt && s.envSettings.DisableTelemetry {
-		return status.Error(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
 	// ignore req.EnableAlerting even if they are present since that will not change anything
@@ -619,12 +617,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		if req.EmailAlertingSettings != nil {
 			settingsParams.EmailAlertingSettings = &models.EmailAlertingSettings{
-				From:      req.EmailAlertingSettings.From,
-				Smarthost: req.EmailAlertingSettings.Smarthost,
-				Hello:     req.EmailAlertingSettings.Hello,
-				Username:  req.EmailAlertingSettings.Username,
-				Identity:  req.EmailAlertingSettings.Identity,
-				Secret:    req.EmailAlertingSettings.Secret,
+				From:       req.EmailAlertingSettings.From,
+				Smarthost:  req.EmailAlertingSettings.Smarthost,
+				Hello:      req.EmailAlertingSettings.Hello,
+				Username:   req.EmailAlertingSettings.Username,
+				Identity:   req.EmailAlertingSettings.Identity,
+				Secret:     req.EmailAlertingSettings.Secret,
+				RequireTLS: req.EmailAlertingSettings.RequireTls,
 			}
 			if req.EmailAlertingSettings.Password != "" {
 				settingsParams.EmailAlertingSettings.Password = req.EmailAlertingSettings.Password
