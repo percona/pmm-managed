@@ -63,6 +63,7 @@ func TestDownloadLogs(t *testing.T) {
 		"pmm-agent.yaml",
 		"pmm-managed.log",
 		"pmm-ssl.conf",
+		"pmm-update-perform-init.log",
 		"pmm-version.txt",
 		"pmm.conf",
 		"pmm.ini",
