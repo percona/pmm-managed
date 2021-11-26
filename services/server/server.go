@@ -738,7 +738,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
-	_, err = models.GetPerconaSSODetails(s.db.Querier)
+	_, err := models.GetPerconaSSODetails(s.db.Querier)
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(newSettings, err == nil),
