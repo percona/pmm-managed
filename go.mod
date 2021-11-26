@@ -18,7 +18,8 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
-	github.com/aws/aws-sdk-go v1.40.56
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.9.0
 	github.com/davecgh/go-spew v1.1.1
@@ -37,8 +38,8 @@ require (
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2
 	github.com/percona-platform/saas v0.0.0-20211101203847-f65c32bc8770
-	github.com/percona/pmm v0.0.0-20211104123115-96038f5b56ef
-	github.com/percona/promconfig v0.2.3
+	github.com/percona/pmm v0.0.0-20211126085313-13d6fb2c4ec0
+	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.11.0
