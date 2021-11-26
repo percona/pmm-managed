@@ -150,7 +150,7 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 		IssuerURL:    ssoParams.IssuerURL,
 		Scope:        ssoParams.Scope,
 	})
-	return errors.Wrap(err, "failed to save session id")
+	return errors.Wrap(err, "failed to save SSO details")
 }
 
 type connectPMMParams struct {
