@@ -35,6 +35,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/saasdial"
 )
@@ -117,8 +118,6 @@ func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string)
 	return nil
 }
 
-var ErrAddressNotSet = errors.New("PMM server does not have an address set")
-
 // Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
 func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
 	_, err := models.GetPerconaSSODetails(s.db.Querier)
@@ -127,10 +126,10 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 	}
 	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
-		return errors.Wrap(ErrAddressNotSet, "failed to fetch PMM server ID and address of PMM server")
+		return errors.Wrap(services.ErrAddressNotSet, "failed to fetch PMM server ID and address of PMM server")
 	}
 	if settings.PMMPublicAddress == "" {
-		return ErrAddressNotSet
+		return services.ErrAddressNotSet
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 	ssoParams, err := s.connect(ctx, &connectPMMParams{

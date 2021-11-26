@@ -57,7 +57,8 @@ func GetSettings(q *reform.Querier) (*Settings, error) {
 		s.PMMServerID = idParts[len(idParts)-1] // uuid is at the end
 	} else {
 		// The default service will be added after first start of PMM Server, we should not return error if we fail to get it.
-		logger.Get(q.Context()).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", defaultPMMPostgreSQLService, err)
+		ctx := logger.Set(q.Context(), "models")
+		logger.Get(ctx).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", defaultPMMPostgreSQLService, err)
 	}
 
 	s.fillDefaults()
