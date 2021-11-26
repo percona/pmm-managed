@@ -30,7 +30,8 @@ import (
 	"github.com/percona/pmm-managed/utils/validators"
 )
 
-const defaultPMMPostgreSQLService = "pmm-server-postgresql"
+// DefaultPMMPostgreSQLService represents a service of PostgreSQL that PMM server uses.
+const DefaultPMMPostgreSQLService = "pmm-server-postgresql"
 
 // GetSettings returns current PMM Server settings.
 func GetSettings(q *reform.Querier) (*Settings, error) {
@@ -47,7 +48,7 @@ func GetSettings(q *reform.Querier) (*Settings, error) {
 
 	// Extract UUID from default PMM PostgreSQL service ID to use it as an unique identifier for the PMM server.
 	// Service id example: /service_id/78fae40e-9dc8-4efd-a40c-972a208dd218
-	service, err := FindServiceByName(q, defaultPMMPostgreSQLService)
+	service, err := FindServiceByName(q, DefaultPMMPostgreSQLService)
 	if err == nil {
 		// the service exists
 		idParts := strings.Split(service.ServiceID, "/")
@@ -58,7 +59,7 @@ func GetSettings(q *reform.Querier) (*Settings, error) {
 	} else {
 		// The default service will be added after first start of PMM Server, we should not return error if we fail to get it.
 		ctx := logger.Set(q.Context(), "models")
-		logger.Get(ctx).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", defaultPMMPostgreSQLService, err)
+		logger.Get(ctx).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", DefaultPMMPostgreSQLService, err)
 	}
 
 	s.fillDefaults()
