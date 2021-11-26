@@ -655,7 +655,7 @@ var databaseSchema = [][]string{
 			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
 	},
 	52: {
-		`UPDATE services SET database_name = 'postgresql' 
+		`UPDATE services SET database_name = 'postgres' 
 			WHERE service_type = 'postgresql' and database_name = ''`,
 	},
 }
