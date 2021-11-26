@@ -19,10 +19,6 @@ services:
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
       - ENABLE_ALERTING=1
       - ENABLE_BACKUP_MANAGEMENT=1
-      - PERCONA_SSO_CLIENT_ID="clientid"
-      - PERCONA_SSO_CLIENT_SECRET="clientsecret"
-      - PERCONA_SSO_ISSUER_URL="url"
-      - PERCONA_SSO_SCOPE="percona"
     # for delve
     cap_add:
       - SYS_PTRACE
