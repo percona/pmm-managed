@@ -159,16 +159,16 @@ type connectPMMParams struct {
 }
 
 type connectPMMRequest struct {
-	PMMServerID               string `json:"pmm_server_id`
-	PMMServerName             string `json:"pmm_server_name`
-	PMMServerURL              string `json:"pmm_server_url`
-	PMMServerOAuthCallbackURL string `json:"pmm_server_oauth_callback_url`
+	PMMServerID               string `json:"pmm_server_id"`
+	PMMServerName             string `json:"pmm_server_name"`
+	PMMServerURL              string `json:"pmm_server_url"`
+	PMMServerOAuthCallbackURL string `json:"pmm_server_oauth_callback_url"`
 }
 
 type ssoDetails struct {
-	ClientID     string `json:"client_id`
-	ClientSecret string `json:"client_secret`
-	Scope        string `json:"scope`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Scope        string `json:"scope"`
 	IssuerURL    string `json:"issuer_url"`
 }
 
