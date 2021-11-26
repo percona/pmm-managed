@@ -426,7 +426,7 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 }
 
 // convertSettings merges database settings and settings from environment variables into API response.
-// Checking if PMM is connected to Portal is separated from settings for security reasons.
+// Checking if PMM is connected to Portal is separated from settings for security and concurrency reasons.
 func (s *Server) convertSettings(settings *models.Settings, connectedToPortal bool) *serverpb.Settings {
 	res := &serverpb.Settings{
 		UpdatesDisabled:  settings.Updates.Disabled,
