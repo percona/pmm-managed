@@ -204,7 +204,11 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute request")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			s.l.Errorf("Failed to close response body: %s", err)
+		}
+	}()
 
 	decoder := json.NewDecoder(resp.Body)
 	if resp.StatusCode != http.StatusOK {

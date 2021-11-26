@@ -753,7 +753,9 @@ func (s *Server) UpdateConfigurations() error {
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
 	if err != nil {
-		s.l.Warnf("Failed to get Percona SSO Details: %v. Percona SSO is most likely not set up.", err)
+		if !errors.Is(err, reform.ErrNoRows) {
+			return errors.Wrap(err, "failed to get SSO details")
+		}
 	}
 	if err := s.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		return errors.Wrap(err, "failed to update supervisord configuration")
