@@ -109,7 +109,7 @@ func TestPlatform(t *testing.T) {
 		const serverName string = "my PMM"
 		email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
 		if email == "" || password == "" {
-			t.Skip("Enviroment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
 		t.Run("PMM server does not have address set", func(t *testing.T) {
 			_, err := client.PlatformConnect(&server.PlatformConnectParams{
