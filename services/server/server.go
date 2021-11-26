@@ -853,8 +853,11 @@ func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConn
 	if err := s.platformService.Connect(nCtx, req.ServerName, req.Email, req.Password); err != nil {
 		if errors.Is(err, services.ErrAddressNotSet) {
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		} else if status, ok := status.FromError(err); ok {
+			return nil, status.Err()
 		}
-		return nil, err
+		s.l.Errorf("failed to connect PMM to portal %s:", err)
+		return nil, status.Error(codes.Internal, "Internal server error.")
 	}
 
 	if err := s.UpdateConfigurations(); err != nil {

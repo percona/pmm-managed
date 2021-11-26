@@ -141,7 +141,7 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 		pmmServerID:               settings.PMMServerID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to connect PMM server to Portal")
+		return err
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
@@ -175,9 +175,13 @@ type connectPMMResponse struct {
 	SSODetails *ssoDetails `json:"sso_details"`
 }
 
+type grpcGatewayError struct {
+	Message string `json:"message"`
+	Code    uint32 `json:"code"`
+}
+
 func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDetails, error) {
-	// TODO USE HTTPS
-	endpoint := fmt.Sprintf("http://%s/v1/orgs/inventory", s.host)
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory", s.host)
 
 	marshaled, err := json.Marshal(connectPMMRequest{
 		PMMServerID:               params.pmmServerID,
@@ -189,20 +193,30 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, errors.Wrap(err, "failed to marshal request data")
 	}
 
-	// TODO use client with some timeouts
+	client := http.Client{Timeout: time.Second * 10}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build request")
 	}
-	encodedEmailPassword := base64.RawStdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", params.email, params.password)))
+	encodedEmailPassword := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", params.email, params.password)))
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", encodedEmailPassword))
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute request")
 	}
 	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		var gwErr grpcGatewayError
+		if err := decoder.Decode(&gwErr); err != nil {
+			return nil, errors.Wrap(err, "failed to decode error message")
+		}
+		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
+	}
+
 	var response connectPMMResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := decoder.Decode(&response); err != nil {
 		return nil, errors.Wrap(err, "failed to decode response into SSO details")
 	}
 	return response.SSODetails, nil

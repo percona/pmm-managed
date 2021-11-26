@@ -17,7 +17,7 @@
 package server
 
 import (
-	"io/ioutil"
+	"net/http"
 	"os"
 	"os/user"
 	"strings"
@@ -106,17 +106,12 @@ func TestPlatform(t *testing.T) {
 	})
 
 	t.Run("connect", func(t *testing.T) {
-		// TODO Change this test once real API for Portal is ready.
-		// Right now, this test only succeeds if env vars PERCONA_SSO_CLIENT_ID,
-		// PERCONA_SSO_CLIENT_SECRET, PERCONA_SSO_ISSUER_URL, PERCONA_SSO_SCOPE are set.
-
 		const serverName string = "my PMM"
-
-		// TODO make sure we are using existing credentials when using real Platform API for connecting.
-		email, password, _, _ := genCredentials(t)
-
-		t.Run("wrong email", func(t *testing.T) {
-			t.Skip("Skip until we use the real credentials for dev")
+		email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
+		if email == "" || password == "" {
+			t.Skip("Enviroment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		}
+		t.Run("PMM server does not have address set", func(t *testing.T) {
 			_, err := client.PlatformConnect(&server.PlatformConnectParams{
 				Body: server.PlatformConnectBody{
 					Email:      "wrong@example.com",
@@ -125,11 +120,32 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Incorrect username or password.")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.FailedPrecondition, "PMM server does not have an address set")
+		})
+
+		// Set the PMM address to localhost.
+		res, err := client.ChangeSettings(&server.ChangeSettingsParams{
+			Body: server.ChangeSettingsBody{
+				PMMPublicAddress: "localhost",
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "localhost", res.Payload.Settings.PMMPublicAddress)
+
+		t.Run("wrong email", func(t *testing.T) {
+			_, err := client.PlatformConnect(&server.PlatformConnectParams{
+				Body: server.PlatformConnectBody{
+					Email:      "wrong@example.com",
+					Password:   password,
+					ServerName: serverName,
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusUnauthorized, codes.Unauthenticated, "Incorrect username or password.")
 		})
 
 		t.Run("wrong password", func(t *testing.T) {
-			t.Skip("Skip until we use the real credentials for dev")
 			_, err := client.PlatformConnect(&server.PlatformConnectParams{
 				Body: server.PlatformConnectBody{
 					Email:      email,
@@ -138,7 +154,7 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Incorrect username or password.")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusUnauthorized, codes.Unauthenticated, "Incorrect username or password.")
 		})
 
 		t.Run("empty email", func(t *testing.T) {
@@ -150,7 +166,7 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Email: value '' must not be an empty string")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.InvalidArgument, "invalid field Email: value '' must not be an empty string")
 		})
 
 		t.Run("empty password", func(t *testing.T) {
@@ -162,7 +178,7 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
 		})
 
 		t.Run("empty server name", func(t *testing.T) {
@@ -174,10 +190,11 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServerName: value '' must not be an empty string")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.InvalidArgument, "invalid field ServerName: value '' must not be an empty string")
 		})
 
-		t.Run("normal", func(t *testing.T) {
+		t.Run("successful call", func(t *testing.T) {
+			t.Skip("Skip this test until we've got disconnect")
 			_, err := client.PlatformConnect(&server.PlatformConnectParams{
 				Body: server.PlatformConnectBody{
 					ServerName: serverName,
@@ -187,11 +204,6 @@ func TestPlatform(t *testing.T) {
 				Context: pmmapitests.Context,
 			})
 			require.NoError(t, err)
-
-			// Check SSO is set up in the grafana.ini supervisord config.
-			grafanaConfig, err := ioutil.ReadFile("/etc/supervisord.d/grafana.ini")
-			require.NoError(t, err)
-			assert.True(t, strings.Contains(string(grafanaConfig), "cfg:default.auth.generic_oauth.enabled=true"), "generic_oauth should have been enabled")
 
 			// Confirm we are connected to Portal.
 			settings, err := client.GetSettings(nil)
