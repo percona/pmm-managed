@@ -30,8 +30,11 @@ import (
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
-// New MongoDB Exporter will be released with PMM agent v2.10.0.
-var newMongoExporterPMMVersion = version.MustParse("2.9.99")
+var (
+	// New MongoDB Exporter will be released with PMM agent v2.10.0.
+	newMongoExporterPMMVersion = version.MustParse("2.9.99")
+	v2_25                      = version.MustParse("2.25.0")
+)
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
@@ -40,19 +43,29 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 
 	var args []string
 	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
-	if pmmAgentVersion.Less(newMongoExporterPMMVersion) {
+	switch {
+	case !pmmAgentVersion.Less(v2_25): // >= 2.25
+		args = []string{
+			"--mongodb.global-conn-pool",
+			"--compatible-mode",
+			"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
+			"--discovering-mode",
+			"--collector.dbstats",
+			"--enable.top",
+		}
+	case !pmmAgentVersion.Less(newMongoExporterPMMVersion): // >= 2.10
+		args = []string{
+			"--mongodb.global-conn-pool",
+			"--compatible-mode",
+			"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
+		}
+	default:
 		args = []string{
 			"--collect.collection",
 			"--collect.database",
 			"--collect.topmetrics",
 			"--no-collect.connpoolstats",
 			"--no-collect.indexusage",
-			"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
-		}
-	} else {
-		args = []string{
-			"--mongodb.global-conn-pool",
-			"--compatible-mode",
 			"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 		}
 	}
