@@ -84,13 +84,6 @@ func TestSettings(t *testing.T) {
 		assert.Equal(t, expected, s)
 	})
 
-	t.Run("Unique PMM server ID", func(t *testing.T) {
-		settings, err := models.GetSettings(q)
-		require.NoError(t, err)
-		require.NotNil(t, settings)
-		assert.NotEmpty(t, settings.PMMServerID)
-	})
-
 	t.Run("Validation", func(t *testing.T) {
 		t.Run("AWSPartitions", func(t *testing.T) {
 			s := &models.ChangeSettingsParams{
@@ -480,5 +473,12 @@ func TestSettings(t *testing.T) {
 			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: both enable_alerting and disable_alerting are present")
 		})
+	})
+
+	t.Run("Unique PMM server ID", func(t *testing.T) {
+		settings, err := models.GetSettings(q)
+		require.NoError(t, err)
+		require.NotNil(t, settings)
+		assert.NotEmpty(t, settings.PMMServerID)
 	})
 }

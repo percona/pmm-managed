@@ -59,7 +59,7 @@ func GetSettings(q *reform.Querier) (*Settings, error) {
 	} else {
 		// The default service will be added after first start of PMM Server, we should not return error if we fail to get it.
 		ctx := logger.Set(q.Context(), "models")
-		logger.Get(ctx).Errorf("failed to get defalt PMM PostgreSQL service by name %q: %s", DefaultPMMPostgreSQLService, err)
+		logger.Get(ctx).Errorf("Failed to get default PMM PostgreSQL service by name %q: %s", DefaultPMMPostgreSQLService, err)
 	}
 
 	s.fillDefaults()
