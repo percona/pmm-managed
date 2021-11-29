@@ -659,6 +659,10 @@ var databaseSchema = [][]string{
 			WHERE service_type = 'postgresql' and database_name = ''`,
 	},
 	53: {
+		`UPDATE services SET database_name = 'postgres' 
+			WHERE service_type = 'postgresql' and database_name = 'postgresql'`,
+	},
+	54: {
 		`DELETE FROM ia_rules`,
 		`ALTER TABLE ia_rules
 			RENAME COLUMN params TO params_values`,
@@ -671,7 +675,7 @@ var databaseSchema = [][]string{
 			ADD COLUMN labels TEXT,
 			ADD COLUMN annotations TEXT`,
 	},
-	54: {
+	55: {
 		`ALTER TABLE ia_templates
 			DROP COLUMN tiers`,
 	},
