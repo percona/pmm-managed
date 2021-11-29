@@ -120,7 +120,7 @@ func TestPlatform(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.FailedPrecondition, "PMM server does not have an address set")
+			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.FailedPrecondition, "The address of PMM server is not set")
 		})
 
 		// Set the PMM address to localhost.

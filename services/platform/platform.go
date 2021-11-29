@@ -35,7 +35,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/saasdial"
 )
@@ -126,10 +125,10 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 	}
 	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
-		return errors.Wrap(services.ErrAddressNotSet, "failed to fetch PMM server ID and address of PMM server")
+		return errors.Wrap(err, "failed to fetch PMM server ID and address of PMM server")
 	}
 	if settings.PMMPublicAddress == "" {
-		return services.ErrAddressNotSet
+		return status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 	ssoParams, err := s.connect(ctx, &connectPMMParams{

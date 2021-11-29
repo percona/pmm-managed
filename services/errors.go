@@ -25,6 +25,3 @@ var ErrSTTDisabled = errors.New("STT is disabled")
 
 // ErrAlertingDisabled means Integrated Alerting is disabled and IA APIs can't be executed.
 var ErrAlertingDisabled = errors.New("Alerting is disabled")
-
-// ErrAddressNotSet means operation relies on PMM server having address set in the settings.
-var ErrAddressNotSet = errors.New("PMM server does not have an address set")
