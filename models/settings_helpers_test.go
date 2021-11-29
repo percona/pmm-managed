@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -476,6 +477,28 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("Unique PMM server ID", func(t *testing.T) {
+		containerID := uuid.NewString()
+		node, err := models.CreateNode(q, models.ContainerNodeType, &models.CreateNodeParams{
+			NodeName:    "pmm-server",
+			ContainerID: &containerID,
+			Address:     "localhost",
+		})
+		require.NoError(t, err)
+
+		address := "locahost"
+		port := uint16(1654)
+		_, err = models.AddNewService(q, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName:    models.DefaultPMMPostgreSQLService,
+			NodeID:         node.NodeID,
+			Environment:    "prod",
+			Cluster:        "cluseter1",
+			ReplicationSet: "rpset",
+			Database:       "db",
+			Address:        &address,
+			Port:           &port,
+		})
+		require.NoError(t, err)
+
 		settings, err := models.GetSettings(q)
 		require.NoError(t, err)
 		require.NotNil(t, settings)
