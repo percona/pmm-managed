@@ -483,7 +483,7 @@ func (s *RulesService) updateConfigurations() {
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 }
-func convertModelToParamsDefinitions(definitions models.ParamsDefinitions) ([]*iav1beta1.ParamDefinition, error) {
+func convertModelToParamsDefinitions(definitions models.AlertExprParamsDefinitions) ([]*iav1beta1.ParamDefinition, error) {
 	res := make([]*iav1beta1.ParamDefinition, 0, len(definitions))
 	for _, definition := range definitions {
 		t := alert.Type(definition.Type)
@@ -525,7 +525,7 @@ func convertModelToParamsDefinitions(definitions models.ParamsDefinitions) ([]*i
 	return res, nil
 }
 
-func convertModelToParamValues(values models.ParamsValues) ([]*iav1beta1.ParamValue, error) {
+func convertModelToParamValues(values models.AlertExprParamsValues) ([]*iav1beta1.ParamValue, error) {
 	res := make([]*iav1beta1.ParamValue, len(values))
 	for i, param := range values {
 		p := &iav1beta1.ParamValue{Name: param.Name}
@@ -548,10 +548,10 @@ func convertModelToParamValues(values models.ParamsValues) ([]*iav1beta1.ParamVa
 	return res, nil
 }
 
-func convertParamsValuesToModel(params []*iav1beta1.ParamValue) (models.ParamsValues, error) {
-	ruleParams := make(models.ParamsValues, len(params))
+func convertParamsValuesToModel(params []*iav1beta1.ParamValue) (models.AlertExprParamsValues, error) {
+	ruleParams := make(models.AlertExprParamsValues, len(params))
 	for i, param := range params {
-		p := models.ParamValue{Name: param.Name}
+		p := models.AlertExprParamValue{Name: param.Name}
 
 		switch param.Type {
 		case iav1beta1.ParamType_PARAM_TYPE_INVALID:

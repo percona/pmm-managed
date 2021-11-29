@@ -29,25 +29,25 @@ import (
 // Rule represents alert rule configuration.
 //reform:ia_rules
 type Rule struct {
-	ID                string            `reform:"id,pk"`
-	Name              string            `reform:"name"`
-	Summary           string            `reform:"summary"`
-	TemplateName      string            `reform:"template_name"`
-	Disabled          bool              `reform:"disabled"`
-	ExprTemplate      string            `reform:"expr_template"`
-	ParamsDefinitions ParamsDefinitions `reform:"params_definitions"`
-	ParamsValues      ParamsValues      `reform:"params_values"`
-	DefaultFor        time.Duration     `reform:"default_for"`
-	For               time.Duration     `reform:"for"`
-	DefaultSeverity   Severity          `reform:"default_severity"`
-	Severity          Severity          `reform:"severity"`
-	CustomLabels      []byte            `reform:"custom_labels"`
-	Labels            []byte            `reform:"labels"`
-	Annotations       []byte            `reform:"annotations"`
-	Filters           Filters           `reform:"filters"`
-	ChannelIDs        ChannelIDs        `reform:"channel_ids"`
-	CreatedAt         time.Time         `reform:"created_at"`
-	UpdatedAt         time.Time         `reform:"updated_at"`
+	ID                string                     `reform:"id,pk"`
+	Name              string                     `reform:"name"`
+	Summary           string                     `reform:"summary"`
+	TemplateName      string                     `reform:"template_name"`
+	Disabled          bool                       `reform:"disabled"`
+	ExprTemplate      string                     `reform:"expr_template"`
+	ParamsDefinitions AlertExprParamsDefinitions `reform:"params_definitions"`
+	ParamsValues      AlertExprParamsValues      `reform:"params_values"`
+	DefaultFor        time.Duration              `reform:"default_for"`
+	For               time.Duration              `reform:"for"`
+	DefaultSeverity   Severity                   `reform:"default_severity"`
+	Severity          Severity                   `reform:"severity"`
+	CustomLabels      []byte                     `reform:"custom_labels"`
+	Labels            []byte                     `reform:"labels"`
+	Annotations       []byte                     `reform:"annotations"`
+	Filters           Filters                    `reform:"filters"`
+	ChannelIDs        ChannelIDs                 `reform:"channel_ids"`
+	CreatedAt         time.Time                  `reform:"created_at"`
+	UpdatedAt         time.Time                  `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -134,17 +134,17 @@ func (f Filter) Value() (driver.Value, error) { return jsonValue(f) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
 
-// ParamsValues represents rule parameters values slice.
-type ParamsValues []ParamValue
+// AlertExprParamsValues represents rule parameters values slice.
+type AlertExprParamsValues []AlertExprParamValue
 
 // Value implements database/sql/driver Valuer interface.
-func (p ParamsValues) Value() (driver.Value, error) { return jsonValue(p) }
+func (p AlertExprParamsValues) Value() (driver.Value, error) { return jsonValue(p) }
 
 // Scan implements database/sql Scanner interface.
-func (p *ParamsValues) Scan(src interface{}) error { return jsonScan(p, src) }
+func (p *AlertExprParamsValues) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // AsStringMap convert param values to string map, where parameter name is a map key and parameter value is a map value.
-func (p ParamsValues) AsStringMap() map[string]string {
+func (p AlertExprParamsValues) AsStringMap() map[string]string {
 	m := make(map[string]string, len(p))
 	for _, rp := range p {
 		var value string
@@ -164,8 +164,8 @@ func (p ParamsValues) AsStringMap() map[string]string {
 	return m
 }
 
-// ParamValue represents rule parameter value.
-type ParamValue struct {
+// AlertExprParamValue represents rule parameter value.
+type AlertExprParamValue struct {
 	Name        string    `json:"name"`
 	Type        ParamType `json:"type"`
 	BoolValue   bool      `json:"bool"`
@@ -174,10 +174,10 @@ type ParamValue struct {
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (p ParamValue) Value() (driver.Value, error) { return jsonValue(p) }
+func (p AlertExprParamValue) Value() (driver.Value, error) { return jsonValue(p) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (p *ParamValue) Scan(src interface{}) error { return jsonScan(p, src) }
+func (p *AlertExprParamValue) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // ChannelIDs is a slice of notification channel ids.
 type ChannelIDs []string

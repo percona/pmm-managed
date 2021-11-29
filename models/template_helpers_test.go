@@ -61,7 +61,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, params.Template.Summary, created.Summary)
 		assert.Equal(t, params.Template.Expr, created.Expr)
 		assert.Equal(t,
-			models.ParamsDefinitions{{
+			models.AlertExprParamsDefinitions{{
 				Name:    params.Template.Params[0].Name,
 				Summary: params.Template.Params[0].Summary,
 				Unit:    string(params.Template.Params[0].Unit),
@@ -111,7 +111,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, updateParams.Template.Summary, updated.Summary)
 		assert.Equal(t, updateParams.Template.Expr, updated.Expr)
 		assert.Equal(t,
-			models.ParamsDefinitions{{
+			models.AlertExprParamsDefinitions{{
 				Name:    updateParams.Template.Params[0].Name,
 				Summary: updateParams.Template.Params[0].Summary,
 				Unit:    string(updateParams.Template.Params[0].Unit),
@@ -291,7 +291,7 @@ func createRule(t *testing.T, q *reform.Querier, channelID string, template *mod
 	rule, err := models.CreateRule(q, &models.CreateRuleParams{
 		TemplateName: template.Name,
 		Disabled:     true,
-		ParamsValues: []models.ParamValue{
+		ParamsValues: []models.AlertExprParamValue{
 			{
 				Name:       "test",
 				Type:       models.Float,

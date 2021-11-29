@@ -69,7 +69,7 @@ var TemplateTable = &templateTableType{
 			{Name: "Version", Type: "uint32", Column: "version"},
 			{Name: "Summary", Type: "string", Column: "summary"},
 			{Name: "Expr", Type: "string", Column: "expr"},
-			{Name: "Params", Type: "ParamsDefinitions", Column: "params"},
+			{Name: "Params", Type: "AlertExprParamsDefinitions", Column: "params"},
 			{Name: "For", Type: "time.Duration", Column: "for"},
 			{Name: "Severity", Type: "Severity", Column: "severity"},
 			{Name: "Labels", Type: "[]uint8", Column: "labels"},

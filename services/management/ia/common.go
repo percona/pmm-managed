@@ -144,13 +144,13 @@ func fillExprWithParams(expr string, values map[string]string) (string, error) {
 	return buf.String(), nil
 }
 
-func validateParameters(definitions models.ParamsDefinitions, values models.ParamsValues) error {
+func validateParameters(definitions models.AlertExprParamsDefinitions, values models.AlertExprParamsValues) error {
 	if len(definitions) != len(values) {
 		return status.Errorf(codes.InvalidArgument, "Expression requires %d parameters, but got %d.",
 			len(definitions), len(values))
 	}
 
-	valuesM := make(map[string]models.ParamValue)
+	valuesM := make(map[string]models.AlertExprParamValue)
 	for _, v := range values {
 		valuesM[v.Name] = v
 	}

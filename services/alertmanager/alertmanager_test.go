@@ -463,7 +463,7 @@ templates: []
 		rule1, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			ParamsValues: []models.ParamValue{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
@@ -487,7 +487,7 @@ templates: []
 		rule2, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			ParamsValues: []models.ParamValue{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
@@ -511,7 +511,7 @@ templates: []
 		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			ParamsValues: []models.ParamValue{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
@@ -529,7 +529,7 @@ templates: []
 		rule4, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			ParamsValues: []models.ParamValue{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,

@@ -107,8 +107,8 @@ type CreateRuleParams struct {
 	Summary           string
 	Disabled          bool
 	ExprTemplate      string
-	ParamsDefinitions ParamsDefinitions
-	ParamsValues      ParamsValues
+	ParamsDefinitions AlertExprParamsDefinitions
+	ParamsValues      AlertExprParamsValues
 	DefaultFor        time.Duration
 	For               time.Duration
 	DefaultSeverity   Severity
@@ -182,7 +182,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 type ChangeRuleParams struct {
 	Name         string
 	Disabled     bool
-	ParamsValues ParamsValues
+	ParamsValues AlertExprParamsValues
 	For          time.Duration
 	Severity     Severity
 	CustomLabels map[string]string

@@ -214,10 +214,10 @@ func templateInUse(q *reform.Querier, name string) (bool, error) {
 }
 
 // ConvertParamsDefinitions converts parameters definitions to the model.
-func ConvertParamsDefinitions(params []alert.Parameter) (ParamsDefinitions, error) {
-	res := make(ParamsDefinitions, 0, len(params))
+func ConvertParamsDefinitions(params []alert.Parameter) (AlertExprParamsDefinitions, error) {
+	res := make(AlertExprParamsDefinitions, 0, len(params))
 	for _, param := range params {
-		p := ParamDefinition{
+		p := AlertExprParamDefinition{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    string(param.Unit),

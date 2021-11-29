@@ -304,7 +304,7 @@ func createCreateRuleParams(t *testing.T, template *models.Template, channelID s
 		Name:         "rule name",
 		Summary:      template.Summary,
 		Disabled:     true,
-		ParamsValues: []models.ParamValue{
+		ParamsValues: []models.AlertExprParamValue{
 			{
 				Name:       "test",
 				Type:       models.Float,
