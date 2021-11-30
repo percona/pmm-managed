@@ -181,9 +181,6 @@ type grpcGatewayError struct {
 
 func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDetails, error) {
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory", s.host)
-	if params.pmmServerID == "" {
-		return nil, errors.Errorf("PMMServerID is not yet set, please wait until a service %q is added into the inventory", models.DefaultPMMPostgreSQLService)
-	}
 	marshaled, err := json.Marshal(connectPMMRequest{
 		PMMServerID:               params.pmmServerID,
 		PMMServerName:             params.serverName,

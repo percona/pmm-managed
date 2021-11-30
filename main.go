@@ -450,7 +450,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 
 	deps.l.Infof("Updating supervisord configuration...")
-	settings, err := models.GetSettings(db)
+	settings, err := models.GetSettings(db.Querier)
 	if err != nil {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false

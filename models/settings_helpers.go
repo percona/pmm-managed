@@ -30,9 +30,6 @@ import (
 	"github.com/percona/pmm-managed/utils/validators"
 )
 
-// DefaultPMMPostgreSQLService represents a service of PostgreSQL that PMM server uses.
-const DefaultPMMPostgreSQLService = "pmm-server-postgresql"
-
 // GetSettings returns current PMM Server settings.
 func GetSettings(q reform.DBTX) (*Settings, error) {
 	var b []byte

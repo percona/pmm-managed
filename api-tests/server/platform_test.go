@@ -211,7 +211,6 @@ func TestPlatform(t *testing.T) {
 			require.NotNil(t, settings)
 			assert.True(t, settings.GetPayload().Settings.ConnectedToPortal)
 		})
-
 	})
 }
 
