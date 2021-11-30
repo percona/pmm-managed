@@ -34,7 +34,7 @@ var postgresExporterAutodiscoveryVersion = version.MustParse("2.15.99")
 
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
 func postgresExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
-	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+	agentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 
 	if service.DatabaseName == "" {
 		panic("database name not set")
@@ -52,13 +52,13 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		// HR
 		"--collect.custom_query.hr",
 
-		"--collect.custom_query.lr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/low-resolution",
-		"--collect.custom_query.mr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/medium-resolution",
-		"--collect.custom_query.hr.directory=" + pathsBase(pointer.GetString(exporter.Version), tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/high-resolution",
+		"--collect.custom_query.lr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/low-resolution",
+		"--collect.custom_query.mr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/medium-resolution",
+		"--collect.custom_query.hr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/high-resolution",
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
-	if !pmmAgentVersion.Less(postgresExporterAutodiscoveryVersion) {
+	if !agentVersion.Less(postgresExporterAutodiscoveryVersion) {
 		args = append(args,
 			"--auto-discover-databases",
 			"--exclude-databases=template0,template1,postgres,cloudsqladmin,pmm-managed-dev,azure_maintenance",
