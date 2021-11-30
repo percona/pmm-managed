@@ -393,7 +393,7 @@ func (s *Service) DisableChecks(checkNames []string) error {
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		params := models.ChangeSettingsParams{DisableSTTChecks: checkNames}
-		_, err := models.UpdateSettings(tx, &params)
+		_, err := models.UpdateSettings(tx.Querier, &params)
 		return err
 	})
 	if err != nil {
@@ -411,7 +411,7 @@ func (s *Service) EnableChecks(checkNames []string) error {
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		params := models.ChangeSettingsParams{EnableSTTChecks: checkNames}
-		_, err := models.UpdateSettings(tx, &params)
+		_, err := models.UpdateSettings(tx.Querier, &params)
 		return err
 	})
 	if err != nil {

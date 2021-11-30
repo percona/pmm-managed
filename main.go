@@ -781,7 +781,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(db)
+	settings, err := models.GetSettings(sqlDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}

@@ -254,7 +254,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
 		params := models.ChangeSettingsParams{LogOut: true}
-		_, err := models.UpdateSettings(tx, &params)
+		_, err := models.UpdateSettings(tx.Querier, &params)
 		return err
 	})
 	if err != nil {

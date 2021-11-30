@@ -138,7 +138,7 @@ func listRegions(partitions []string) []string {
 func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.DiscoverRDSRequest) (*managementpb.DiscoverRDSResponse, error) {
 	l := logger.Get(ctx).WithField("component", "discover/rds")
 
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}

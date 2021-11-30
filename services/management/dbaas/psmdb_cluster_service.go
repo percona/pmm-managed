@@ -176,7 +176,7 @@ func (s PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req
 // CreatePSMDBCluster creates PSMDB cluster with given parameters.
 //nolint:dupl
 func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) (*dbaasv1beta1.CreatePSMDBClusterResponse, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaas
 
 // GetPSMDBClusterResources returns expected resources to be consumed by the cluster.
 func (s PSMDBClusterService) GetPSMDBClusterResources(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterResourcesRequest) (*dbaasv1beta1.GetPSMDBClusterResourcesResponse, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func NewKubernetesServer(db *reform.DB, dbaasClient dbaasClient, grafanaClient g
 
 // Enabled returns if service is enabled and can be used.
 func (k *kubernetesServer) Enabled() bool {
-	settings, err := models.GetSettings(k.db)
+	settings, err := models.GetSettings(k.db.Querier)
 	if err != nil {
 		k.l.WithError(err).Error("can't get settings")
 		return false
@@ -192,7 +192,7 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		}
 	}
 
-	settings, err := models.GetSettings(k.db)
+	settings, err := models.GetSettings(k.db.Querier)
 	if err != nil {
 		return nil, err
 	}

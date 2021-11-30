@@ -183,7 +183,7 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 // CreateXtraDBCluster creates XtraDB cluster with given parameters.
 //nolint:dupl
 func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.CreateXtraDBClusterRequest) (*dbaasv1beta1.CreateXtraDBClusterResponse, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +397,7 @@ func (s XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *dba
 
 // GetXtraDBClusterResources returns expected resources to be consumed by the cluster.
 func (s XtraDBClusterService) GetXtraDBClusterResources(ctx context.Context, req *dbaasv1beta1.GetXtraDBClusterResourcesRequest) (*dbaasv1beta1.GetXtraDBClusterResourcesResponse, error) {
-	settings, err := models.GetSettings(s.db)
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
 	}

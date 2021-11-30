@@ -56,7 +56,7 @@ func LogoutIfInvalidAuth(db *reform.DB, l *logrus.Entry, platformErr error) erro
 	if st, _ := status.FromError(platformErr); st.Code() == codes.Unauthenticated {
 		e := db.InTransaction(func(tx *reform.TX) error {
 			params := models.ChangeSettingsParams{LogOut: true}
-			_, err := models.UpdateSettings(tx, &params)
+			_, err := models.UpdateSettings(tx.Querier, &params)
 			return err
 		})
 		if e != nil {
