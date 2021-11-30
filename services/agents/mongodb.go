@@ -34,7 +34,7 @@ import (
 var (
 	// New MongoDB Exporter will be released with PMM agent v2.10.0.
 	newMongoExporterPMMVersion = version.MustParse("2.9.99")
-	v2_25                      = version.MustParse("2.25.0")
+	v2_24_99                   = version.MustParse("2.24.99")
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
@@ -48,7 +48,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	// Until now, discovering mode was not workign properly and was enabled only if mongodb.collstats-colls=
 	// was specified in the command line.
 	switch {
-	case !pmmAgentVersion.Less(v2_25): // >= 2.25
+	case !pmmAgentVersion.Less(v2_24_99): // >= 2.25
 		args = v225Args(exporter, exporter.DisabledCollectors, tdp)
 	case !pmmAgentVersion.Less(newMongoExporterPMMVersion): // >= 2.10
 		args = []string{
