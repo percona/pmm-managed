@@ -123,9 +123,9 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 	if err == nil {
 		return errors.Wrap(err, "PMM server is already connected to Portal")
 	}
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch PMM server ID and address of PMM server")
+		return errors.Wrap(err, "failed to fetch PMM server ID and address")
 	}
 	if settings.PMMPublicAddress == "" {
 		return status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
@@ -229,7 +229,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 
 // SignOut logouts that instance from Percona Platform account and removes session id.
 func (s *Service) SignOut(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
 		params := models.ChangeSettingsParams{LogOut: true}
-		_, err := models.UpdateSettings(tx.Querier, &params)
+		_, err := models.UpdateSettings(tx, &params)
 		return err
 	})
 	if err != nil {
@@ -266,7 +266,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 
 // refreshSession resets session timeout.
 func (s *Service) refreshSession(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return err
 	}

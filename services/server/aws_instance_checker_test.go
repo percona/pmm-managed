@@ -76,7 +76,7 @@ func TestAWSInstanceChecker(t *testing.T) {
 		db, teardown := setup(t)
 		defer teardown()
 
-		settings, err := models.GetSettings(db.Querier)
+		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 		settings.AWSInstanceChecked = true
 		err = models.SaveSettings(db.Querier, settings)

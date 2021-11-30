@@ -812,7 +812,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		}
 
 		// fill settings with defaults
-		s, err := GetSettings(tx.Querier)
+		s, err := GetSettings(tx)
 		if err != nil {
 			return err
 		}

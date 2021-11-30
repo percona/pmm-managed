@@ -106,7 +106,7 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 
 // Enabled returns if service is enabled and can be used.
 func (s *TemplatesService) Enabled() bool {
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.WithError(err).Error("can't get settings")
 		return false
@@ -370,7 +370,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Template, error) {
 	s.l.Infof("Downloading templates from %s ...", s.host)
 
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
 	}

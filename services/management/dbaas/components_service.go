@@ -61,7 +61,7 @@ func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionService
 
 // Enabled returns if service is enabled and can be used.
 func (c *componentsService) Enabled() bool {
-	settings, err := models.GetSettings(c.db.Querier)
+	settings, err := models.GetSettings(c.db)
 	if err != nil {
 		c.l.WithError(err).Error("can't get settings")
 		return false

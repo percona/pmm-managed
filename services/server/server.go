@@ -152,7 +152,7 @@ func (s *Server) UpdateSettingsFromEnv(env []string) []error {
 	}
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.UpdateSettings(tx.Querier, envSettings)
+		_, err := models.UpdateSettings(tx, envSettings)
 		return err
 	})
 	if err != nil {
@@ -489,7 +489,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 	s.envRW.RLock()
 	defer s.envRW.RUnlock()
 
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +577,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	var newSettings, oldSettings *models.Settings
 	errTX := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		if oldSettings, err = models.GetSettings(tx.Querier); err != nil {
+		if oldSettings, err = models.GetSettings(tx); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -643,7 +643,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		var errInvalidArgument *models.ErrInvalidArgument
-		newSettings, err = models.UpdateSettings(tx.Querier, settingsParams)
+		newSettings, err = models.UpdateSettings(tx, settingsParams)
 		switch {
 		case err == nil:
 		case errors.As(err, &errInvalidArgument):
@@ -746,7 +746,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
 func (s *Server) UpdateConfigurations() error {
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}

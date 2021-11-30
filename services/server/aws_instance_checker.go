@@ -69,7 +69,7 @@ func (c *AWSInstanceChecker) MustCheck() bool {
 		return false
 	}
 
-	settings, err := models.GetSettings(c.db.Querier)
+	settings, err := models.GetSettings(c.db)
 	if err != nil {
 		c.l.Error(err)
 		return true
@@ -103,7 +103,7 @@ func (c *AWSInstanceChecker) check(instanceID string) error {
 	}
 
 	if e := c.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx.Querier)
+		settings, err := models.GetSettings(tx)
 		if err != nil {
 			return err
 		}

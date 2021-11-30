@@ -93,7 +93,7 @@ func TestTemplateValidation(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	// Enable IA
-	settings, err := models.GetSettings(db.Querier)
+	settings, err := models.GetSettings(db)
 	require.NoError(t, err)
 	settings.IntegratedAlerting.Enabled = true
 	err = models.SaveSettings(db, settings)

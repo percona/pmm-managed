@@ -450,7 +450,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 
 	deps.l.Infof("Updating supervisord configuration...")
-	settings, err := models.GetSettings(db.Querier)
+	settings, err := models.GetSettings(db)
 	if err != nil {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
@@ -607,6 +607,12 @@ func main() {
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
+
+	// Generate unique PMM Server ID if it's not already set.
+	err = models.SetPMMServerID(db)
+	if err != nil {
+		l.Panicf("failed to set PMM Server ID")
+	}
 
 	cleaner := clean.New(db)
 	externalRules := vmalert.NewExternalRules()
@@ -775,7 +781,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(db.Querier)
+	settings, err := models.GetSettings(db)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}

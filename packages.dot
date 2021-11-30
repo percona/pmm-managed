@@ -45,7 +45,6 @@ digraph packages {
 	"/services/management/grpc" -> "/services/management";
 	"/services/qan" -> "/models";
 	"/services/server" -> "/models";
-	"/services/server" -> "/services";
 	"/services/supervisord" -> "/models";
 	"/services/telemetry" -> "/models";
 	"/services/victoriametrics" -> "/models";

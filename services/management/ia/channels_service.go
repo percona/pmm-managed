@@ -45,7 +45,7 @@ func NewChannelsService(db *reform.DB, alertManager alertManager) *ChannelsServi
 
 // Enabled returns if service is enabled and can be used.
 func (s *ChannelsService) Enabled() bool {
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.WithError(err).Error("can't get settings")
 		return false

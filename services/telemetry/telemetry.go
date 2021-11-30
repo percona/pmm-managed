@@ -184,7 +184,7 @@ func (s *Service) sendOneEvent(ctx context.Context) error {
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
-		if settings, e = models.GetSettings(tx.Querier); e != nil {
+		if settings, e = models.GetSettings(tx); e != nil {
 			return e
 		}
 
@@ -340,7 +340,7 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	settings, err := models.GetSettings(s.db.Querier)
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return err
 	}

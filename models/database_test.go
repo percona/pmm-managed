@@ -26,8 +26,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
@@ -363,9 +361,8 @@ func TestDatabaseChecks(t *testing.T) {
 func TestDatabaseMigrations(t *testing.T) {
 	t.Run("Update metrics resolutions", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(9))
-		q := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)).Querier
 		defer sqlDB.Close() //nolint:errcheck
-		settings, err := models.GetSettings(q)
+		settings, err := models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		metricsResolutions := models.MetricsResolutions{
 			HR: 5 * time.Second,
@@ -373,15 +370,15 @@ func TestDatabaseMigrations(t *testing.T) {
 			LR: 60 * time.Second,
 		}
 		settings.MetricsResolutions = metricsResolutions
-		err = models.SaveSettings(q, settings)
+		err = models.SaveSettings(sqlDB, settings)
 		require.NoError(t, err)
 
-		settings, err = models.GetSettings(q)
+		settings, err = models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		require.Equal(t, metricsResolutions, settings.MetricsResolutions)
 
 		testdb.SetupDB(t, sqlDB, models.SkipFixtures, pointer.ToInt(10))
-		settings, err = models.GetSettings(q)
+		settings, err = models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		require.Equal(t, models.MetricsResolutions{
 			HR: 5 * time.Second,
@@ -391,9 +388,8 @@ func TestDatabaseMigrations(t *testing.T) {
 	})
 	t.Run("Shouldn' update metrics resolutions if it's already changed", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(9))
-		q := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)).Querier
 		defer sqlDB.Close() //nolint:errcheck
-		settings, err := models.GetSettings(q)
+		settings, err := models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		metricsResolutions := models.MetricsResolutions{
 			HR: 1 * time.Second,
@@ -401,15 +397,15 @@ func TestDatabaseMigrations(t *testing.T) {
 			LR: 60 * time.Second,
 		}
 		settings.MetricsResolutions = metricsResolutions
-		err = models.SaveSettings(q, settings)
+		err = models.SaveSettings(sqlDB, settings)
 		require.NoError(t, err)
 
-		settings, err = models.GetSettings(q)
+		settings, err = models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		require.Equal(t, metricsResolutions, settings.MetricsResolutions)
 
 		testdb.SetupDB(t, sqlDB, models.SkipFixtures, pointer.ToInt(10))
-		settings, err = models.GetSettings(q)
+		settings, err = models.GetSettings(sqlDB)
 		require.NoError(t, err)
 		require.Equal(t, models.MetricsResolutions{
 			HR: 1 * time.Second,
