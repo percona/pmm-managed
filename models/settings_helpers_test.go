@@ -473,11 +473,33 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("Set PMM server ID", func(t *testing.T) {
-		err := models.SetPMMServerID(sqlDB)
-		require.NoError(t, err)
-		settings, err := models.GetSettings(sqlDB)
-		require.NoError(t, err)
-		require.NotNil(t, settings)
-		assert.NotEmpty(t, settings.PMMServerID)
+		t.Run("not set", func(t *testing.T) {
+			settings, err := models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.Empty(t, settings.PMMServerID)
+
+			err = models.SetPMMServerID(sqlDB)
+			require.NoError(t, err)
+
+			settings, err = models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.NotEmpty(t, settings.PMMServerID)
+		})
+		t.Run("already set", func(t *testing.T) {
+			settings, err := models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			pmmServerID := settings.PMMServerID
+
+			err = models.SetPMMServerID(sqlDB)
+			require.NoError(t, err)
+
+			settings, err = models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.Equal(t, pmmServerID, settings.PMMServerID)
+		})
 	})
 }
