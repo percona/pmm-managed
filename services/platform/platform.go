@@ -137,41 +137,6 @@ func (s *Service) UpdateSupervisordConfigurations() error {
 	return nil
 }
 
-// // Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
-// func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
-// 	_, err := models.GetPerconaSSODetails(s.db.Querier)
-// 	if err == nil {
-// 		return errors.Wrap(err, "PMM server is already connected to Portal")
-// 	}
-// 	settings, err := models.GetSettings(s.db)
-// 	if err != nil {
-// 		return errors.Wrap(err, "failed to fetch PMM server ID and address")
-// 	}
-// 	if settings.PMMPublicAddress == "" {
-// 		return status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
-// 	}
-// 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
-// 	ssoParams, err := s.connect(ctx, &connectPMMParams{
-// 		serverName:                serverName,
-// 		email:                     email,
-// 		password:                  password,
-// 		pmmServerURL:              pmmServerURL,
-// 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
-// 		pmmServerID:               settings.PMMServerID,
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
-// 		ClientID:     ssoParams.ClientID,
-// 		ClientSecret: ssoParams.ClientSecret,
-// 		IssuerURL:    ssoParams.IssuerURL,
-// 		Scope:        ssoParams.Scope,
-// 	})
-// 	return errors.Wrap(err, "failed to save SSO details")
-// }
-
 type connectPMMParams struct {
 	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, email, password string
 }

@@ -35,8 +35,6 @@ import (
 	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
-// Tests in this file cover Percona Platform authentication.
-
 func TestPlatform(t *testing.T) {
 	client := platformClient.Default.Platform
 	serverClient := serverClient.Default.Server
