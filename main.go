@@ -336,6 +336,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
 		dbaasv1beta1.RegisterLogsAPIHandlerFromEndpoint,
 		dbaasv1beta1.RegisterComponentsHandlerFromEndpoint,
+
+		platformpb.RegisterPlatformHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
