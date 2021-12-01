@@ -301,50 +301,6 @@ func TestSettings(t *testing.T) {
 			assert.Empty(t, ns.Telemetry.UUID)
 		})
 
-		t.Run("Percona Platform auth", func(t *testing.T) {
-			email := tests.GenEmail(t)
-			sessionID := gofakeit.UUID()
-
-			// User logged in
-			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				Email:     email,
-				SessionID: sessionID,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, email, ns.SaaS.Email)
-			assert.Equal(t, sessionID, ns.SaaS.SessionID)
-
-			// Logout with email update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut: true,
-				Email:  tests.GenEmail(t),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Logout with session ID update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut:    true,
-				SessionID: gofakeit.UUID(),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Logout with email and session ID update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut:    true,
-				Email:     tests.GenEmail(t),
-				SessionID: gofakeit.UUID(),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Normal logout
-			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut: true,
-			})
-			require.NoError(t, err)
-			assert.Empty(t, ns.SaaS.Email)
-			assert.Empty(t, ns.SaaS.SessionID)
-		})
-
 		t.Run("disable checks", func(t *testing.T) {
 			disChecks := []string{"one", "two", "three"}
 
