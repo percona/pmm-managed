@@ -20,7 +20,6 @@ package platform
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -219,8 +218,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
-	encodedEmailPassword := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", params.email, params.password)))
-	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", encodedEmailPassword))
+	req.SetBasicAuth(params.email, params.password)
 	resp, err := client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
