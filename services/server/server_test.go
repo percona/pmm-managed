@@ -66,9 +66,6 @@ func TestServer(t *testing.T) {
 		ts := new(mockTelemetryService)
 		ts.Test(t)
 
-		ps := new(mockPlatformService)
-		ps.Test(t)
-
 		s, err := NewServer(&Params{
 			DB:                   reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			VMDB:                 mvmdb,
@@ -78,7 +75,6 @@ func TestServer(t *testing.T) {
 			Supervisord:          r,
 			VMAlertExternalRules: par,
 			TelemetryService:     ts,
-			PlatformService:      ps,
 		})
 		require.NoError(t, err)
 		return s

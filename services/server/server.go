@@ -50,8 +50,6 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
-const platformAPITimeout = 10 * time.Second
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                   *reform.DB
@@ -63,7 +61,6 @@ type Server struct {
 	checksService        checksService
 	supervisord          supervisordService
 	telemetryService     telemetryService
-	platformService      platformService
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
 	rulesService         rulesService
@@ -100,7 +97,6 @@ type Params struct {
 	VMAlertExternalRules vmAlertExternalRules
 	Supervisord          supervisordService
 	TelemetryService     telemetryService
-	PlatformService      platformService
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
@@ -125,7 +121,6 @@ func NewServer(params *Params) (*Server, error) {
 		vmalertExternalRules: params.VMAlertExternalRules,
 		supervisord:          params.Supervisord,
 		telemetryService:     params.TelemetryService,
-		platformService:      params.PlatformService,
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
@@ -425,8 +420,8 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 }
 
 // convertSettings merges database settings and settings from environment variables into API response.
-// Checking if PMM is connected to Portal is separated from settings for security and concurrency reasons.
-func (s *Server) convertSettings(settings *models.Settings, connectedToPortal bool) *serverpb.Settings {
+// Checking if PMM is connected to Platform is separated from settings for security and concurrency reasons.
+func (s *Server) convertSettings(settings *models.Settings, connectedToPlatform bool) *serverpb.Settings {
 	res := &serverpb.Settings{
 		UpdatesDisabled:  settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
@@ -453,7 +448,7 @@ func (s *Server) convertSettings(settings *models.Settings, connectedToPortal bo
 		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
 
-		ConnectedToPortal: connectedToPortal,
+		ConnectedToPlatform: connectedToPlatform,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -834,46 +829,6 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil
-}
-
-// PlatformSignUp creates new Percona Platform user with given email and password.
-func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.SignUp(nCtx, req.Email, req.FirstName, req.LastName); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformSignUpResponse{}, nil
-}
-
-// PlatformConnect connects a PMM server to the organization created on Percona Portal. That allows the user to sign in to the PMM server with their Percona Account.
-func (s *Server) PlatformConnect(ctx context.Context, req *serverpb.PlatformConnectRequest) (*serverpb.PlatformConnectResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.Connect(nCtx, req.ServerName, req.Email, req.Password); err != nil {
-		if status, ok := status.FromError(err); ok {
-			return nil, status.Err()
-		}
-		s.l.Errorf("failed to connect PMM to portal %s:", err)
-		return nil, status.Error(codes.Internal, "Internal server error.")
-	}
-
-	if err := s.UpdateConfigurations(); err != nil {
-		return nil, err
-	}
-	return &serverpb.PlatformConnectResponse{}, nil
-}
-
-// PlatformSignOut logouts that PMM instance from Percona Platform account.
-func (s *Server) PlatformSignOut(ctx context.Context, _ *serverpb.PlatformSignOutRequest) (*serverpb.PlatformSignOutResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.SignOut(nCtx); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformSignOutResponse{}, nil
 }
 
 // isAgentsStateUpdateNeeded - checks metrics resolution changes,

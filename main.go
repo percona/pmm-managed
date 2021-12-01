@@ -46,6 +46,7 @@ import (
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/percona/pmm/api/platformpb"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -148,6 +149,7 @@ type gRPCServerDeps struct {
 	backupRemovalService *backup.RemovalService
 	minioService         *minio.Service
 	versionCache         *versioncache.Service
+	supervisord          *supervisord.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -218,6 +220,13 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
+
+	platformService, err := platform.New(deps.db, deps.supervisord)
+	if err == nil {
+		platformpb.RegisterPlatformServer(gRPCServer, platformService)
+	} else {
+		l.Fatalf("Failed to register platform service: %s", err.Error())
+	}
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -674,11 +683,6 @@ func main() {
 
 	prom.MustRegister(checksService)
 
-	platformService, err := platform.New(db)
-	if err != nil {
-		l.Fatalf("Could not create platform service: %s", err)
-	}
-
 	// Integrated alerts services
 	templatesService, err := ia.NewTemplatesService(db)
 	if err != nil {
@@ -706,7 +710,6 @@ func main() {
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
-		PlatformService:      platformService,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -843,12 +846,6 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		platformService.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		supervisord.Run(ctx)
 	}()
 
@@ -898,6 +895,7 @@ func main() {
 			backupRemovalService: backupRemovalService,
 			minioService:         minioService,
 			versionCache:         versionCache,
+			supervisord:          supervisord,
 		})
 	}()
 

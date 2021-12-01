@@ -110,14 +110,6 @@ type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
 }
 
-// platformService is a subset of methods of platform.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type platformService interface {
-	SignUp(ctx context.Context, email, firstName, lastName string) error
-	Connect(ctx context.Context, serverName, email, password string) error
-	SignOut(ctx context.Context) error
-}
-
 // agentsStateUpdater is subset of methods of agents.StateUpdater used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type agentsStateUpdater interface {

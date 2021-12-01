@@ -23,7 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v6"
+	"github.com/brianvoe/gofakeit"
+	platformClient "github.com/percona/pmm/api/platformpb/json/client"
+	"github.com/percona/pmm/api/platformpb/json/client/platform"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
@@ -36,75 +38,8 @@ import (
 // Tests in this file cover Percona Platform authentication.
 
 func TestPlatform(t *testing.T) {
-	client := serverClient.Default.Server
-
-	t.Run("signUp", func(t *testing.T) {
-		t.Run("normal", func(t *testing.T) {
-			email, _, firstName, lastName := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:     email,
-					FirstName: firstName,
-					LastName:  lastName,
-				},
-				Context: pmmapitests.Context,
-			})
-			require.NoError(t, err)
-		})
-
-		t.Run("invalid email", func(t *testing.T) {
-			_, _, firstName, lastName := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:     "not-email",
-					FirstName: firstName,
-					LastName:  lastName,
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
-		})
-
-		t.Run("empty email", func(t *testing.T) {
-			_, _, firstName, lastName := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:     "",
-					FirstName: firstName,
-					LastName:  lastName,
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Email: value '' must not be an empty string")
-		})
-
-		t.Run("empty first name", func(t *testing.T) {
-			email, _, _, lastName := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:     email,
-					FirstName: "",
-					LastName:  lastName,
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
-		})
-
-		t.Run("empty last name", func(t *testing.T) {
-			email, _, firstName, _ := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:     email,
-					FirstName: firstName,
-					LastName:  "",
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
-		})
-	})
-
+	client := platformClient.Default.Platform
+	serverClient := serverClient.Default.Server
 	t.Run("connect", func(t *testing.T) {
 		const serverName string = "my PMM"
 		email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
@@ -112,8 +47,8 @@ func TestPlatform(t *testing.T) {
 			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
 		t.Run("PMM server does not have address set", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      "wrong@example.com",
 					Password:   password,
 					ServerName: serverName,
@@ -124,7 +59,7 @@ func TestPlatform(t *testing.T) {
 		})
 
 		// Set the PMM address to localhost.
-		res, err := client.ChangeSettings(&server.ChangeSettingsParams{
+		res, err := serverClient.ChangeSettings(&server.ChangeSettingsParams{
 			Body: server.ChangeSettingsBody{
 				PMMPublicAddress: "localhost",
 			},
@@ -134,8 +69,8 @@ func TestPlatform(t *testing.T) {
 		assert.Equal(t, "localhost", res.Payload.Settings.PMMPublicAddress)
 
 		t.Run("wrong email", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      "wrong@example.com",
 					Password:   password,
 					ServerName: serverName,
@@ -146,8 +81,8 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("wrong password", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      email,
 					Password:   "WrongPassword12345",
 					ServerName: serverName,
@@ -158,8 +93,8 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      "",
 					Password:   password,
 					ServerName: serverName,
@@ -170,8 +105,8 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty password", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      email,
 					ServerName: serverName,
 					Password:   "",
@@ -182,8 +117,8 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty server name", func(t *testing.T) {
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					Email:      email,
 					Password:   password,
 					ServerName: "",
@@ -195,8 +130,9 @@ func TestPlatform(t *testing.T) {
 
 		t.Run("successful call", func(t *testing.T) {
 			t.Skip("Skip this test until we've got disconnect")
-			_, err := client.PlatformConnect(&server.PlatformConnectParams{
-				Body: server.PlatformConnectBody{
+
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
 					ServerName: serverName,
 					Email:      email,
 					Password:   password,
@@ -206,10 +142,10 @@ func TestPlatform(t *testing.T) {
 			require.NoError(t, err)
 
 			// Confirm we are connected to Portal.
-			settings, err := client.GetSettings(nil)
+			settings, err := serverClient.GetSettings(nil)
 			require.NoError(t, err)
 			require.NotNil(t, settings)
-			assert.True(t, settings.GetPayload().Settings.ConnectedToPortal)
+			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
 		})
 	})
 }

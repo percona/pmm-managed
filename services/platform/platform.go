@@ -24,10 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
-	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -36,27 +34,25 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm/api/platformpb"
 )
 
-const (
-	defaultSessionRefreshInterval = 24 * time.Hour
-
-	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
-)
-
-var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
+// supervisordService is a subset of methods of supervisord.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type supervisordService interface {
+	UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error
+}
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
-	db                     *reform.DB
-	host                   string
-	sessionRefreshInterval time.Duration
-	l                      *logrus.Entry
+	db          *reform.DB
+	host        string
+	l           *logrus.Entry
+	supervisord supervisordService
 }
 
 // New returns platform Service.
-func New(db *reform.DB) (*Service, error) {
+func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
 	l := logrus.WithField("component", "auth")
 
 	host, err := envvars.GetSAASHost()
@@ -65,82 +61,46 @@ func New(db *reform.DB) (*Service, error) {
 	}
 
 	s := Service{
-		host:                   host,
-		sessionRefreshInterval: defaultSessionRefreshInterval,
-		db:                     db,
-		l:                      l,
-	}
-
-	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
-		l.Warnf("Session refresh interval changed to %s.", d)
-		s.sessionRefreshInterval = d
+		host:        host,
+		db:          db,
+		l:           l,
+		supervisord: supervisord,
 	}
 
 	return &s, nil
 }
 
-// Run refreshes Percona Platform session every interval until context is canceled.
-func (s *Service) Run(ctx context.Context) {
-	ticker := time.NewTicker(s.sessionRefreshInterval)
-	defer ticker.Stop()
+const platformAPITimeout = 10 * time.Second
 
-	for {
-		select {
-		case <-ticker.C:
-			// continue with next loop iteration
-		case <-ctx.Done():
-			return
-		}
-
-		nCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		err := s.refreshSession(nCtx)
-		if err != nil && err != errNoActiveSessions {
-			s.l.Warnf("Failed to refresh session, reason: %+v.", err)
-		}
-		cancel()
-	}
-}
-
-// SignUp creates new Percona Platform user with given email and password.
-func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string) error {
-	cc, err := saasdial.Dial(ctx, "", s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	_, err = api.NewAuthAPIClient(cc).SignUp(ctx, &api.SignUpRequest{Email: email, FirstName: firstName, LastName: lastName})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
-func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
+// Connect connects a PMM server to the organization created on Percona Portal. That allows the user to sign in to the PMM server with their Percona Account.
+func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (*platformpb.ConnectResponse, error) {
 	_, err := models.GetPerconaSSODetails(s.db.Querier)
 	if err == nil {
-		return errors.Wrap(err, "PMM server is already connected to Portal")
+		return nil, status.Error(codes.AlreadyExists, "PMM server is already connected to Portal")
 	}
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch PMM server ID and address")
+		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	if settings.PMMPublicAddress == "" {
-		return status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
+		return nil, status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
-	ssoParams, err := s.connect(ctx, &connectPMMParams{
-		serverName:                serverName,
-		email:                     email,
-		password:                  password,
+
+	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
+	defer cancel()
+
+	ssoParams, err := s.connect(nCtx, &connectPMMParams{
+		serverName:                req.ServerName,
+		email:                     req.Email,
+		password:                  req.Password,
 		pmmServerURL:              pmmServerURL,
 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
 		pmmServerID:               settings.PMMServerID,
 	})
 	if err != nil {
-		return err
+		return nil, err // this is already a status error
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
@@ -149,8 +109,69 @@ func (s *Service) Connect(ctx context.Context, serverName, email, password strin
 		IssuerURL:    ssoParams.IssuerURL,
 		Scope:        ssoParams.Scope,
 	})
-	return errors.Wrap(err, "failed to save SSO details")
+	if err != nil {
+		s.l.Errorf("Failed to insert SSO details: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	if err := s.UpdateSupervisordConfigurations(); err != nil {
+		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+	return &platformpb.ConnectResponse{}, nil
 }
+
+func (s *Service) UpdateSupervisordConfigurations() error {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to get settings")
+	}
+	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
+	if err != nil {
+		if !errors.Is(err, reform.ErrNoRows) {
+			return errors.Wrap(err, "failed to get SSO details")
+		}
+	}
+	if err := s.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
+		return errors.Wrap(err, "failed to update supervisord configuration")
+	}
+	return nil
+}
+
+// // Connect checks if PMM is connected. If it's not, it connects the a PMM server to the Portal.
+// func (s *Service) Connect(ctx context.Context, serverName, email, password string) error {
+// 	_, err := models.GetPerconaSSODetails(s.db.Querier)
+// 	if err == nil {
+// 		return errors.Wrap(err, "PMM server is already connected to Portal")
+// 	}
+// 	settings, err := models.GetSettings(s.db)
+// 	if err != nil {
+// 		return errors.Wrap(err, "failed to fetch PMM server ID and address")
+// 	}
+// 	if settings.PMMPublicAddress == "" {
+// 		return status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
+// 	}
+// 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
+// 	ssoParams, err := s.connect(ctx, &connectPMMParams{
+// 		serverName:                serverName,
+// 		email:                     email,
+// 		password:                  password,
+// 		pmmServerURL:              pmmServerURL,
+// 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
+// 		pmmServerID:               settings.PMMServerID,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
+// 		ClientID:     ssoParams.ClientID,
+// 		ClientSecret: ssoParams.ClientSecret,
+// 		IssuerURL:    ssoParams.IssuerURL,
+// 		Scope:        ssoParams.Scope,
+// 	})
+// 	return errors.Wrap(err, "failed to save SSO details")
+// }
 
 type connectPMMParams struct {
 	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, email, password string
@@ -188,19 +209,22 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		PMMServerOAuthCallbackURL: params.pmmServerOAuthCallbackURL,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal request data")
+		s.l.Errorf("Failed to marshal request data: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 
-	client := http.Client{Timeout: time.Second * 10}
+	client := http.Client{Timeout: platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to build request")
+		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	encodedEmailPassword := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", params.email, params.password)))
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", encodedEmailPassword))
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute request")
+		s.l.Errorf("Connect to Platform request failed: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -208,83 +232,16 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	if resp.StatusCode != http.StatusOK {
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
-			return nil, errors.Wrap(err, "failed to decode error message")
+			s.l.Errorf("Connect to Platform request failed and we faild to decode error message: %s", err)
+			return nil, status.Error(codes.Internal, "Internal server error")
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
 	var response connectPMMResponse
 	if err := decoder.Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response into SSO details")
+		s.l.Errorf("Failed to decode response into SSO details: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	return response.SSODetails, nil
-}
-
-// SignOut logouts that instance from Percona Platform account and removes session id.
-func (s *Service) SignOut(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return err
-	}
-
-	if settings.SaaS.SessionID == "" {
-		return errNoActiveSessions
-	}
-
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	_, err = api.NewAuthAPIClient(cc).SignOut(ctx, &api.SignOutRequest{})
-	if err != nil {
-		// If SaaS credentials have become invalid then go ahead with the log out instead of returning error.
-		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument && st.Code() != codes.Unauthenticated {
-			return err
-		}
-	}
-
-	err = s.db.InTransaction(func(tx *reform.TX) error {
-		params := models.ChangeSettingsParams{LogOut: true}
-		_, err := models.UpdateSettings(tx.Querier, &params)
-		return err
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to remove session id")
-	}
-
-	return nil
-}
-
-// refreshSession resets session timeout.
-func (s *Service) refreshSession(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return err
-	}
-
-	if settings.SaaS.SessionID == "" {
-		return errNoActiveSessions
-	}
-
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	_, err = api.NewAuthAPIClient(cc).RefreshSession(ctx, &api.RefreshSessionRequest{})
-	if err != nil {
-		// If SaaS credentials become invalid then force a logout so that the next
-		// refresh session attempt is successful.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-
-		return errors.Wrap(err, "failed to refresh session")
-	}
-
-	return nil
 }
