@@ -650,6 +650,18 @@ var databaseSchema = [][]string{
 				WHERE job_id = j.id
 			);`,
 	},
+	51: {
+		`ALTER TABLE services
+			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
+	},
+	52: {
+		`UPDATE services SET database_name = 'postgresql' 
+			WHERE service_type = 'postgresql' and database_name = ''`,
+	},
+	53: {
+		`UPDATE services SET database_name = 'postgres' 
+			WHERE service_type = 'postgresql' and database_name = 'postgresql'`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
