@@ -221,6 +221,7 @@ func (s PXCClustersService) UpdatePXCCluster(ctx context.Context, req *dbaasv1be
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
 			}
+			in.Params.Pxc.Image = req.Params.Pxc.Image
 		}
 
 		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
