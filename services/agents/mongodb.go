@@ -121,7 +121,7 @@ func v225Args(exporter *models.Agent, disabledCollectors []string, tdp *models.D
 		},
 		"topmetrics": {
 			enabled:     true,
-			enableParam: "--collector-topmetrics",
+			enableParam: "--collector.topmetrics",
 		},
 	}
 
