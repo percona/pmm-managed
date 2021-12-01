@@ -31,7 +31,7 @@ import (
 )
 
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
-func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, agentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -63,9 +63,9 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 		"--collect.standard.go",
 		"--collect.standard.process",
 
-		"--collect.custom_query.lr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/low-resolution",
-		"--collect.custom_query.mr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/medium-resolution",
-		"--collect.custom_query.hr.directory=" + pathsBase(agentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/high-resolution",
+		"--collect.custom_query.lr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/low-resolution",
+		"--collect.custom_query.mr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/medium-resolution",
+		"--collect.custom_query.hr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/high-resolution",
 
 		"--exporter.max-idle-conns=3",
 		"--exporter.max-open-conns=3",
