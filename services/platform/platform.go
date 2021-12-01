@@ -120,6 +120,37 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	return &platformpb.ConnectResponse{}, nil
 }
 
+// Disconnect disconnects a PMM server from the organization created on Percona Portal.
+func (s *Service) Disconnect(ctx context.Context, req *platformpb.ConnectRequest) (*platformpb.ConnectResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
+	defer cancel()
+
+	err = s.disconnect(nCtx, &disconnectPMMParams{
+		pmmServerID: settings.PMMServerID,
+	})
+	if err != nil {
+		return nil, err // this is already a status error
+	}
+
+	err = models.DeletePerconaSSODetails(s.db.Querier)
+	if err != nil {
+		s.l.Errorf("Failed to insert SSO details: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
+		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+	return &platformpb.ConnectResponse{}, nil
+}
+
 func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -146,6 +177,14 @@ type connectPMMRequest struct {
 	PMMServerName             string `json:"pmm_server_name"`
 	PMMServerURL              string `json:"pmm_server_url"`
 	PMMServerOAuthCallbackURL string `json:"pmm_server_oauth_callback_url"`
+}
+
+type disconnectPMMParams struct {
+	pmmServerID string
+}
+
+type disconnectPMMRequest struct {
+	PMMServerID string `json:"pmm_server_id"`
 }
 
 type ssoDetails struct {
@@ -207,4 +246,9 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	return response.SSODetails, nil
+}
+
+func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
+	// TODO
+	return nil
 }
