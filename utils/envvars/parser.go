@@ -230,8 +230,8 @@ func parseSAASHost(v string) (string, error) {
 	if host == "" {
 		host = v
 	}
-	if port == "" {
-		port = "443"
+	if port != "" {
+		return "", errors.New("saas host can't have port set: it's signed for domain without the port")
 	}
 
 	v = net.JoinHostPort(host, port)
