@@ -659,6 +659,10 @@ var databaseSchema = [][]string{
 			WHERE service_type = 'postgresql' and database_name = ''`,
 	},
 	53: {
+		`UPDATE services SET database_name = 'postgres' 
+			WHERE service_type = 'postgresql' and database_name = 'postgresql'`,
+	},
+	54: {
 		`ALTER TABLE percona_sso_details
 			ADD COLUMN access_token VARCHAR`,
 	},
