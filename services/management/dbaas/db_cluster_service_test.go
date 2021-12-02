@@ -99,7 +99,7 @@ func TestDBClusterService(t *testing.T) {
 	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, versionService)
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, dbKubeconfigTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
-			PxcOperatorVersion:   "",
+			PxcOperatorVersion:   onePointNine,
 			PsmdbOperatorVersion: onePointEight,
 		},
 		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
