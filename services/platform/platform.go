@@ -125,16 +125,16 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 }
 
 // Disconnect disconnects a PMM server from the organization created on Percona Portal.
-func (s *Service) Disconnect(ctx context.Context, req *platformpb.ConnectRequest) error {
+func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequest) (*platformpb.DisconnectResponse, error) {
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err == nil {
-		return status.Error(codes.Aborted, "PMM server is not connected to Portal")
+		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
@@ -145,20 +145,20 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.ConnectRequest
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
-		return err // this is already a status error
+		return nil, err // this is already a status error
 	}
 
 	err = models.DeletePerconaSSODetails(s.db.Querier)
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
 	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return nil, status.Error(codes.Internal, internalServerError)
 	}
-	return nil
+	return &platformpb.DisconnectResponse{}, nil
 }
 
 func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
