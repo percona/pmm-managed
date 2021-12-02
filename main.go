@@ -741,7 +741,7 @@ func main() {
 				return
 			case s := <-updateSignals:
 				l.Infof("Got %s, reloading configuration...", unix.SignalName(s.(unix.Signal)))
-				err := server.UpdateConfigurations(context.Background())
+				err := server.UpdateConfigurations(ctx)
 				if err != nil {
 					l.Warnf("Couldn't reload configuration: %s", err)
 				} else {
