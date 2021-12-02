@@ -265,7 +265,6 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	}
 
 	h := req.Header
-	h.Add("Content-Type", "application/json")
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", params.AccessToken))
 
 	resp, err := client.Do(req)
