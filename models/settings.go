@@ -96,6 +96,9 @@ type Settings struct {
 	BackupManagement struct {
 		Enabled bool `json:"enabled"`
 	} `json:"backup_management"`
+
+	// PMMServerID is generated on the first start of PMM server.
+	PMMServerID string `json:"pmmServerID"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.

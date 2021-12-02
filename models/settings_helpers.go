@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
@@ -37,7 +38,6 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	}
 
 	var s Settings
-
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal settings")
 	}
@@ -122,6 +122,19 @@ type ChangeSettingsParams struct {
 	EnableBackupManagement bool
 	// Disable Backup Management features.
 	DisableBackupManagement bool
+}
+
+// SetPMMServerID should be run on start up to generate unique PMM Server ID.
+func SetPMMServerID(q reform.DBTX) error {
+	settings, err := GetSettings(q)
+	if err != nil {
+		return err
+	}
+	if settings.PMMServerID != "" {
+		return nil
+	}
+	settings.PMMServerID = uuid.NewString()
+	return SaveSettings(q, settings)
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
