@@ -488,7 +488,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		return nil, err
 	}
 
-	_, err = models.GetPerconaSSODetails(s.db.Querier)
+	_, err = models.GetPerconaSSODetails(ctx, s.db.Querier)
 
 	return &serverpb.GetSettingsResponse{
 		Settings: s.convertSettings(settings, err == nil),
@@ -670,7 +670,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, errTX
 	}
 
-	if err := s.UpdateConfigurations(); err != nil {
+	if err := s.UpdateConfigurations(ctx); err != nil {
 		return nil, err
 	}
 
@@ -731,7 +731,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
-	_, err := models.GetPerconaSSODetails(s.db.Querier)
+	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(newSettings, err == nil),
@@ -739,12 +739,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 }
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
-func (s *Server) UpdateConfigurations() error {
+func (s *Server) UpdateConfigurations(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		if !errors.Is(err, reform.ErrNoRows) {
 			return errors.Wrap(err, "failed to get SSO details")
