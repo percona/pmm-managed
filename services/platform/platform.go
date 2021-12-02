@@ -31,9 +31,10 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm/api/platformpb"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm/api/platformpb"
 )
 
 const (
