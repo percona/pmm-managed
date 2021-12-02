@@ -461,6 +461,8 @@ github.com/percona/pmm v0.0.0-20211202174438-5bdfdfa73c08 h1:CtzDJnIMBNxEiS20iPX
 github.com/percona/pmm v0.0.0-20211202174438-5bdfdfa73c08/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/pmm v0.0.0-20211202192300-b738bb7508e6 h1:693g8T8GYqf3hi5ovmDtr36RWsv6wHJkJ9RbEcKos/g=
 github.com/percona/pmm v0.0.0-20211202192300-b738bb7508e6/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
+github.com/percona/pmm v0.0.0-20211202192401-a3cf14b2ce6b h1:nN9YtzlQAnCKlaFDoOvvTdHquFhQi3VfV/yhZ3MFibI=
+github.com/percona/pmm v0.0.0-20211202192401-a3cf14b2ce6b/go.mod h1:OmWayvQAavtvlzLkvpea5tAqaWGGNNyG+xj4MJUsNm4=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
