@@ -49,8 +49,8 @@ func TestMongodbExporterConfig225(t *testing.T) {
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{
-			"--collector-topmetrics",
 			"--collector.dbstats",
+			"--collector.topmetrics",
 			"--compatible-mode",
 			"--discovering-mode",
 			"--mongodb.global-conn-pool",
@@ -73,9 +73,9 @@ func TestMongodbExporterConfig225(t *testing.T) {
 			CollectionsLimit: 79014,
 		}
 		expected.Args = []string{
-			"--collector-topmetrics",
 			"--collector.collstats-limit=79014",
 			"--collector.dbstats",
+			"--collector.topmetrics",
 			"--compatible-mode",
 			"--discovering-mode",
 			"--mongodb.collstats-colls=col1,col2,col3",

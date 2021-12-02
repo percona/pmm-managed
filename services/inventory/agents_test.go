@@ -135,7 +135,7 @@ func TestAgents(t *testing.T) {
 			PmmAgentId:       pmmAgent.AgentId,
 			ServiceId:        ms.ServiceId,
 			Username:         "username",
-			StatsCollections: "",
+			StatsCollections: nil,
 			CollectionsLimit: 0, // no limit
 		})
 		require.NoError(t, err)
