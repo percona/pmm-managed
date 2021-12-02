@@ -34,7 +34,6 @@ import (
 //go:generate mockery -name=vmAlertExternalRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
-//go:generate mockery -name=platformService -case=snake -inpkg -testonly
 //go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
 
