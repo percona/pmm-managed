@@ -78,7 +78,6 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/minio"
-	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/services/server"
