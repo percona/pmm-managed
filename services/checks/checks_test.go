@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	devChecksHost      = "check-dev.percona.com:443"
+	devChecksHost      = "check-dev.percona.com"
 	devChecksPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
 	testChecksFile     = "../../testdata/checks/checks.yml"
 	issuerURL          = "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
