@@ -407,6 +407,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 		"PerconaSSODetails":  ssoDetails,
+		"PMMServerAddress":   settings.PMMPublicAddress,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -694,6 +695,7 @@ command =
         cfg:default.log.console.format=console
         cfg:default.server.root_url="https://%%(domain)s/graph"
         {{- if .PerconaSSODetails}}
+        cfg:default.server.domain="{{ .PMMServerAddress }}"
         cfg:default.auth.generic_oauth.enabled=true
         cfg:default.auth.generic_oauth.name="Percona Account"
         cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
