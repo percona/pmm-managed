@@ -10,8 +10,8 @@ require (
 	github.com/reviewdog/reviewdog v0.11.0
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/perf v0.0.0-20210220033136-40a54f11e909
-	golang.org/x/tools v0.1.1-0.20210408155258-593413344da1
+	golang.org/x/tools v0.1.8-0.20211102182255-bb4add04ddef
 	golang.org/x/tools/gopls v0.6.10
 	gopkg.in/reform.v1 v1.5.0
-	mvdan.cc/gofumpt v0.1.1
+	mvdan.cc/gofumpt v0.2.0
 )
