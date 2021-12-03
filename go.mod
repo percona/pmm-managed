@@ -44,7 +44,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.1-0.20200623203004-60555c9708c7 // indirect
-	github.com/prometheus/common v0.26.0
+	github.com/prometheus/common v0.32.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/objx v0.3.0 // indirect
@@ -52,7 +52,7 @@ require (
 	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
