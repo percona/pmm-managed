@@ -151,7 +151,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 
 	err = models.DeletePerconaSSODetails(s.db.Querier)
 	if err != nil {
-		s.l.Errorf("Failed to insert SSO details: %s", err)
+		s.l.Errorf("Failed to delete SSO details: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
