@@ -48,7 +48,7 @@ services:
       - ./testdata/mysql:/mysql
 
   mongo:
-    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.2}
+    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.4}
     container_name: pmm-agent_mongo
     command: --profile 2
     ports:
