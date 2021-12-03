@@ -8,7 +8,7 @@ require (
 	github.com/golangci/golangci-lint v1.39.0
 	github.com/kevinburke/go-bindata v3.22.0+incompatible
 	github.com/reviewdog/reviewdog v0.11.0
-	github.com/vektra/mockery v1.1.2
+	github.com/vektra/mockery/v2 v2.9.4
 	golang.org/x/perf v0.0.0-20210220033136-40a54f11e909
 	golang.org/x/tools v0.1.1-0.20210408155258-593413344da1
 	golang.org/x/tools/gopls v0.6.10
