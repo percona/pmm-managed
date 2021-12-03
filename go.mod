@@ -21,7 +21,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
-	github.com/brianvoe/gofakeit/v6 v6.9.0
+	github.com/brianvoe/gofakeit/v6 v6.10.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-co-op/gocron v1.7.1
 	github.com/go-openapi/runtime v0.19.20
