@@ -35,7 +35,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/go-version v1.3.0
 	github.com/lib/pq v1.9.0
-	github.com/minio/minio-go/v7 v7.0.10
+	github.com/minio/minio-go/v7 v7.0.16
 	github.com/percona-platform/dbaas-api v0.0.0-20211201151251-014259873599
 	github.com/percona-platform/saas v0.0.0-20211101203847-f65c32bc8770
 	github.com/percona/pmm v0.0.0-20211203124433-9a6e4ff18a5a
@@ -46,7 +46,7 @@ require (
 	github.com/prometheus/client_model v0.2.1-0.20200623203004-60555c9708c7 // indirect
 	github.com/prometheus/common v0.26.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc
