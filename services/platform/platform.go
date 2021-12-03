@@ -117,7 +117,6 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		s.l.Errorf("Failed to insert SSO details: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
-	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 
 	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
@@ -285,5 +284,6 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 		}
 		return status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
-	return response.SSODetails, nil
+
+	return nil
 }
