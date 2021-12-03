@@ -20,7 +20,7 @@ services:
       - ./testdata/checks:/srv/checks
 
   test_db:
-    image: aleksi/test_db:1.1.0
+    image: aleksi/test_db:1.2.1
     container_name: pmm-agent_test_db
     volumes:
       - test_db_mysql:/test_db/mysql/world:ro
