@@ -49,7 +49,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc
+	go.starlark.net v0.0.0-20211203141949-70c0e40ae128
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
