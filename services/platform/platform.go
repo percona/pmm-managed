@@ -142,7 +142,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	defer cancel()
 
 	err = s.disconnect(nCtx, &disconnectPMMParams{
-		pmmServerID: settings.PMMServerID,
+		PMMServerID: settings.PMMServerID,
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
@@ -191,7 +191,7 @@ type connectPMMRequest struct {
 }
 
 type disconnectPMMParams struct {
-	pmmServerID string
+	PMMServerID string
 	AccessToken string
 }
 
@@ -257,7 +257,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 }
 
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
-	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s", s.host, params.pmmServerID)
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s", s.host, params.PMMServerID)
 	client := http.Client{Timeout: platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
