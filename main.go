@@ -468,7 +468,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(db.Querier)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
 	if err != nil {
 		deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
 	}
@@ -741,7 +741,7 @@ func main() {
 				return
 			case s := <-updateSignals:
 				l.Infof("Got %s, reloading configuration...", unix.SignalName(s.(unix.Signal)))
-				err := server.UpdateConfigurations()
+				err := server.UpdateConfigurations(ctx)
 				if err != nil {
 					l.Warnf("Couldn't reload configuration: %s", err)
 				} else {

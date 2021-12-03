@@ -74,7 +74,7 @@ const platformAPITimeout = 10 * time.Second
 
 // Connect connects a PMM server to the organization created on Percona Portal. That allows the user to sign in to the PMM server with their Percona Account.
 func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (*platformpb.ConnectResponse, error) {
-	_, err := models.GetPerconaSSODetails(s.db.Querier)
+	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err == nil {
 		return nil, status.Error(codes.AlreadyExists, "PMM server is already connected to Portal")
 	}
@@ -103,7 +103,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		return nil, err // this is already a status error
 	}
 
-	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetails{
+	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 		ClientID:     ssoParams.ClientID,
 		ClientSecret: ssoParams.ClientSecret,
 		IssuerURL:    ssoParams.IssuerURL,
@@ -114,19 +114,19 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 
-	if err := s.UpdateSupervisordConfigurations(); err != nil {
+	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	return &platformpb.ConnectResponse{}, nil
 }
 
-func (s *Service) UpdateSupervisordConfigurations() error {
+func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(s.db.Querier)
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		if !errors.Is(err, reform.ErrNoRows) {
 			return errors.Wrap(err, "failed to get SSO details")
