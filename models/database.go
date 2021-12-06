@@ -663,6 +663,10 @@ var databaseSchema = [][]string{
 			WHERE service_type = 'postgresql' and database_name = 'postgresql'`,
 	},
 	54: {
+		`ALTER TABLE percona_sso_details
+			ADD COLUMN access_token VARCHAR`,
+	},
+	55: {
 		`DELETE FROM ia_rules`,
 		`ALTER TABLE ia_rules
 			RENAME COLUMN params TO params_values`,
@@ -675,7 +679,7 @@ var databaseSchema = [][]string{
 			ADD COLUMN labels TEXT,
 			ADD COLUMN annotations TEXT`,
 	},
-	55: {
+	56: {
 		`ALTER TABLE ia_templates
 			DROP COLUMN tiers`,
 	},

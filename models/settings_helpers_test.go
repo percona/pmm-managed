@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -302,50 +301,6 @@ func TestSettings(t *testing.T) {
 			assert.Empty(t, ns.Telemetry.UUID)
 		})
 
-		t.Run("Percona Platform auth", func(t *testing.T) {
-			email := tests.GenEmail(t)
-			sessionID := uuid.New().String()
-
-			// User logged in
-			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				Email:     email,
-				SessionID: sessionID,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, email, ns.SaaS.Email)
-			assert.Equal(t, sessionID, ns.SaaS.SessionID)
-
-			// Logout with email update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut: true,
-				Email:  tests.GenEmail(t),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Logout with session ID update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut:    true,
-				SessionID: uuid.New().String(),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Logout with email and session ID update
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut:    true,
-				Email:     tests.GenEmail(t),
-				SessionID: uuid.New().String(),
-			})
-			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
-
-			// Normal logout
-			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				LogOut: true,
-			})
-			require.NoError(t, err)
-			assert.Empty(t, ns.SaaS.Email)
-			assert.Empty(t, ns.SaaS.SessionID)
-		})
-
 		t.Run("disable checks", func(t *testing.T) {
 			disChecks := []string{"one", "two", "three"}
 
@@ -470,6 +425,37 @@ func TestSettings(t *testing.T) {
 			})
 			assert.True(t, errors.As(err, &errInvalidArgument))
 			assert.EqualError(t, err, "invalid argument: both enable_alerting and disable_alerting are present")
+		})
+	})
+
+	t.Run("Set PMM server ID", func(t *testing.T) {
+		t.Run("not set", func(t *testing.T) {
+			settings, err := models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.Empty(t, settings.PMMServerID)
+
+			err = models.SetPMMServerID(sqlDB)
+			require.NoError(t, err)
+
+			settings, err = models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.NotEmpty(t, settings.PMMServerID)
+		})
+		t.Run("already set", func(t *testing.T) {
+			settings, err := models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			pmmServerID := settings.PMMServerID
+
+			err = models.SetPMMServerID(sqlDB)
+			require.NoError(t, err)
+
+			settings, err = models.GetSettings(sqlDB)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.Equal(t, pmmServerID, settings.PMMServerID)
 		})
 	})
 }
