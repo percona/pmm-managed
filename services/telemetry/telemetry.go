@@ -29,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/uuid"
@@ -39,6 +38,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
@@ -350,16 +350,13 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
-	marshaler := jsonpb.Marshaler{}
-
-	var reqByte bytes.Buffer
-	err := marshaler.Marshal(&reqByte, req)
+	reqByte, err := protojson.MarshalOptions{}.Marshal(req)
 	if err != nil {
 		return err
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte.Bytes()))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
