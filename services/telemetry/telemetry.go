@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/uuid"
@@ -350,13 +350,16 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
-	reqByte, err := json.Marshal(req)
+	marshaler := jsonpb.Marshaler{}
+
+	var reqByte bytes.Buffer
+	err := marshaler.Marshal(&reqByte, req)
 	if err != nil {
 		return err
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte.Bytes()))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
