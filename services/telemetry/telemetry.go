@@ -350,7 +350,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
-	reqByte, err := protojson.MarshalOptions{}.Marshal(req)
+	reqByte, err := protojson.Marshal(req)
 	if err != nil {
 		return err
 	}
