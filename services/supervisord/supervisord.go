@@ -400,15 +400,27 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
+
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
-		"PerconaSSODetails":  ssoDetails,
-		"PMMServerAddress":   settings.PMMPublicAddress,
 	}
+
+	if ssoDetails != nil {
+		u, err := url.Parse(ssoDetails.IssuerURL)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse host of IssuerURL")
+		}
+		templateParams["PerconaSSODetails"] = ssoDetails
+		templateParams["PMMServerAddress"] = settings.PMMPublicAddress
+		templateParams["IssuerDomain"] = u.Host
+	} else {
+		templateParams["PerconaSSODetails"] = nil
+	}
+
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
 	}
@@ -697,6 +709,7 @@ command =
         {{- if .PerconaSSODetails}}
         cfg:default.server.domain="{{ .PMMServerAddress }}"
         cfg:default.auth.generic_oauth.enabled=true
+        cfg:default.auth.signout_redirect_url="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
         cfg:default.auth.generic_oauth.name="Percona Account"
         cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
         cfg:default.auth.generic_oauth.client_secret="{{ .PerconaSSODetails.ClientSecret }}"
