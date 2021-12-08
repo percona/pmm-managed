@@ -400,7 +400,6 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
-
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
