@@ -294,7 +294,7 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 			Id: id[:],
 			Time: &timestamp.Timestamp{
 				Seconds: now.Unix(),
-				Nanos:   int32(now.UnixNano()),
+				Nanos:   int32(now.Nanosecond()),
 			},
 			Event: &reporter.AnyEvent{
 				TypeUrl: proto.MessageName(event), //nolint:staticcheck
