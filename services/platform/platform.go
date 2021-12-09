@@ -138,6 +138,20 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
+	if err := s.CleanSupervisordConfigurations(ctx); err != nil {
+		s.l.Errorf("Failed to clean configuration of grafana during removing PMM from Portal: %s", err)
+		return nil, status.Error(codes.Internal, internalServerError)
+	}
+
+	err = models.DeletePerconaSSODetails(s.db.Querier)
+	if err != nil {
+		s.l.Errorf("Failed to delete SSO details: %s", err)
+		if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
+			s.l.Errorf("Failed to rollback: %s", err)
+		}
+		return nil, status.Error(codes.Internal, internalServerError)
+	}
+
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
 
@@ -146,20 +160,34 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
+		if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
+			s.l.Errorf("Failed to rollback: %s", err)
+		}
+		if err := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
+			ClientID:     ssoDetails.ClientID,
+			ClientSecret: ssoDetails.ClientSecret,
+			IssuerURL:    ssoDetails.IssuerURL,
+			Scope:        ssoDetails.Scope,
+		}); err != nil {
+			s.l.Errorf("Failed to rollback: %s", err)
+		}
+
 		return nil, err // this is already a status error
 	}
 
-	err = models.DeletePerconaSSODetails(s.db.Querier)
+	return &platformpb.DisconnectResponse{}, nil
+}
+
+func (s *Service) CleanSupervisordConfigurations(ctx context.Context) error {
+	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		s.l.Errorf("Failed to delete SSO details: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return errors.Wrap(err, "failed to get settings")
 	}
 
-	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
-		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+	if err := s.supervisord.UpdateConfiguration(settings, nil); err != nil {
+		return errors.Wrap(err, "failed to update supervisord configuration")
 	}
-	return &platformpb.DisconnectResponse{}, nil
+	return nil
 }
 
 func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
