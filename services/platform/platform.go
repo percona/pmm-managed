@@ -146,8 +146,8 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	err = models.DeletePerconaSSODetails(s.db.Querier)
 	if err != nil {
 		s.l.Errorf("Failed to delete SSO details: %s", err)
-		if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
-			s.l.Errorf("Failed to rollback: %s", err)
+		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
+			s.l.Errorf("Failed to rollback: %s", e)
 		}
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
@@ -160,16 +160,16 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
-		if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
-			s.l.Errorf("Failed to rollback: %s", err)
+		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
+			s.l.Errorf("Failed to rollback: %s", e)
 		}
-		if err := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
+		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 			ClientID:     ssoDetails.ClientID,
 			ClientSecret: ssoDetails.ClientSecret,
 			IssuerURL:    ssoDetails.IssuerURL,
 			Scope:        ssoDetails.Scope,
-		}); err != nil {
-			s.l.Errorf("Failed to rollback: %s", err)
+		}); e != nil {
+			s.l.Errorf("Failed to rollback: %s", e)
 		}
 
 		return nil, err // this is already a status error
