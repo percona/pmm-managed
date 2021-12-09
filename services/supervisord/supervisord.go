@@ -708,7 +708,6 @@ command =
         {{- if .PerconaSSODetails}}
         cfg:default.server.domain="{{ .PMMServerAddress }}"
         cfg:default.auth.generic_oauth.enabled=true
-        cfg:default.auth.signout_redirect_url="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
         cfg:default.auth.generic_oauth.name="Percona Account"
         cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
         cfg:default.auth.generic_oauth.client_secret="{{ .PerconaSSODetails.ClientSecret }}"
@@ -716,8 +715,9 @@ command =
         cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
         cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
-        {{- end}}
 
+environment=GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
+        {{- end}}
 user = grafana
 directory = /usr/share/grafana
 autorestart = true
