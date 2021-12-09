@@ -70,7 +70,7 @@ func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
 	return &s, nil
 }
 
-const platformAPITimeout = 10 * time.Second
+const platformAPITimeout = 30 * time.Second
 
 // Connect connects a PMM server to the organization created on Percona Portal. That allows the user to sign in to the PMM server with their Percona Account.
 func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (*platformpb.ConnectResponse, error) {
