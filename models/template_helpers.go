@@ -181,36 +181,15 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 
 // RemoveTemplate removes rule template with specified name.
 func RemoveTemplate(q *reform.Querier, name string) error {
-	template, err := FindTemplateByName(q, name)
+	_, err := FindTemplateByName(q, name)
 	if err != nil {
 		return err
-	}
-
-	inUse, err := templateInUse(q, name)
-	if err != nil {
-		return err
-	}
-
-	if inUse {
-		return status.Errorf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary)
 	}
 
 	if err = q.Delete(&Template{Name: name}); err != nil {
 		return errors.Wrap(err, "failed to delete rule template")
 	}
 	return nil
-}
-
-func templateInUse(q *reform.Querier, name string) (bool, error) {
-	_, err := q.FindOneFrom(RuleTable, "template_name", name)
-	switch err {
-	case nil:
-		return true, nil
-	case reform.ErrNoRows:
-		return false, nil
-	default:
-		return false, errors.WithStack(err)
-	}
 }
 
 // ConvertParamsDefinitions converts parameters definitions to the model.

@@ -348,7 +348,6 @@ func TestTemplatesAPI(t *testing.T) {
 				Context: pmmapitests.Context,
 			})
 			require.NoError(t, err)
-			defer deleteTemplate(t, templatesClient.Default.Templates, name)
 
 			channelID, _ := createChannel(t)
 			defer deleteChannel(t, templatesClient.Default.Channels, channelID)
@@ -369,7 +368,7 @@ func TestTemplatesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, "Test summary")
+			require.NoError(t, err)
 
 			resp, err := client.ListTemplates(&templates.ListTemplatesParams{
 				Body: templates.ListTemplatesBody{
@@ -379,13 +378,9 @@ func TestTemplatesAPI(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			var found bool
 			for _, template := range resp.Payload.Templates {
-				if name == template.Name {
-					found = true
-				}
+				assert.Falsef(t, name == template.Name, "Template with id %s wasn't deleted", name)
 			}
-			assert.Truef(t, found, "Template with id %s not found", name)
 		})
 
 		t.Run("unknown template", func(t *testing.T) {

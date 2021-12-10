@@ -28,14 +28,11 @@ import (
 	"github.com/percona/promconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestRuleTemplates(t *testing.T) {
@@ -181,7 +178,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Empty(t, templates)
 	})
 
-	t.Run("remove template in use", func(t *testing.T) {
+	t.Run("remove template that is used for some rule", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -198,12 +195,11 @@ func TestRuleTemplates(t *testing.T) {
 		_ = createRule(t, q, channel.ID, template)
 
 		err = models.RemoveTemplate(q, template.Name)
-		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary), err)
+		require.NoError(t, err)
 
 		templates, err := models.FindTemplates(q)
 		require.NoError(t, err)
-
-		assert.NotEmpty(t, templates)
+		assert.Empty(t, templates)
 	})
 
 	t.Run("list", func(t *testing.T) {
