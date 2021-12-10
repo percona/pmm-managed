@@ -26,10 +26,17 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/percona/pmm-managed/utils/envvars"
+	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm/utils/tlsconfig"
 )
 
-const dialTimeout = 10 * time.Second
+var dialTimeout time.Duration
+
+func init() {
+	l := logger.Get(logger.Set(context.Background(), "saasreq init"))
+	dialTimeout = envvars.GetPlatformAPITimeout(l)
+}
 
 // MakeRequest creates http/https POST request to Percona Platform
 func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader) ([]byte, error) {
