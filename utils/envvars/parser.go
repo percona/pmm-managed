@@ -155,7 +155,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			}
 
 		case envPlatfromAPITimeout:
-			// This variable is not part of the settings and is parsed on different separately.
+			// This variable is not part of the settings and is parsed separately.
 			continue
 
 		default:
