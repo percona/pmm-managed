@@ -39,6 +39,7 @@ import (
 
 const (
 	internalServerError = "Internal server error"
+	rollbackFailed      = "Failed to rollback:"
 )
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.
@@ -147,7 +148,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	if err != nil {
 		s.l.Errorf("Failed to delete SSO details: %s", err)
 		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
-			s.l.Errorf("Failed to rollback: %s", e)
+			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
@@ -161,7 +162,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	})
 	if err != nil {
 		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
-			s.l.Errorf("Failed to rollback: %s", e)
+			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 			ClientID:     ssoDetails.ClientID,
@@ -169,7 +170,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 			IssuerURL:    ssoDetails.IssuerURL,
 			Scope:        ssoDetails.Scope,
 		}); e != nil {
-			s.l.Errorf("Failed to rollback: %s", e)
+			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
 
 		return nil, err // this is already a status error
