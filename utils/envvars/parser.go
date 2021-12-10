@@ -154,6 +154,10 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				warns = append(warns, fmt.Sprintf("environment variable %q IS DEPRECATED AND WILL BE REMOVED, USE %q INSTEAD", envTestDbaas, envEnableDbaas))
 			}
 
+		case envPlatfromAPITimeout:
+			// This variable is not part of the settings and is parsed on different separately.
+			continue
+
 		default:
 			// handle prefixes
 
