@@ -128,12 +128,10 @@ func TestEnvVarValidator(t *testing.T) {
 
 		envs := []string{
 			"PERCONA_TEST_SAAS_HOST=host:333",
-			"PERCONA_TEST_PLATFORM_API_TIMEOUT=20s",
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedWarns := []string{
 			`environment variable "PERCONA_TEST_SAAS_HOST" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
-			`environment variable "PERCONA_TEST_PLATFORM_API_TIMEOUT" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
 		}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
@@ -191,7 +189,7 @@ func TestEnvVarValidator(t *testing.T) {
 			respVal time.Duration
 			msg     string
 		}{
-			{value: "", respVal: time.Second * 30, msg: "Environment variable \"PERCONA_TEST_PLATFORM_API_TIMEOUT\" is not set, using \"30s\" as a default timeout for platform API."},
+			{value: "", respVal: time.Second * 30, msg: "Environment variable \"PERCONA_PLATFORM_API_TIMEOUT\" is not set, using \"30s\" as a default timeout for platform API."},
 			{value: "10s", respVal: time.Second * 10, msg: "Using \"10s\" as a timeout for platform API."},
 			{value: "xxx", respVal: time.Second * 30, msg: "Using \"30s\" as a default: failed to parse platform API timeout \"xxx\": invalid duration error."},
 		}

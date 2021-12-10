@@ -38,7 +38,7 @@ const (
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
 	envTestDbaas              = "PERCONA_TEST_DBAAS"
 	envEnableDbaas            = "ENABLE_DBAAS"
-	envPlatfromAPITimeout     = "PERCONA_TEST_PLATFORM_API_TIMEOUT"
+	envPlatfromAPITimeout     = "PERCONA_PLATFORM_API_TIMEOUT"
 	defaultPlatformAPITimeout = 30 * time.Second
 )
 
