@@ -26,9 +26,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/percona/pmm/utils/tlsconfig"
+
 	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm/utils/tlsconfig"
 )
 
 var dialTimeout time.Duration

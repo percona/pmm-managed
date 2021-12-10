@@ -90,10 +90,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 
-	nCtx, cancel := context.WithTimeout(ctx, s.platformAPITimeout)
-	defer cancel()
-
-	ssoParams, err := s.connect(nCtx, &connectPMMParams{
+	ssoParams, err := s.connect(ctx, &connectPMMParams{
 		serverName:                req.ServerName,
 		email:                     req.Email,
 		password:                  req.Password,
