@@ -98,6 +98,9 @@ def main():
     make_init()
     make_install()
 
+    # do basic setup
+    setup()
+
 
 MARKER = "/tmp/devcontainer-setup-done"
 if os.path.exists(MARKER):
