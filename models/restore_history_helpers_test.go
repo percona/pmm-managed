@@ -82,6 +82,7 @@ func TestRestoreHistory(t *testing.T) {
 				LocationID: locationID1,
 				ServiceID:  serviceID1,
 				DataModel:  models.PhysicalDataModel,
+				Mode:       models.Snapshot,
 				Status:     models.SuccessBackupStatus,
 				Type:       models.OnDemandArtifactType,
 				CreatedAt:  time.Now(),
@@ -93,6 +94,7 @@ func TestRestoreHistory(t *testing.T) {
 				LocationID: locationID1,
 				ServiceID:  serviceID2,
 				DataModel:  models.PhysicalDataModel,
+				Mode:       models.Snapshot,
 				Status:     models.SuccessBackupStatus,
 				Type:       models.OnDemandArtifactType,
 				CreatedAt:  time.Now(),
@@ -242,7 +244,7 @@ func TestRestoreHistoryValidation(t *testing.T) {
 				ServiceID: "service_id",
 				Status:    models.SuccessRestoreStatus,
 			},
-			errorMsg: "artifact_id shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: artifact_id shouldn't be empty",
 		},
 		{
 			name: "service missing",
@@ -250,7 +252,7 @@ func TestRestoreHistoryValidation(t *testing.T) {
 				ArtifactID: "artifact_id",
 				Status:     models.SuccessRestoreStatus,
 			},
-			errorMsg: "service_id shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: service_id shouldn't be empty",
 		},
 		{
 			name: "invalid status",
@@ -259,7 +261,7 @@ func TestRestoreHistoryValidation(t *testing.T) {
 				ServiceID:  "service_id",
 				Status:     models.RestoreStatus("invalid"),
 			},
-			errorMsg: "invalid status 'invalid': invalid argument",
+			errorMsg: "invalid argument: invalid status \"invalid\"",
 		},
 	}
 

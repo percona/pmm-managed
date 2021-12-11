@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/percona/pmm/api/serverpb"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -41,14 +42,14 @@ func TestServer(t *testing.T) {
 	newServer := func(t *testing.T) *Server {
 		r := new(mockSupervisordService)
 		r.Test(t)
-		r.On("UpdateConfiguration", mock.Anything).Return(nil)
+		r.On("UpdateConfiguration", mock.Anything, mock.Anything).Return(nil)
 
 		mvmdb := new(mockPrometheusService)
 		mvmdb.Test(t)
 		mvmdb.On("RequestConfigurationUpdate").Return(nil)
-		mAgents := new(mockAgentsRegistry)
-		mAgents.Test(t)
-		mAgents.On("UpdateAgentsState", context.TODO()).Return(nil)
+		mState := new(mockAgentsStateUpdater)
+		mState.Test(t)
+		mState.On("UpdateAgentsState", context.TODO()).Return(nil)
 
 		mvmalert := new(mockPrometheusService)
 		mvmalert.Test(t)
@@ -65,19 +66,15 @@ func TestServer(t *testing.T) {
 		ts := new(mockTelemetryService)
 		ts.Test(t)
 
-		ps := new(mockPlatformService)
-		ps.Test(t)
-
 		s, err := NewServer(&Params{
 			DB:                   reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			VMDB:                 mvmdb,
 			VMAlert:              mvmalert,
 			Alertmanager:         malertmanager,
-			AgentsRegistry:       mAgents,
+			AgentsStateUpdater:   mState,
 			Supervisord:          r,
 			VMAlertExternalRules: par,
 			TelemetryService:     ts,
-			PlatformService:      ps,
 		})
 		require.NoError(t, err)
 		return s
@@ -142,7 +139,9 @@ func TestServer(t *testing.T) {
 				"METRICS_RESOLUTION=5ns",
 			})
 			require.Len(t, errs, 1)
-			require.EqualError(t, errs[0], `hr: minimal resolution is 1s`)
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
+			require.EqualError(t, errs[0], `invalid argument: hr: minimal resolution is 1s`)
 			assert.Zero(t, s.envSettings.MetricsResolutions.HR)
 		})
 
@@ -152,7 +151,9 @@ func TestServer(t *testing.T) {
 				"DATA_RETENTION=12h",
 			})
 			require.Len(t, errs, 1)
-			require.EqualError(t, errs[0], `data_retention: minimal resolution is 24h`)
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
+			require.EqualError(t, errs[0], `invalid argument: data_retention: minimal resolution is 24h`)
 			assert.Zero(t, s.envSettings.DataRetention)
 		})
 
@@ -162,7 +163,9 @@ func TestServer(t *testing.T) {
 				"DATA_RETENTION=30h",
 			})
 			require.Len(t, errs, 1)
-			require.EqualError(t, errs[0], `data_retention: should be a natural number of days`)
+			var errInvalidArgument *models.ErrInvalidArgument
+			assert.True(t, errors.As(errs[0], &errInvalidArgument))
+			require.EqualError(t, errs[0], `invalid argument: data_retention: should be a natural number of days`)
 			assert.Zero(t, s.envSettings.DataRetention)
 		})
 
@@ -188,8 +191,16 @@ func TestServer(t *testing.T) {
 			RemoveAlertManagerRules: true,
 		}))
 
-		s.envSettings.DisableTelemetry = true
+		s.envSettings.DisableUpdates = true
+		expected = status.New(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			EnableUpdates: true,
+		}))
+		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			DisableUpdates: true,
+		}))
 
+		s.envSettings.DisableTelemetry = true
 		expected = status.New(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableTelemetry: true,
@@ -198,8 +209,7 @@ func TestServer(t *testing.T) {
 			DisableTelemetry: true,
 		}))
 
-		expected = status.New(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
-		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableStt: true,
 		}))
 		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{

@@ -105,6 +105,7 @@ func TestArtifacts(t *testing.T) {
 			ServiceID:  serviceID1,
 			DataModel:  models.PhysicalDataModel,
 			Status:     models.PendingBackupStatus,
+			Mode:       models.Snapshot,
 		}
 
 		a, err := models.CreateArtifact(q, params)
@@ -135,6 +136,7 @@ func TestArtifacts(t *testing.T) {
 			ServiceID:  serviceID1,
 			DataModel:  models.PhysicalDataModel,
 			Status:     models.PendingBackupStatus,
+			Mode:       models.Snapshot,
 		}
 		params2 := models.CreateArtifactParams{
 			Name:       "backup_name_2",
@@ -143,6 +145,7 @@ func TestArtifacts(t *testing.T) {
 			ServiceID:  serviceID2,
 			DataModel:  models.LogicalDataModel,
 			Status:     models.PausedBackupStatus,
+			Mode:       models.Snapshot,
 		}
 
 		a1, err := models.CreateArtifact(q, params1)
@@ -150,7 +153,7 @@ func TestArtifacts(t *testing.T) {
 		a2, err := models.CreateArtifact(q, params2)
 		require.NoError(t, err)
 
-		actual, err := models.FindArtifacts(q, nil)
+		actual, err := models.FindArtifacts(q, models.ArtifactFilters{})
 		require.NoError(t, err)
 
 		found := func(id string) func() bool {
@@ -185,6 +188,7 @@ func TestArtifacts(t *testing.T) {
 			ServiceID:  serviceID1,
 			DataModel:  models.PhysicalDataModel,
 			Status:     models.PendingBackupStatus,
+			Mode:       models.Snapshot,
 		}
 
 		b, err := models.CreateArtifact(q, params)
@@ -193,7 +197,7 @@ func TestArtifacts(t *testing.T) {
 		err = models.DeleteArtifact(q, b.ID)
 		require.NoError(t, err)
 
-		artifacts, err := models.FindArtifacts(q, nil)
+		artifacts, err := models.FindArtifacts(q, models.ArtifactFilters{})
 		require.NoError(t, err)
 		assert.Empty(t, artifacts)
 	})
@@ -220,8 +224,9 @@ func TestArtifactValidation(t *testing.T) {
 				ServiceID:  "service_id",
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
 			},
-			errorMsg: "name shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: name shouldn't be empty",
 		},
 		{
 			name: "vendor missing",
@@ -231,8 +236,9 @@ func TestArtifactValidation(t *testing.T) {
 				ServiceID:  "service_id",
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
 			},
-			errorMsg: "vendor shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: vendor shouldn't be empty",
 		},
 		{
 			name: "location missing",
@@ -242,8 +248,9 @@ func TestArtifactValidation(t *testing.T) {
 				ServiceID: "service_id",
 				DataModel: models.PhysicalDataModel,
 				Status:    models.PendingBackupStatus,
+				Mode:      models.Snapshot,
 			},
-			errorMsg: "location_id shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: location_id shouldn't be empty",
 		},
 		{
 			name: "service missing",
@@ -253,8 +260,35 @@ func TestArtifactValidation(t *testing.T) {
 				LocationID: "location_id",
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
 			},
-			errorMsg: "service_id shouldn't be empty: invalid argument",
+			errorMsg: "invalid argument: service_id shouldn't be empty",
+		},
+		{
+			name: "empty backup mode",
+			params: models.CreateArtifactParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				Mode:       "",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
+			},
+			errorMsg: "invalid argument: empty backup mode",
+		},
+		{
+			name: "empty data model",
+			params: models.CreateArtifactParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  "",
+				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
+			},
+			errorMsg: "invalid argument: empty data model",
 		},
 		{
 			name: "invalid data model",
@@ -265,8 +299,9 @@ func TestArtifactValidation(t *testing.T) {
 				ServiceID:  "service_id",
 				DataModel:  models.DataModel("invalid"),
 				Status:     models.PendingBackupStatus,
+				Mode:       models.Snapshot,
 			},
-			errorMsg: "invalid data model 'invalid': invalid argument",
+			errorMsg: "invalid argument: invalid data model 'invalid'",
 		},
 		{
 			name: "invalid status",
@@ -277,8 +312,22 @@ func TestArtifactValidation(t *testing.T) {
 				ServiceID:  "service_id",
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.BackupStatus("invalid"),
+				Mode:       models.Snapshot,
 			},
-			errorMsg: "invalid status 'invalid': invalid argument",
+			errorMsg: "invalid argument: invalid status 'invalid'",
+		},
+		{
+			name: "invalid mode",
+			params: models.CreateArtifactParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
+				Mode:       models.BackupMode("invalid"),
+			},
+			errorMsg: "invalid argument: invalid backup mode 'invalid'",
 		},
 	}
 

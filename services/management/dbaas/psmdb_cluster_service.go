@@ -33,16 +33,23 @@ import (
 
 // PSMDBClusterService implements PSMDBClusterServer methods.
 type PSMDBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient versionService
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.PSMDBClusterServer {
-	l := logrus.WithField("component", "xtradb_cluster")
-	return &PSMDBClusterService{db: db, l: l, controllerClient: dbaasClient, grafanaClient: grafanaClient}
+func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.PSMDBClustersServer {
+	l := logrus.WithField("component", "psmdb_cluster")
+	return &PSMDBClusterService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     dbaasClient,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // Enabled returns if service is enabled and can be used.
@@ -53,62 +60,6 @@ func (s *PSMDBClusterService) Enabled() bool {
 		return false
 	}
 	return settings.DBaaS.Enabled
-}
-
-// ListPSMDBClusters returns a list of all PSMDB clusters.
-func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1beta1.ListPSMDBClustersRequest) (*dbaasv1beta1.ListPSMDBClustersResponse, error) {
-	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	in := dbaascontrollerv1beta1.ListPSMDBClustersRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: kubernetesCluster.KubeConfig,
-		},
-	}
-
-	out, err := s.controllerClient.ListPSMDBClusters(ctx, &in)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Can't get list of PSMDB clusters: %s", err.Error())
-	}
-
-	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
-	for i, c := range out.Clusters {
-		var computeResources *dbaasv1beta1.ComputeResources
-		var diskSize int64
-		if c.Params.Replicaset != nil {
-			diskSize = c.Params.Replicaset.DiskSize
-			if c.Params.Replicaset.ComputeResources != nil {
-				computeResources = &dbaasv1beta1.ComputeResources{
-					CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
-					MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
-				}
-			}
-		}
-
-		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name: c.Name,
-			Params: &dbaasv1beta1.PSMDBClusterParams{
-				ClusterSize: c.Params.ClusterSize,
-				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
-					ComputeResources: computeResources,
-					DiskSize:         diskSize,
-				},
-			},
-			State: psmdbStates()[c.State],
-			Operation: &dbaasv1beta1.RunningOperation{
-				TotalSteps:    c.Operation.TotalSteps,
-				FinishedSteps: c.Operation.FinishedSteps,
-				Message:       c.Operation.Message,
-			},
-			Exposed: c.Exposed,
-		}
-
-		clusters[i] = &cluster
-	}
-
-	return &dbaasv1beta1.ListPSMDBClustersResponse{Clusters: clusters}, nil
 }
 
 // GetPSMDBClusterCredentials returns a PSMDB cluster credentials by cluster name.
@@ -187,6 +138,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
+			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
 		},
 		Pmm:    pmmParams,
 		Expose: req.Expose,
@@ -240,6 +192,7 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 			}
 		}
+		in.Params.Image = req.Params.Image
 	}
 	_, err = s.controllerClient.UpdatePSMDBCluster(ctx, &in)
 	if err != nil {
@@ -247,56 +200,6 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 	}
 
 	return &dbaasv1beta1.UpdatePSMDBClusterResponse{}, nil
-}
-
-// DeletePSMDBCluster deletes PSMDB cluster by given name.
-func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv1beta1.DeletePSMDBClusterRequest) (*dbaasv1beta1.DeletePSMDBClusterResponse, error) {
-	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	in := dbaascontrollerv1beta1.DeletePSMDBClusterRequest{
-		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: kubernetesCluster.KubeConfig,
-		},
-	}
-
-	_, err = s.controllerClient.DeletePSMDBCluster(ctx, &in)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("psmdb-%s-%s", req.KubernetesClusterName, req.Name))
-	if err != nil {
-		// ignore if API Key is not deleted.
-		s.l.Warnf("Couldn't delete API key: %s", err)
-	}
-
-	return &dbaasv1beta1.DeletePSMDBClusterResponse{}, nil
-}
-
-// RestartPSMDBCluster restarts PSMDB cluster by given name.
-func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaasv1beta1.RestartPSMDBClusterRequest) (*dbaasv1beta1.RestartPSMDBClusterResponse, error) {
-	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
-		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: kubernetesCluster.KubeConfig,
-		},
-	}
-
-	_, err = s.controllerClient.RestartPSMDBCluster(ctx, &in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dbaasv1beta1.RestartPSMDBClusterResponse{}, nil
 }
 
 // GetPSMDBClusterResources returns expected resources to be consumed by the cluster.
@@ -323,15 +226,4 @@ func (s PSMDBClusterService) GetPSMDBClusterResources(ctx context.Context, req *
 			DiskSize:    disk,
 		},
 	}, nil
-}
-
-func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
-	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
-	}
 }

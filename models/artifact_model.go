@@ -19,7 +19,6 @@ package models
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -39,8 +38,10 @@ func (dm DataModel) Validate() error {
 	switch dm {
 	case PhysicalDataModel:
 	case LogicalDataModel:
+	case "":
+		return NewInvalidArgumentError("empty data model")
 	default:
-		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", dm)
+		return NewInvalidArgumentError("invalid data model '%s'", dm)
 	}
 
 	return nil
@@ -71,7 +72,7 @@ func (bs BackupStatus) Validate() error {
 	case DeletingBackupStatus:
 	case FailedToDeleteBackupStatus:
 	default:
-		return errors.Wrapf(ErrInvalidArgument, "invalid status '%s'", bs)
+		return NewInvalidArgumentError("invalid status '%s'", bs)
 	}
 
 	return nil
@@ -91,35 +92,73 @@ const (
 	ScheduledArtifactType ArtifactType = "scheduled"
 )
 
+// BackupMode represents artifact mode.
+type BackupMode string
+
+// Backup modes.
+const (
+	Snapshot    BackupMode = "snapshot"
+	Incremental BackupMode = "incremental"
+	PITR        BackupMode = "pitr"
+)
+
+// Validate validates backup mode.
+func (m BackupMode) Validate() error {
+	switch m {
+	case Snapshot:
+	case Incremental:
+	case PITR:
+	case "":
+		return NewInvalidArgumentError("empty backup mode")
+	default:
+		return NewInvalidArgumentError("invalid backup mode '%s'", m)
+	}
+
+	return nil
+}
+
 // Artifact represents result of a backup.
 //reform:artifacts
 type Artifact struct {
 	ID         string       `reform:"id,pk"`
 	Name       string       `reform:"name"`
 	Vendor     string       `reform:"vendor"`
+	DBVersion  string       `reform:"db_version"`
 	LocationID string       `reform:"location_id"`
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
+	Mode       BackupMode   `reform:"mode"`
 	Status     BackupStatus `reform:"status"`
 	Type       ArtifactType `reform:"type"`
 	ScheduleID string       `reform:"schedule_id"`
 	CreatedAt  time.Time    `reform:"created_at"`
+	UpdatedAt  time.Time    `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 func (s *Artifact) BeforeInsert() error {
-	s.CreatedAt = Now()
+	now := Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
+	return nil
+}
+
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (s *Artifact) BeforeUpdate() error {
+	s.UpdatedAt = Now()
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
 func (s *Artifact) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
+	s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil
 }
 
 // check interfaces.
 var (
 	_ reform.BeforeInserter = (*Artifact)(nil)
+	_ reform.BeforeUpdater  = (*Artifact)(nil)
 	_ reform.AfterFinder    = (*Artifact)(nil)
 )

@@ -23,8 +23,6 @@ import (
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
@@ -33,17 +31,17 @@ import (
 
 // ArtifactsService represents artifacts API.
 type ArtifactsService struct {
-	l  *logrus.Entry
-	db *reform.DB
-	s3 awsS3
+	l          *logrus.Entry
+	db         *reform.DB
+	removalSVC removalService
 }
 
 // NewArtifactsService creates new artifacts API service.
-func NewArtifactsService(db *reform.DB, s3 awsS3) *ArtifactsService {
+func NewArtifactsService(db *reform.DB, removalSVC removalService) *ArtifactsService {
 	return &ArtifactsService{
-		l:  logrus.WithField("component", "management/backup/artifacts"),
-		db: db,
-		s3: s3,
+		l:          logrus.WithField("component", "management/backup/artifacts"),
+		db:         db,
+		removalSVC: removalSVC,
 	}
 }
 
@@ -61,7 +59,7 @@ func (s *ArtifactsService) Enabled() bool {
 func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArtifactsRequest) (*backupv1beta1.ListArtifactsResponse, error) {
 	q := s.db.Querier
 
-	artifacts, err := models.FindArtifacts(q, nil)
+	artifacts, err := models.FindArtifacts(q, models.ArtifactFilters{})
 	if err != nil {
 		return nil, err
 	}
@@ -100,174 +98,49 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
-func (s *ArtifactsService) canDeleteArtifact(q *reform.Querier, artifactID string) (*models.Artifact, error) {
-	artifact, err := models.FindArtifactByID(q, artifactID)
-	switch {
-	case err == nil:
-	case errors.Is(err, models.ErrNotFound):
-		return nil, status.Errorf(codes.NotFound, "Artifact with ID %q not found.", artifactID)
-	default:
-		return nil, err
-	}
-
-	switch artifact.Status {
-	case models.SuccessBackupStatus,
-		models.ErrorBackupStatus,
-		models.FailedToDeleteBackupStatus:
-	case models.DeletingBackupStatus,
-		models.InProgressBackupStatus,
-		models.PausedBackupStatus,
-		models.PendingBackupStatus:
-		return nil, status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
-	default:
-		return nil, status.Errorf(codes.Internal, "Unhandled status %q", artifact.Status)
-	}
-
-	return artifact, nil
-}
-
-// beginDeletingArtifact checks if the artifact isn't in use at the moment and sets deleting status,
-// so it will not be used to restore backup.
-func (s *ArtifactsService) beginDeletingArtifact(
-	artifactID string,
-) (string, *models.S3LocationConfig, error) {
-	var s3Config *models.S3LocationConfig
-	var artifactName string
-	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		artifact, err := s.canDeleteArtifact(tx.Querier, artifactID)
-		if err != nil {
-			return err
-		}
-
-		artifactName = artifact.Name
-
-		inProgressStatus := models.InProgressRestoreStatus
-		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, models.RestoreHistoryItemFilters{
-			ArtifactID: artifactID,
-			Status:     &inProgressStatus,
-		})
-		if err != nil {
-			return err
-		}
-
-		if len(restoreItems) != 0 {
-			return status.Errorf(codes.FailedPrecondition, "Cannot delete artifact with ID %q: "+
-				"artifact is used by currently running restore operation.", artifactID)
-		}
-
-		location, err := models.FindBackupLocationByID(tx.Querier, artifact.LocationID)
-		if err != nil {
-			return err
-		}
-
-		s3Config = location.S3Config
-
-		if _, err := models.UpdateArtifact(tx.Querier, artifactID, models.UpdateArtifactParams{
-			Status: models.BackupStatusPointer(models.DeletingBackupStatus),
-		}); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
-		return "", nil, err
-	}
-
-	return artifactName, s3Config, nil
-}
-
 // DeleteArtifact deletes specified artifact.
 func (s *ArtifactsService) DeleteArtifact(
 	ctx context.Context,
 	req *backupv1beta1.DeleteArtifactRequest,
 ) (*backupv1beta1.DeleteArtifactResponse, error) {
-	artifactName, s3Config, err := s.beginDeletingArtifact(req.ArtifactId)
-	if err != nil {
-		return nil, err
-	}
 
-	if req.RemoveFiles && s3Config != nil {
-		if err := s.s3.RemoveRecursive(
-			ctx,
-			s3Config.Endpoint,
-			s3Config.AccessKey,
-			s3Config.SecretKey,
-			s3Config.BucketName,
-			// Recursive listing finds all the objects with the specified prefix.
-			// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
-			// listing by prefix `backup-daily` gives us both artifacts.
-			// To avoid such a situation we need to append a slash.
-			artifactName+"/",
-		); err != nil {
-			if _, updateErr := models.UpdateArtifact(s.db.Querier, req.ArtifactId, models.UpdateArtifactParams{
-				Status: models.BackupStatusPointer(models.FailedToDeleteBackupStatus),
-			}); updateErr != nil {
-				s.l.WithError(updateErr).
-					Errorf("failed to set status %q for artifact %q", models.FailedToDeleteBackupStatus, req.ArtifactId)
-			}
-
-			return nil, err
-		}
-	}
-
-	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, models.RestoreHistoryItemFilters{
-			ArtifactID: req.ArtifactId,
-		})
-		if err != nil {
-			return err
-		}
-
-		for _, ri := range restoreItems {
-			if err := models.RemoveRestoreHistoryItem(tx.Querier, ri.ID); err != nil {
-				return err
-			}
-		}
-
-		return models.DeleteArtifact(tx.Querier, req.ArtifactId)
-	}); err != nil {
+	if err := s.removalSVC.DeleteArtifact(ctx, req.ArtifactId, req.RemoveFiles); err != nil {
 		return nil, err
 	}
 
 	return &backupv1beta1.DeleteArtifactResponse{}, nil
 }
 
-func convertDataModel(dataModel models.DataModel) (*backupv1beta1.DataModel, error) {
-	var dm backupv1beta1.DataModel
-	switch dataModel {
+func convertDataModel(model models.DataModel) (backupv1beta1.DataModel, error) {
+	switch model {
 	case models.PhysicalDataModel:
-		dm = backupv1beta1.DataModel_PHYSICAL
+		return backupv1beta1.DataModel_PHYSICAL, nil
 	case models.LogicalDataModel:
-		dm = backupv1beta1.DataModel_LOGICAL
+		return backupv1beta1.DataModel_LOGICAL, nil
 	default:
-		return nil, errors.Errorf("invalid data model '%s'", dataModel)
+		return 0, errors.Errorf("unknown data model: %s", model)
 	}
-
-	return &dm, nil
 }
 
-func convertBackupStatus(status models.BackupStatus) (*backupv1beta1.BackupStatus, error) {
-	var s backupv1beta1.BackupStatus
+func convertBackupStatus(status models.BackupStatus) (backupv1beta1.BackupStatus, error) {
 	switch status {
 	case models.PendingBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_PENDING
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_PENDING, nil
 	case models.InProgressBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_IN_PROGRESS
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_IN_PROGRESS, nil
 	case models.PausedBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_PAUSED
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_PAUSED, nil
 	case models.SuccessBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_SUCCESS
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_SUCCESS, nil
 	case models.ErrorBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_ERROR
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_ERROR, nil
 	case models.DeletingBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING, nil
 	case models.FailedToDeleteBackupStatus:
-		s = backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE
+		return backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE, nil
 	default:
-		return nil, errors.Errorf("invalid status '%s'", status)
+		return 0, errors.Errorf("invalid status '%s'", status)
 	}
-
-	return &s, nil
 }
 
 func convertArtifact(
@@ -291,12 +164,17 @@ func convertArtifact(
 		serviceName = s.ServiceName
 	}
 
-	dm, err := convertDataModel(a.DataModel)
+	dataModel, err := convertDataModel(a.DataModel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
 
 	backupStatus, err := convertBackupStatus(a.Status)
+	if err != nil {
+		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
+	}
+
+	backupMode, err := convertModelToBackupMode(a.Mode)
 	if err != nil {
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
@@ -309,8 +187,9 @@ func convertArtifact(
 		LocationName: l.Name,
 		ServiceId:    a.ServiceID,
 		ServiceName:  serviceName,
-		DataModel:    *dm,
-		Status:       *backupStatus,
+		DataModel:    dataModel,
+		Mode:         backupMode,
+		Status:       backupStatus,
 		CreatedAt:    createdAt,
 	}, nil
 }

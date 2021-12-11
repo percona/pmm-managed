@@ -35,6 +35,11 @@ var postgresExporterAutodiscoveryVersion = version.MustParse("2.15.99")
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
 func postgresExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
 	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+
+	if service.DatabaseName == "" {
+		panic("database name not set")
+	}
+
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -47,9 +52,9 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		// HR
 		"--collect.custom_query.hr",
 
-		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
-		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
-		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
+		"--collect.custom_query.lr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/low-resolution",
+		"--collect.custom_query.mr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/medium-resolution",
+		"--collect.custom_query.hr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/postgresql/high-resolution",
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
@@ -79,9 +84,10 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, "postgres", nil)),
-			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, timeout, service.DatabaseName, nil)),
+			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 		},
+		TextFiles: exporter.Files(),
 	}
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
@@ -91,17 +97,29 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 
 // qanPostgreSQLPgStatementsAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
 func qanPostgreSQLPgStatementsAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
+	tdp := agent.TemplateDelimiters(service)
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
-		Dsn:  agent.DSN(service, 5*time.Second, "postgres", nil),
+		Dsn:  agent.DSN(service, 5*time.Second, service.DatabaseName, nil),
+		TextFiles: &agentpb.TextFiles{
+			Files:              agent.Files(),
+			TemplateLeftDelim:  tdp.Left,
+			TemplateRightDelim: tdp.Right,
+		},
 	}
 }
 
 // qanPostgreSQLPgStatMonitorAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
 func qanPostgreSQLPgStatMonitorAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
+	tdp := agent.TemplateDelimiters(service)
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type:                 inventorypb.AgentType_QAN_POSTGRESQL_PGSTATMONITOR_AGENT,
-		Dsn:                  agent.DSN(service, time.Second, "postgres", nil),
+		Dsn:                  agent.DSN(service, time.Second, service.DatabaseName, nil),
 		DisableQueryExamples: agent.QueryExamplesDisabled,
+		TextFiles: &agentpb.TextFiles{
+			Files:              agent.Files(),
+			TemplateLeftDelim:  tdp.Left,
+			TemplateRightDelim: tdp.Right,
+		},
 	}
 }

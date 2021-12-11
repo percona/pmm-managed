@@ -34,8 +34,7 @@ import (
 //go:generate mockery -name=vmAlertExternalRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
-//go:generate mockery -name=platformService -case=snake -inpkg -testonly
-//go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
+//go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
@@ -101,7 +100,7 @@ type supervisordService interface {
 	UpdateRunning() bool
 	UpdateLog(offset uint32) ([]string, uint32, error)
 
-	UpdateConfiguration(settings *models.Settings) error
+	UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error
 }
 
 // telemetryService is a subset of methods of telemetry.Service used by this package.
@@ -110,17 +109,9 @@ type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
 }
 
-// platformService is a subset of methods of platform.Service used by this package.
+// agentsStateUpdater is subset of methods of agents.StateUpdater used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
-type platformService interface {
-	SignUp(ctx context.Context, email, firstName, lastName string) error
-	SignIn(ctx context.Context, email, password string) error
-	SignOut(ctx context.Context) error
-}
-
-// agentsRegistry is subset of methods of agents.Registry used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type agentsRegistry interface {
+type agentsStateUpdater interface {
 	UpdateAgentsState(ctx context.Context) error
 }
 
@@ -129,8 +120,4 @@ type agentsRegistry interface {
 type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
-}
-
-type backupService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 }

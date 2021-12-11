@@ -18,12 +18,12 @@ package checks
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
@@ -39,14 +39,29 @@ import (
 )
 
 const (
-	devChecksHost      = "check-dev.percona.com:443"
+	devChecksHost      = "check-dev.percona.com"
 	devChecksPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
 	testChecksFile     = "../../testdata/checks/checks.yml"
+	issuerURL          = "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
 )
 
 func TestDownloadChecks(t *testing.T) {
+	clientID, clientSecret := os.Getenv("OAUTH_PMM_CLIENT_ID"), os.Getenv("OAUTH_PMM_CLIENT_SECRET")
+	if clientID == "" || clientSecret == "" {
+		t.Skip("Environment variables OAUTH_PMM_CLIENT_ID / OAUTH_PMM_CLIENT_SECRET are not defined, skipping test")
+	}
+
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+	insertSSODetails := &models.PerconaSSODetailsInsert{
+		IssuerURL:    issuerURL,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		Scope:        "percona",
+	}
+	err := models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
+	require.NoError(t, err)
 
 	s, err := New(nil, nil, db)
 	require.NoError(t, err)
@@ -297,63 +312,6 @@ func TestSTTMetrics(t *testing.T) {
 		assert.NoError(t, promtest.CollectAndCompare(s, expected))
 	})
 }
-
-func TestVerifySignatures(t *testing.T) {
-	t.Parallel()
-
-	t.Run("normal", func(t *testing.T) {
-		t.Parallel()
-
-		s, err := New(nil, nil, nil)
-		require.NoError(t, err)
-		s.host = devChecksHost
-
-		validKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"
-		invalidKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJO+INVALID"
-
-		s.publicKeys = []string{invalidKey, validKey}
-
-		validSign := strings.TrimSpace(`
-untrusted comment: signature from minisign secret key
-RWSdGihBPffV2W/zvmIiTLh8UnocoF3OcwmczGdZ+zM13eRnm2Qq9YxfQ9cLzAp1dA5w7C5a3Cp5D7jlYiydu5hqZhJUxJt/ugg=
-trusted comment: some comment
-uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJeU/AuzDw==
-`)
-
-		invalidSign := strings.TrimSpace(`
-untrusted comment: signature from minisign secret key
-RWSdGihBPffV2W/zvmIiTLh8UnocoF3OcwmczGdZ+zM13eRnm2Qq9YxfQ9cLzAp1dA5w7C5a3Cp5D7jlYiydu5hqZhJ+INVALID=
-trusted comment: some comment
-uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+INVALID==
-`)
-
-		resp := api.GetAllChecksResponse{
-			File:       "random data",
-			Signatures: []string{invalidSign, validSign},
-		}
-
-		err = s.verifySignatures(&resp)
-		assert.NoError(t, err)
-	})
-
-	t.Run("empty signatures", func(t *testing.T) {
-		t.Parallel()
-
-		s, err := New(nil, nil, nil)
-		require.NoError(t, err)
-		s.host = devChecksHost
-		s.publicKeys = []string{"RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"}
-
-		resp := api.GetAllChecksResponse{
-			File:       "random data",
-			Signatures: []string{},
-		}
-
-		err = s.verifySignatures(&resp)
-		assert.EqualError(t, err, "zero signatures received")
-	})
-}
-
 func TestGetSecurityCheckResults(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)

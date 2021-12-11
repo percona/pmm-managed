@@ -24,13 +24,14 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
-func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -62,9 +63,9 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 		"--collect.standard.go",
 		"--collect.standard.process",
 
-		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/low-resolution",
-		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/medium-resolution",
-		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution",
+		"--collect.custom_query.lr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/low-resolution",
+		"--collect.custom_query.mr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/medium-resolution",
+		"--collect.custom_query.hr.directory=" + pathsBase(pmmAgentVersion, tdp.Left, tdp.Right) + "/collectors/custom-queries/mysql/high-resolution",
 
 		"--exporter.max-idle-conns=3",
 		"--exporter.max-open-conns=3",
@@ -126,7 +127,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 		Args:               args,
 		Env: []string{
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "", nil)),
-			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
+			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 		},
 		TextFiles: exporter.Files(),
 	}

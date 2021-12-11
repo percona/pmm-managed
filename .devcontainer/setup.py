@@ -30,6 +30,7 @@ def install_packages():
         "yum reinstall -y yum rpm",
 
         "yum install -y gcc git make pkgconfig glibc-static \
+            vim \
             ansible-lint \
             mc tmux psmisc lsof which iproute \
             bash-completion bash-completion-extras \
@@ -73,6 +74,16 @@ def make_init():
     run_commands([
         "make init",
     ])
+
+def setup():
+    """Runs various setup commands."""
+    run_commands([
+        # allow connecting from any host, needed to connect from host to PG running in docker
+        "sed -i -e \"s/#listen_addresses = \'localhost\'/listen_addresses = \'*\'/\" /srv/postgres/postgresql.conf",
+        "echo 'host    all         all     0.0.0.0/0     trust' >> /srv/postgres/pg_hba.conf",
+        "supervisorctl restart postgresql",
+    ])
+
 
 def main():
     # install packages early as they will be required below

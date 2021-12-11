@@ -49,23 +49,65 @@ func MySQLOptionsFromRequest(params MySQLOptionsParams) *MySQLOptions {
 	return nil
 }
 
+// PostgreSQLOptionsParams contains methods to create PostgreSQLOptions object.
+type PostgreSQLOptionsParams interface {
+	GetTlsCa() string
+	GetTlsCert() string
+	GetTlsKey() string
+}
+
+// PostgreSQLOptionsFromRequest creates PostgreSQLOptions object from request.
+func PostgreSQLOptionsFromRequest(params PostgreSQLOptionsParams) *PostgreSQLOptions {
+	if params.GetTlsCa() != "" || params.GetTlsCert() != "" || params.GetTlsKey() != "" {
+		return &PostgreSQLOptions{
+			SSLCa:   params.GetTlsCa(),
+			SSLCert: params.GetTlsCert(),
+			SSLKey:  params.GetTlsKey(),
+		}
+	}
+	return nil
+}
+
 // MongoDBOptionsParams contains methods to create MongoDBOptions object.
 type MongoDBOptionsParams interface {
 	GetTlsCertificateKey() string
 	GetTlsCertificateKeyFilePassword() string
 	GetTlsCa() string
+	GetAuthenticationMechanism() string
+	GetAuthenticationDatabase() string
+}
+
+// MongoDBExtendedOptionsParams contains extended parameters for MongoDB exporter.
+type MongoDBExtendedOptionsParams interface {
+	GetStatsCollections() string
+	GetCollectionsLimit() int32
 }
 
 // MongoDBOptionsFromRequest creates MongoDBOptionsParams object from request.
 func MongoDBOptionsFromRequest(params MongoDBOptionsParams) *MongoDBOptions {
+	var mdbOptions *MongoDBOptions
+
 	if params.GetTlsCertificateKey() != "" || params.GetTlsCertificateKeyFilePassword() != "" || params.GetTlsCa() != "" {
-		return &MongoDBOptions{
-			TLSCertificateKey:             params.GetTlsCertificateKey(),
-			TLSCertificateKeyFilePassword: params.GetTlsCertificateKeyFilePassword(),
-			TLSCa:                         params.GetTlsCa(),
+		mdbOptions = &MongoDBOptions{}
+		mdbOptions.TLSCertificateKey = params.GetTlsCertificateKey()
+		mdbOptions.TLSCertificateKeyFilePassword = params.GetTlsCertificateKeyFilePassword()
+		mdbOptions.TLSCa = params.GetTlsCa()
+		mdbOptions.AuthenticationMechanism = params.GetAuthenticationMechanism()
+		mdbOptions.AuthenticationDatabase = params.GetAuthenticationDatabase()
+	}
+
+	// MongoDB exporter has these parameters but they are not needed for QAN agent.
+	if extendedOptions, ok := params.(MongoDBExtendedOptionsParams); ok {
+		if extendedOptions.GetStatsCollections() != "" || extendedOptions.GetCollectionsLimit() > 0 {
+			if mdbOptions == nil {
+				mdbOptions = &MongoDBOptions{}
+			}
+			mdbOptions.StatsCollections = extendedOptions.GetStatsCollections()
+			mdbOptions.CollectionsLimit = extendedOptions.GetCollectionsLimit()
 		}
 	}
-	return nil
+
+	return mdbOptions
 }
 
 // AzureOptionsParams contains methods to create AzureOptions object.
@@ -620,11 +662,13 @@ type CreateAgentParams struct {
 	ServiceID                      string
 	Username                       string
 	Password                       string
+	AgentPassword                  string
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
 	MySQLOptions                   *MySQLOptions
 	MongoDBOptions                 *MongoDBOptions
+	PostgreSQLOptions              *PostgreSQLOptions
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64
@@ -635,6 +679,84 @@ type CreateAgentParams struct {
 	AzureOptions                   *AzureOptions
 	PushMetrics                    bool
 	DisableCollectors              []string
+}
+
+func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
+	const allowAll = "allow_all"
+	allow := map[NodeType]AgentType{
+		GenericNodeType:             allowAll,
+		ContainerNodeType:           allowAll,
+		RemoteNodeType:              ExternalExporterType,
+		RemoteRDSNodeType:           RDSExporterType,
+		RemoteAzureDatabaseNodeType: AzureDatabaseExporterType,
+	}
+
+	allowed, ok := allow[nodeType]
+	if !ok {
+		return false
+	}
+
+	if allowed == allowAll {
+		return true
+	}
+
+	return allowed == agentType
+}
+
+func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) bool {
+	allow := map[AgentType][]ServiceType{
+		MySQLdExporterType: {
+			MySQLServiceType,
+		},
+		QANMySQLSlowlogAgentType: {
+			MySQLServiceType,
+		},
+		QANMySQLPerfSchemaAgentType: {
+			MySQLServiceType,
+		},
+		MongoDBExporterType: {
+			MongoDBServiceType,
+		},
+		QANMongoDBProfilerAgentType: {
+			MongoDBServiceType,
+		},
+		PostgresExporterType: {
+			PostgreSQLServiceType,
+		},
+		ProxySQLExporterType: {
+			ProxySQLServiceType,
+		},
+		AzureDatabaseExporterType: {
+			PostgreSQLServiceType,
+			MySQLServiceType,
+		},
+		RDSExporterType: {
+			PostgreSQLServiceType,
+			MySQLServiceType,
+		},
+		QANPostgreSQLPgStatMonitorAgentType: {
+			PostgreSQLServiceType,
+		},
+		QANPostgreSQLPgStatementsAgentType: {
+			PostgreSQLServiceType,
+		},
+		ExternalExporterType: {
+			ExternalServiceType,
+		},
+	}
+
+	allowed, ok := allow[agentType]
+	if !ok {
+		return false
+	}
+
+	for _, svcType := range allowed {
+		if svcType == serviceType {
+			return true
+		}
+	}
+
+	return false
 }
 
 // CreateAgent creates Agent with given type.
@@ -658,13 +780,24 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	}
 
 	if params.NodeID != "" {
-		if _, err := FindNodeByID(q, params.NodeID); err != nil {
+		node, err := FindNodeByID(q, params.NodeID)
+		if err != nil {
 			return nil, err
 		}
+
+		if !compatibleNodeAndAgent(node.NodeType, agentType) {
+			return nil, status.Errorf(codes.FailedPrecondition, "invalid combination of node type %s and agent type %s", node.NodeType, agentType)
+		}
 	}
+
 	if params.ServiceID != "" {
-		if _, err := FindServiceByID(q, params.ServiceID); err != nil {
+		svc, err := FindServiceByID(q, params.ServiceID)
+		if err != nil {
 			return nil, err
+		}
+
+		if !compatibleServiceAndAgent(svc.ServiceType, agentType) {
+			return nil, status.Errorf(codes.FailedPrecondition, "invalid combination of service type %s and agent type %s", svc.ServiceType, agentType)
 		}
 	}
 
@@ -676,10 +809,12 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		NodeID:                         pointer.ToStringOrNil(params.NodeID),
 		Username:                       pointer.ToStringOrNil(params.Username),
 		Password:                       pointer.ToStringOrNil(params.Password),
+		AgentPassword:                  pointer.ToStringOrNil(params.AgentPassword),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
 		MySQLOptions:                   params.MySQLOptions,
 		MongoDBOptions:                 params.MongoDBOptions,
+		PostgreSQLOptions:              params.PostgreSQLOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,

@@ -32,18 +32,18 @@ import (
 type dbaasClient interface {
 	// CheckKubernetesClusterConnection checks connection to Kubernetes cluster and returns statuses of the cluster and operators.
 	CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error)
-	// ListXtraDBClusters returns a list of XtraDB clusters.
-	ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error)
-	// CreateXtraDBCluster creates a new XtraDB cluster.
-	CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreateXtraDBClusterResponse, error)
-	// UpdateXtraDBCluster updates existing XtraDB cluster.
-	UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdateXtraDBClusterResponse, error)
-	// DeleteXtraDBCluster deletes XtraDB cluster.
-	DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error)
-	// RestartXtraDBCluster restarts XtraDB cluster.
-	RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1.RestartXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartXtraDBClusterResponse, error)
-	// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
-	GetXtraDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error)
+	// ListPXCClusters returns a list of PXC clusters.
+	ListPXCClusters(ctx context.Context, in *controllerv1beta1.ListPXCClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListPXCClustersResponse, error)
+	// CreatePXCCluster creates a new PXC cluster.
+	CreatePXCCluster(ctx context.Context, in *controllerv1beta1.CreatePXCClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreatePXCClusterResponse, error)
+	// UpdatePXCCluster updates existing PXC cluster.
+	UpdatePXCCluster(ctx context.Context, in *controllerv1beta1.UpdatePXCClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdatePXCClusterResponse, error)
+	// DeletePXCCluster deletes PXC cluster.
+	DeletePXCCluster(ctx context.Context, in *controllerv1beta1.DeletePXCClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeletePXCClusterResponse, error)
+	// RestartPXCCluster restarts PXC cluster.
+	RestartPXCCluster(ctx context.Context, in *controllerv1beta1.RestartPXCClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartPXCClusterResponse, error)
+	// GetPXCClusterCredentials returns an PXC cluster credentials.
+	GetPXCClusterCredentials(ctx context.Context, in *controllerv1beta1.GetPXCClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPXCClusterCredentialsResponse, error)
 	// ListPSMDBClusters returns a list of PSMDB clusters.
 	ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.ListPSMDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListPSMDBClustersResponse, error)
 	// CreatePSMDBCluster creates a new PSMDB cluster.
@@ -60,17 +60,33 @@ type dbaasClient interface {
 	GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetLogsResponse, error)
 	// GetResources returns all and available resources of a Kubernetes cluster.
 	GetResources(ctx context.Context, in *controllerv1beta1.GetResourcesRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetResourcesResponse, error)
-	// InstallXtraDBOperator installs kubernetes pxc operator.
-	InstallXtraDBOperator(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
+	// InstallPXCOperator installs kubernetes pxc operator.
+	InstallPXCOperator(ctx context.Context, in *controllerv1beta1.InstallPXCOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPXCOperatorResponse, error)
 	// InstallPSMDBOperator installs kubernetes psmdb operator.
 	InstallPSMDBOperator(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
+	// StartMonitoring sets up victoria metrics operator to monitor kubernetes cluster.
+	StartMonitoring(ctx context.Context, in *controllerv1beta1.StartMonitoringRequest, opts ...grpc.CallOption) (*controllerv1beta1.StartMonitoringResponse, error)
 }
 
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
-	// GetLatestOperatorVersion returns latest operators versions available based on given params.
-	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
+	// GetNextDatabaseImage returns image of the dabase version that is a direct successor of currently installed version.
+	GetNextDatabaseImage(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error)
+	// GetVersionServiceURL version service used by version service client.
+	GetVersionServiceURL() string
+	// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+	// if given database version is supported by given operator version, error is nil in that case.
+	IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error)
+	// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+	// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+	// version service does not have any matching versions.
+	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
+	// LatestOperatorVersion returns latest operators versions available based on given params.
+	LatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPXCOperatorVersion, latestPSMDBOperatorVersion *goversion.Version, err error)
+	// NextOperatorVersion returns operator versions that is a direct successor of currently installed one.
+	// Compatibility with PMM is not taken into account.
+	NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

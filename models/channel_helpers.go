@@ -90,6 +90,22 @@ func checkWebHookConfig(c *WebHookConfig) error {
 		return status.Error(codes.InvalidArgument, "Webhook url field is empty.")
 	}
 
+	if c.HTTPConfig != nil && c.HTTPConfig.TLSConfig != nil {
+		tlsConfig := c.HTTPConfig.TLSConfig
+		if tlsConfig.CAFile != "" && tlsConfig.CAFileContent != "" {
+			return status.Error(codes.InvalidArgument,
+				"Fields CAFile and CAFileContent shouldn't be set at the same time.")
+		}
+		if tlsConfig.CertFile != "" && tlsConfig.CertFileContent != "" {
+			return status.Error(codes.InvalidArgument,
+				"Fields CertFile and CertFileContent shouldn't be set at the same time.")
+		}
+		if tlsConfig.KeyFile != "" && tlsConfig.KeyFileContent != "" {
+			return status.Error(codes.InvalidArgument,
+				"Fields KeyFile and KeyFileContent shouldn't be set at the same time.")
+		}
+	}
+
 	return nil
 }
 
@@ -341,7 +357,8 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 // RemoveChannel removes notification channel with specified id.
 func RemoveChannel(q *reform.Querier, id string) error {
-	if _, err := FindChannelByID(q, id); err != nil {
+	channel, err := FindChannelByID(q, id)
+	if err != nil {
 		return err
 	}
 
@@ -351,7 +368,7 @@ func RemoveChannel(q *reform.Querier, id string) error {
 	}
 
 	if inUse {
-		return status.Errorf(codes.FailedPrecondition, "Failed to delete notification channel %s, as it is being used by some rule.", id)
+		return status.Errorf(codes.FailedPrecondition, `You can't delete the "%s" channel when it's being used by a rule.`, channel.Summary)
 	}
 
 	if err = q.Delete(&Channel{ID: id}); err != nil {

@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -61,13 +62,15 @@ type matrix struct {
 	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
 }
 
+type Version struct {
+	Product        string `json:"product"`
+	ProductVersion string `json:"operator"`
+	Matrix         matrix `json:"matrix"`
+}
+
 // VersionServiceResponse represents response from version service API.
 type VersionServiceResponse struct {
-	Versions []struct {
-		Product        string `json:"product"`
-		ProductVersion string `json:"operator"`
-		Matrix         matrix `json:"matrix"`
-	} `json:"versions"`
+	Versions []Version `json:"versions"`
 }
 
 // componentsParams contains params to filter components in version service API.
@@ -155,11 +158,61 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
-func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
+// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+// if given database version is supported by given operator version, error is nil in that case.
+func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
+	m, err := c.Matrix(ctx, componentsParams{
+		product:        operatorType,
+		productVersion: operatorVersion,
+		dbVersion:      databaseVersion,
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(m.Versions) != 0, nil
+}
+
+// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+// version service does not have any matching versions.
+func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+	pmm, err := goversion.NewVersion(pmmVersion)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := c.Matrix(ctx, componentsParams{product: "pmm-server", productVersion: pmm.Core().String()})
+	if err != nil {
+		return false, err
+	}
+
+	if len(resp.Versions) == 0 {
+		return false, nil
+	}
+
+	var operatorVersions map[string]componentVersion
+	switch operatorType {
+	case pxcOperator:
+		operatorVersions = resp.Versions[0].Matrix.PXCOperator
+	case psmdbOperator:
+		operatorVersions = resp.Versions[0].Matrix.PSMDBOperator
+	default:
+		return false, errors.Errorf("%q is an unknown operator type", operatorType)
+	}
+
+	for version := range operatorVersions {
+		if version == operatorVersion {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func latest(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
-	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
 	for version := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
@@ -172,8 +225,8 @@ func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
 	return latest, nil
 }
 
-// GetLatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
-func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+// LatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
 	if pmmVersion == "" {
 		return nil, nil, errors.New("given PMM version is empty")
 	}
@@ -189,10 +242,124 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
-	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)
+	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
+	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
 	return latestPXCOperator, latestPSMDBOperator, err
+}
+
+// GetNextDatabaseImage returns image of the version that is a direct successor of currently installed version.
+// It returns empty string if update is not available or error occurred.
+func (c *VersionServiceClient) GetNextDatabaseImage(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error) {
+	// Get dependencies of operator type at given version.
+	params := componentsParams{
+		product:        operatorType,
+		productVersion: operatorVersion,
+	}
+	matrix, err := c.Matrix(ctx, params)
+	if err != nil {
+		return "", err
+	}
+	if len(matrix.Versions) != 1 {
+		return "", nil
+	}
+	operatorDependencies := matrix.Versions[0]
+
+	// Choose proper versions map.
+	var versions map[string]componentVersion
+	switch operatorType {
+	case psmdbOperator:
+		versions = operatorDependencies.Matrix.Mongod
+	case pxcOperator:
+		versions = operatorDependencies.Matrix.Pxc
+	default:
+		return "", errors.Errorf("%q operator not supported", operatorType)
+	}
+
+	// Convert slice of version structs to slice of strings so it can be used in generic function next.
+	stringVersions := make([]string, 0, len(versions))
+	for version := range versions {
+		stringVersions = append(stringVersions, version)
+	}
+
+	// Get direct successor of installed version.
+	nextVersion, err := next(stringVersions, installedDBVersion)
+	if err != nil {
+		return "", err
+	}
+	if nextVersion == nil {
+		return "", nil
+	}
+	return versions[nextVersion.String()].ImagePath, nil
+}
+
+// GetVersionServiceURL returns base URL for version service currently used
+func (c *VersionServiceClient) GetVersionServiceURL() string {
+	url, err := url.Parse(c.url)
+	if err != nil {
+		c.l.Warnf("failed to parse url %q: %v", c.url, err)
+		return c.url
+	}
+	return url.Scheme + "://" + url.Host
+}
+
+// NextOperatorVersion returns operator version that is direct successor of currently installed one.
+// It returns nil if update is not available or error occurred. It does not take PMM version into consideration.
+// We need to upgrade to current + 1 version for upgrade to be successful. So even if dbaas-controller does not support the
+// operator, we need to upgrade to it on our way to supported one.
+func (c *VersionServiceClient) NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error) {
+	if installedVersion == "" {
+		return
+	}
+	// Get all operator versions
+	params := componentsParams{
+		product: operatorType,
+	}
+	matrix, err := c.Matrix(ctx, params)
+	if err != nil {
+		return
+	}
+	if len(matrix.Versions) == 0 {
+		return
+	}
+
+	// Convert slice of version structs to slice of strings so it can be used in generic function next.
+	versions := make([]string, 0, len(matrix.Versions))
+	for _, version := range matrix.Versions {
+		versions = append(versions, version.ProductVersion)
+	}
+
+	// Find next versions if installed.
+	if installedVersion != "" {
+		return next(versions, installedVersion)
+	}
+	return
+}
+
+// next direct successor of given installed version, returns nil if there is none.
+// An error is returned if any of given version can't be parsed. It's nil otherwise.
+func next(versions []string, installedVersion string) (*goversion.Version, error) {
+	if len(versions) == 0 {
+		return nil, errNoVersionsFound
+	}
+	// Get versions greater than currently installed one.
+	var nextVersion *goversion.Version
+	installed, err := goversion.NewVersion(installedVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, version := range versions {
+		v, err := goversion.NewVersion(version)
+		if err != nil {
+			return nil, err
+		}
+		if v.GreaterThan(installed) && (nextVersion == nil || nextVersion.GreaterThan(v)) {
+			nextVersion = v
+		}
+	}
+
+	return nextVersion, nil
 }

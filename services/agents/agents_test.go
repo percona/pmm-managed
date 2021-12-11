@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,4 +36,14 @@ func requireNoDuplicateFlags(t *testing.T, flags []string) {
 		}
 		s[name] = struct{}{}
 	}
+}
+
+func TestPathsBaseForDifferentVersions(t *testing.T) {
+	left := "{{"
+	right := "}}"
+	assert.Equal(t, "/usr/local/percona/pmm2", pathsBase(version.MustParse("2.22.01"), left, right))
+	assert.Equal(t, "{{ .paths_base }}", pathsBase(version.MustParse("2.23.0"), left, right))
+	assert.Equal(t, "{{ .paths_base }}", pathsBase(version.MustParse("2.23.0-3-g7aa417c"), left, right))
+	assert.Equal(t, "{{ .paths_base }}", pathsBase(version.MustParse("2.23.0-beta4"), left, right))
+	assert.Equal(t, "{{ .paths_base }}", pathsBase(version.MustParse("2.23.0-rc1"), left, right))
 }

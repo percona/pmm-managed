@@ -31,10 +31,6 @@ type MetricsResolutions struct {
 
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
-	// Percona Platform user email
-	Email string `json:"email"`
-	// Percona Platform session Id
-	SessionID string `json:"session_id"`
 	// Security Threat Tool enabled
 	STTEnabled bool `json:"stt_enabled"`
 	// List of disabled STT checks
@@ -53,6 +49,10 @@ type IntegratedAlerting struct {
 // Settings contains PMM Server settings.
 type Settings struct {
 	PMMPublicAddress string `json:"pmm_public_address"`
+
+	Updates struct {
+		Disabled bool `json:"disabled"`
+	} `json:"updates"`
 
 	Telemetry struct {
 		Disabled bool   `json:"disabled"`
@@ -92,17 +92,21 @@ type Settings struct {
 	BackupManagement struct {
 		Enabled bool `json:"enabled"`
 	} `json:"backup_management"`
+
+	// PMMServerID is generated on the first start of PMM server.
+	PMMServerID string `json:"pmmServerID"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.
 type EmailAlertingSettings struct {
-	From      string `json:"from"`
-	Smarthost string `json:"smarthost"`
-	Hello     string `json:"hello"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Identity  string `json:"identity"`
-	Secret    string `json:"secret"`
+	From       string `json:"from"`
+	Smarthost  string `json:"smarthost"`
+	Hello      string `json:"hello"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	Identity   string `json:"identity"`
+	Secret     string `json:"secret"`
+	RequireTLS bool   `json:"require_tls"`
 }
 
 // SlackAlertingSettings represents Slack settings for Integrated Alerting.

@@ -30,9 +30,21 @@ import (
 var (
 	// ErrNotFound returned when entity is not found.
 	ErrNotFound = errors.New("not found")
-	// ErrInvalidArgument returned when some passed argument is invalid.
-	ErrInvalidArgument = errors.New("invalid argument")
 )
+
+// ErrInvalidArgument returned when some passed argument is invalid.
+type ErrInvalidArgument struct {
+	Details string
+}
+
+func (e *ErrInvalidArgument) Error() string {
+	return "invalid argument: " + e.Details
+}
+
+// NewInvalidArgumentError creates ErrInvalidArgument with given formatting.
+func NewInvalidArgumentError(format string, a ...interface{}) *ErrInvalidArgument {
+	return &ErrInvalidArgument{Details: fmt.Sprintf(format, a...)}
+}
 
 // ArtifactFilters represents filters for artifacts list.
 type ArtifactFilters struct {
@@ -42,33 +54,39 @@ type ArtifactFilters struct {
 	LocationID string
 	// Return only artifacts that was created by specified scheduled task.
 	ScheduleID string
+	// Return only artifacts by specified status.
+	Status BackupStatus
 }
 
 // FindArtifacts returns artifacts list.
-func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, error) {
+func FindArtifacts(q *reform.Querier, filters ArtifactFilters) ([]*Artifact, error) {
 	var conditions []string
 	var args []interface{}
 	idx := 1
-	if filters != nil {
-		if filters.ServiceID != "" {
-			conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.ServiceID)
-			idx++
-		}
+	if filters.ServiceID != "" {
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceID)
+		idx++
+	}
 
-		if filters.LocationID != "" {
-			if _, err := FindBackupLocationByID(q, filters.LocationID); err != nil {
-				return nil, err
-			}
-			conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.LocationID)
-			idx++
+	if filters.LocationID != "" {
+		if _, err := FindBackupLocationByID(q, filters.LocationID); err != nil {
+			return nil, err
 		}
+		conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.LocationID)
+		idx++
+	}
 
-		if filters.ScheduleID != "" {
-			conditions = append(conditions, fmt.Sprintf("schedule_id = %s", q.Placeholder(idx)))
-			args = append(args, filters.ScheduleID)
-		}
+	if filters.ScheduleID != "" {
+		conditions = append(conditions, fmt.Sprintf("schedule_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ScheduleID)
+		idx++
+	}
+
+	if filters.Status != "" {
+		conditions = append(conditions, fmt.Sprintf("status = %s", q.Placeholder(idx)))
+		args = append(args, filters.Status)
 	}
 
 	var whereClause string
@@ -131,6 +149,23 @@ func FindArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	}
 }
 
+// FindArtifactByName returns artifact by given name if found, ErrNotFound if not.
+func FindArtifactByName(q *reform.Querier, name string) (*Artifact, error) {
+	if name == "" {
+		return nil, errors.New("provided backup artifact name is empty")
+	}
+	artifact := new(Artifact)
+	err := q.FindOneTo(artifact, "name", name)
+	switch err {
+	case nil:
+		return artifact, nil
+	case reform.ErrNoRows:
+		return nil, errors.Wrapf(ErrNotFound, "backup artifact with name %q not found.", name)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 func checkUniqueArtifactName(q *reform.Querier, name string) error {
 	if name == "" {
 		panic("empty Location Name")
@@ -151,9 +186,11 @@ func checkUniqueArtifactName(q *reform.Querier, name string) error {
 type CreateArtifactParams struct {
 	Name       string
 	Vendor     string
+	DBVersion  string
 	LocationID string
 	ServiceID  string
 	DataModel  DataModel
+	Mode       BackupMode
 	Status     BackupStatus
 	ScheduleID string
 }
@@ -161,16 +198,20 @@ type CreateArtifactParams struct {
 // Validate validates params used for creating an artifact entry.
 func (p *CreateArtifactParams) Validate() error {
 	if p.Name == "" {
-		return errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
+		return NewInvalidArgumentError("name shouldn't be empty")
 	}
 	if p.Vendor == "" {
-		return errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
+		return NewInvalidArgumentError("vendor shouldn't be empty")
 	}
 	if p.LocationID == "" {
-		return errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
+		return NewInvalidArgumentError("location_id shouldn't be empty")
 	}
 	if p.ServiceID == "" {
-		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+		return NewInvalidArgumentError("service_id shouldn't be empty")
+	}
+
+	if err := p.Mode.Validate(); err != nil {
+		return err
 	}
 
 	if err := p.DataModel.Validate(); err != nil {
@@ -204,9 +245,11 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 		ID:         id,
 		Name:       params.Name,
 		Vendor:     params.Vendor,
+		DBVersion:  params.DBVersion,
 		LocationID: params.LocationID,
 		ServiceID:  params.ServiceID,
 		DataModel:  params.DataModel,
+		Mode:       params.Mode,
 		Status:     params.Status,
 		Type:       OnDemandArtifactType,
 		ScheduleID: params.ScheduleID,

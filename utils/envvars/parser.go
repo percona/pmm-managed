@@ -32,11 +32,14 @@ import (
 )
 
 const (
-	defaultSaaSHost = "check.percona.com:443"
+	defaultSaaSHost = "check.percona.com"
 	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
+	envPublicKey    = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
-	envTestDbaas   = "PERCONA_TEST_DBAAS"
-	envEnableDbaas = "ENABLE_DBAAS"
+	envTestDbaas              = "PERCONA_TEST_DBAAS"
+	envEnableDbaas            = "ENABLE_DBAAS"
+	envPlatfromAPITimeout     = "PERCONA_PLATFORM_API_TIMEOUT"
+	defaultPlatformAPITimeout = 30 * time.Second
 )
 
 // InvalidDurationError invalid duration error.
@@ -82,6 +85,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PMM_DEBUG", "PMM_TRACE":
 			// skip cross-component environment variables that are already handled by kingpin
 			continue
+		case "PERCONA_TEST_VERSION_SERVICE_URL":
+			// skip pmm-managed environment variables that are already handled by kingpin
+			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
@@ -91,9 +97,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			envSettings.DisableTelemetry, err = strconv.ParseBool(v)
 			if err != nil {
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-			} else if envSettings.DisableTelemetry {
-				// special case
-				envSettings.DisableSTT = true
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
 			if envSettings.MetricsResolutions.HR, err = parseStringDuration(v); err != nil {
@@ -120,10 +123,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				// disable cache explicitly
 				envSettings.DisableVMCache = true
 			}
-
-		case "PERCONA_TEST_IA": // FIXME remove
-			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, "ENABLE_ALERTING"))
-			fallthrough
 		case "ENABLE_ALERTING":
 			envSettings.EnableAlerting, err = strconv.ParseBool(v)
 			if err != nil {
@@ -154,6 +153,10 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if k == envTestDbaas {
 				warns = append(warns, fmt.Sprintf("environment variable %q IS DEPRECATED AND WILL BE REMOVED, USE %q INSTEAD", envTestDbaas, envEnableDbaas))
 			}
+
+		case envPlatfromAPITimeout:
+			// This variable is not part of the settings and is parsed separately.
+			continue
 
 		default:
 			// handle prefixes
@@ -194,6 +197,28 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
+func parsePlatformAPITimeout(d string) (time.Duration, string) {
+	if d == "" {
+		msg := fmt.Sprintf("Environment variable %q is not set, using %q as a default timeout for platform API.", envPlatfromAPITimeout, defaultPlatformAPITimeout.String())
+		return defaultPlatformAPITimeout, msg
+	}
+	duration, err := parseStringDuration(d)
+	if err != nil {
+		msg := fmt.Sprintf("Using %q as a default: failed to parse platform API timeout %q: %s.", defaultPlatformAPITimeout.String(), d, err)
+		return defaultPlatformAPITimeout, msg
+	}
+	msg := fmt.Sprintf("Using %q as a timeout for platform API.", duration.String())
+	return duration, msg
+}
+
+// GetPlatformAPITimeout returns timeout duration for requests to Platform.
+func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
+	d := os.Getenv(envPlatfromAPITimeout)
+	duration, msg := parsePlatformAPITimeout(d)
+	l.Info(msg)
+	return duration
+}
+
 // GetSAASHost returns SaaS host env variable value if it's present and valid.
 // Otherwise returns defaultSaaSHost.
 func GetSAASHost() (string, error) {
@@ -207,6 +232,15 @@ func GetSAASHost() (string, error) {
 	return host, nil
 }
 
+// GetPublicKeys returns public keys used to dowload checks from SaaS.
+func GetPublicKeys() []string {
+	if v := os.Getenv(envPublicKey); v != "" {
+		return strings.Split(v, ",")
+	}
+
+	return nil
+}
+
 // parseSAASHost parses, validates and returns SAAS host, otherwise returns error.
 func parseSAASHost(v string) (string, error) {
 	if v == "" {
@@ -217,19 +251,14 @@ func parseSAASHost(v string) (string, error) {
 		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, v)
 	}
 
-	host, port, err := net.SplitHostPort(v)
+	host, _, err := net.SplitHostPort(v)
 	if err != nil && strings.Count(v, ":") >= 1 {
 		return "", err
 	}
 	if host == "" {
 		host = v
 	}
-	if port == "" {
-		port = "443"
-	}
-
-	v = net.JoinHostPort(host, port)
-	return v, nil
+	return host, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {

@@ -183,7 +183,8 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 
 // RemoveTemplate removes rule template with specified name.
 func RemoveTemplate(q *reform.Querier, name string) error {
-	if _, err := FindTemplateByName(q, name); err != nil {
+	template, err := FindTemplateByName(q, name)
+	if err != nil {
 		return err
 	}
 
@@ -193,7 +194,7 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 	}
 
 	if inUse {
-		return status.Errorf(codes.FailedPrecondition, "Failed to delete rule template %s, as it is being used by some rule.", name)
+		return status.Errorf(codes.FailedPrecondition, `You can't delete the "%s" rule template when it's being used by a rule.`, template.Summary)
 	}
 
 	if err = q.Delete(&Template{Name: name}); err != nil {
@@ -245,7 +246,7 @@ func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
 
 			p.FloatParam = &fp
 		default:
-			return nil, errors.Errorf("Unknown parameter type %s", param.Type)
+			return nil, errors.Errorf("unknown parameter type %s", param.Type)
 		}
 
 		res = append(res, p)

@@ -44,12 +44,14 @@ func TestScheduledTaskHelpers(t *testing.T) {
 	createParams := models.CreateScheduledTaskParams{
 		CronExpression: "* * * * *",
 		Type:           models.ScheduledMySQLBackupTask,
-		Data: models.ScheduledTaskData{
+		Data: &models.ScheduledTaskData{
 			MySQLBackupTask: &models.MySQLBackupTaskData{
-				ServiceID:   "",
-				LocationID:  "",
-				Name:        "task",
-				Description: "",
+				CommonBackupTaskData: models.CommonBackupTaskData{
+					ServiceID:   "",
+					LocationID:  "",
+					Name:        "task",
+					Description: "",
+				},
 			},
 		},
 		Disabled: false,
@@ -123,22 +125,26 @@ func TestScheduledTaskHelpers(t *testing.T) {
 
 		createParams2.Disabled = false
 		createParams2.Type = models.ScheduledMySQLBackupTask
-		createParams2.Data = models.ScheduledTaskData{
+		createParams2.Data = &models.ScheduledTaskData{
 			MySQLBackupTask: &models.MySQLBackupTaskData{
-				ServiceID:  "svc1",
-				LocationID: "loc1",
-				Name:       "mysql",
+				CommonBackupTaskData: models.CommonBackupTaskData{
+					ServiceID:  "svc1",
+					LocationID: "loc1",
+					Name:       "mysql",
+				},
 			},
 		}
 		task3, err := models.CreateScheduledTask(findTX.Querier, createParams2)
 		require.NoError(t, err)
 
 		createParams2.Type = models.ScheduledMongoDBBackupTask
-		createParams2.Data = models.ScheduledTaskData{
+		createParams2.Data = &models.ScheduledTaskData{
 			MongoDBBackupTask: &models.MongoBackupTaskData{
-				ServiceID:  "svc2",
-				LocationID: "loc1",
-				Name:       "mongo",
+				CommonBackupTaskData: models.CommonBackupTaskData{
+					ServiceID:  "svc2",
+					LocationID: "loc1",
+					Name:       "mongo",
+				},
 			},
 		}
 		task4, err := models.CreateScheduledTask(findTX.Querier, createParams2)

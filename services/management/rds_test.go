@@ -53,10 +53,16 @@ func TestRDSService(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	r := new(mockAgentsRegistry)
-	r.Test(t)
-	defer r.AssertExpectations(t)
-	s := NewRDSService(db, r)
+
+	cc := new(mockConnectionChecker)
+	cc.Test(t)
+	state := new(mockAgentsStateUpdater)
+	state.Test(t)
+	defer func() {
+		cc.AssertExpectations(t)
+		state.AssertExpectations(t)
+	}()
+	s := NewRDSService(db, state, cc)
 
 	t.Run("DiscoverRDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {
@@ -94,7 +100,7 @@ func TestRDSService(t *testing.T) {
 
 		t.Run("InvalidClientTokenId", func(t *testing.T) {
 			ctx := logger.Set(context.Background(), t.Name())
-			accessKey, secretKey := "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" //nolint:gosec
+			accessKey, secretKey := "EXAMPLE_ACCESS_KEY", "EXAMPLE_SECRET_KEY" //nolint:gosec
 
 			instances, err := s.DiscoverRDS(ctx, &managementpb.DiscoverRDSRequest{
 				AwsAccessKey: accessKey,
@@ -109,7 +115,7 @@ func TestRDSService(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 			defer cancel()
 			ctx = logger.Set(ctx, t.Name())
-			accessKey, secretKey := "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" //nolint:gosec
+			accessKey, secretKey := "EXAMPLE_ACCESS_KEY", "EXAMPLE_SECRET_KEY"
 
 			instances, err := s.DiscoverRDS(ctx, &managementpb.DiscoverRDSRequest{
 				AwsAccessKey: accessKey,
@@ -219,7 +225,7 @@ func TestRDSService(t *testing.T) {
 
 	t.Run("AddRDS", func(t *testing.T) {
 		ctx := logger.Set(context.Background(), t.Name())
-		accessKey, secretKey := "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" //nolint:gosec
+		accessKey, secretKey := "EXAMPLE_ACCESS_KEY", "EXAMPLE_SECRET_KEY"
 
 		req := &managementpb.AddRDSRequest{
 			Region:             "us-east-1",
@@ -248,7 +254,7 @@ func TestRDSService(t *testing.T) {
 			TablestatsGroupTableLimit: 0,
 		}
 
-		r.On("RequestStateUpdate", ctx, "pmm-server")
+		state.On("RequestStateUpdate", ctx, "pmm-server")
 		resp, err := s.AddRDS(ctx, req)
 		require.NoError(t, err)
 
@@ -268,7 +274,7 @@ func TestRDSService(t *testing.T) {
 				AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
 				PmmAgentId:   "pmm-server",
 				NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
-				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+				AwsAccessKey: "EXAMPLE_ACCESS_KEY",
 				Status:       inventorypb.AgentStatus_UNKNOWN,
 			},
 			Mysql: &inventorypb.MySQLService{
@@ -306,7 +312,7 @@ func TestRDSService(t *testing.T) {
 
 	t.Run("AddRDSPostgreSQL", func(t *testing.T) {
 		ctx := logger.Set(context.Background(), t.Name())
-		accessKey, secretKey := "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" //nolint:gosec
+		accessKey, secretKey := "EXAMPLE_ACCESS_KEY", "EXAMPLE_SECRET_KEY"
 
 		req := &managementpb.AddRDSRequest{
 			Region:                    "us-east-1",
@@ -335,7 +341,7 @@ func TestRDSService(t *testing.T) {
 			TablestatsGroupTableLimit: 0,
 		}
 
-		r.On("RequestStateUpdate", ctx, "pmm-server")
+		state.On("RequestStateUpdate", ctx, "pmm-server")
 		resp, err := s.AddRDS(ctx, req)
 		require.NoError(t, err)
 
@@ -355,7 +361,7 @@ func TestRDSService(t *testing.T) {
 				AgentId:      "/agent_id/00000000-0000-4000-8000-00000000000b",
 				PmmAgentId:   "pmm-server",
 				NodeId:       "/node_id/00000000-0000-4000-8000-00000000000a",
-				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+				AwsAccessKey: "EXAMPLE_ACCESS_KEY",
 				Status:       inventorypb.AgentStatus_UNKNOWN,
 			},
 			Postgresql: &inventorypb.PostgreSQLService{
@@ -367,6 +373,7 @@ func TestRDSService(t *testing.T) {
 				Cluster:        "c-01",
 				ReplicationSet: "rs-01",
 				ServiceName:    "rds-postgresql",
+				DatabaseName:   "postgres",
 				CustomLabels: map[string]string{
 					"foo": "bar",
 				},

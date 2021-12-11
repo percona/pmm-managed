@@ -21,7 +21,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -42,14 +44,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm-managed/utils/saasreq"
+	"github.com/percona/pmm-managed/utils/signatures"
 )
 
 const (
 	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envCheckFile         = "PERCONA_TEST_CHECKS_FILE"
 	envResendInterval    = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 	envDisableStartDelay = "PERCONA_TEST_CHECKS_DISABLE_START_DELAY"
@@ -77,12 +79,6 @@ var (
 	pmmAgent270     = version.MustParse("2.7.0")
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
-
-var defaultPublicKeys = []string{
-	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
-	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
-	"RWTHhufOlJ38dWt+DrprOg702YvZgqQJsx1XKfzF+MaB/pe9eCJgKkiF", // PMM 2.17
-}
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
@@ -135,7 +131,6 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 
 		l:               l,
 		host:            host,
-		publicKeys:      defaultPublicKeys,
 		startDelay:      defaultStartDelay,
 		resendInterval:  defaultResendInterval,
 		localChecksFile: os.Getenv(envCheckFile),
@@ -155,9 +150,9 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		}, []string{"service_type", "check_type"}),
 	}
 
-	if k := os.Getenv(envPublicKey); k != "" {
-		s.publicKeys = strings.Split(k, ",")
+	if k := envvars.GetPublicKeys(); k != nil {
 		l.Warnf("Public keys changed to %q.", k)
+		s.publicKeys = k
 	}
 	if d, _ := strconv.ParseBool(os.Getenv(envDisableStartDelay)); d {
 		l.Warn("Start delay disabled.")
@@ -190,6 +185,15 @@ func (s *Service) Run(ctx context.Context) {
 		return
 	}
 
+	s.rareTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.RareInterval)
+	defer s.rareTicker.Stop()
+
+	s.standardTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.StandardInterval)
+	defer s.standardTicker.Stop()
+
+	s.frequentTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.FrequentInterval)
+	defer s.frequentTicker.Stop()
+
 	// delay for the first run to allow all agents to connect
 	startCtx, startCancel := context.WithTimeout(ctx, s.startDelay)
 	<-startCtx.Done()
@@ -205,15 +209,6 @@ func (s *Service) Run(ctx context.Context) {
 		defer wg.Done()
 		s.resendAlerts(ctx)
 	}()
-
-	s.rareTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.RareInterval)
-	defer s.rareTicker.Stop()
-
-	s.standardTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.StandardInterval)
-	defer s.standardTicker.Stop()
-
-	s.frequentTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.FrequentInterval)
-	defer s.frequentTicker.Stop()
 
 	wg.Add(1)
 	go func() {
@@ -1059,29 +1054,23 @@ func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return nil, err
+	var accessToken string
+	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllChecks", s.host)
+	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
-	defer cc.Close() //nolint:errcheck
 
-	resp, err := api.NewRetrievalAPIClient(cc).GetAllChecks(ctx, &api.GetAllChecksRequest{})
-	if err != nil {
-		// if credentials are invalid then force a logout so that the next check download
-		// attempt can be successful.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-		return nil, errors.Wrap(err, "failed to request checks service")
+	var resp *api.GetAllChecksResponse
+	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+		return nil, err
 	}
 
-	if err = s.verifySignatures(resp); err != nil {
+	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {
 		return nil, err
 	}
 
@@ -1145,26 +1134,6 @@ func (s *Service) UpdateIntervals(rare, standard, frequent time.Duration) {
 	s.tm.Unlock()
 
 	s.l.Infof("Intervals are changed: rare %s, standard %s, frequent %s", rare, standard, frequent)
-}
-
-// verifySignatures verifies checks signatures and returns error in case of verification problem.
-func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
-	if len(resp.Signatures) == 0 {
-		return errors.New("zero signatures received")
-	}
-
-	var err error
-	for _, sign := range resp.Signatures {
-		for _, key := range s.publicKeys {
-			if err = check.Verify([]byte(resp.File), key, sign); err == nil {
-				s.l.Debugf("Key %q matches signature %q.", key, sign)
-				return nil
-			}
-			s.l.Debugf("Key %q doesn't match signature %q: %s.", key, sign, err)
-		}
-	}
-
-	return errors.New("no verified signatures")
 }
 
 // Describe implements prom.Collector.

@@ -44,7 +44,7 @@ func TestEnvVarValidator(t *testing.T) {
 		expectedEnvVars := &models.ChangeSettingsParams{
 			DataRetention:    72 * time.Hour,
 			DisableTelemetry: true,
-			DisableSTT:       true, // special case
+			DisableSTT:       false,
 			DisableUpdates:   true,
 			MetricsResolutions: models.MetricsResolutions{
 				HR: 5 * time.Minute,
@@ -164,11 +164,10 @@ func TestEnvVarValidator(t *testing.T) {
 			err     string
 			respVal string
 		}{
-			{value: "host", err: "", respVal: "host:443"},
-			// TODO {value: "2001:cafe:8221:9a0f:4dc7:4bb:8581:d186", err: "", respVal: "[2001:cafe:8221:9a0f:4dc7:4bb:8581:d186]:443"},
+			{value: "host", err: "", respVal: "host"},
 			{value: ":111", err: `environment variable "PERCONA_TEST_SAAS_HOST" has invalid format ":111". Expected host[:port]`, respVal: ""},
-			{value: "host:555", err: "", respVal: "host:555"},
-			{value: "[2001:cafe:8221:9a0f:4dc7:4bb:8581:d186]:333", err: "", respVal: "[2001:cafe:8221:9a0f:4dc7:4bb:8581:d186]:333"},
+			{value: "host:555", err: "", respVal: "host"},
+			{value: "[2001:cafe:8221:9a0f:4dc7:4bb:8581:d186]:333", err: "", respVal: "2001:cafe:8221:9a0f:4dc7:4bb:8581:d186"},
 			{value: "ho:st:444", err: "address ho:st:444: too many colons in address", respVal: ""},
 		}
 		for _, c := range userCase {
@@ -179,6 +178,25 @@ func TestEnvVarValidator(t *testing.T) {
 			} else {
 				assert.Equal(t, c.err, err.Error())
 			}
+		}
+	})
+
+	t.Run("Parse Platform API Timeout", func(t *testing.T) {
+		t.Parallel()
+
+		userCase := []struct {
+			value   string
+			respVal time.Duration
+			msg     string
+		}{
+			{value: "", respVal: time.Second * 30, msg: "Environment variable \"PERCONA_PLATFORM_API_TIMEOUT\" is not set, using \"30s\" as a default timeout for platform API."},
+			{value: "10s", respVal: time.Second * 10, msg: "Using \"10s\" as a timeout for platform API."},
+			{value: "xxx", respVal: time.Second * 30, msg: "Using \"30s\" as a default: failed to parse platform API timeout \"xxx\": invalid duration error."},
+		}
+		for _, c := range userCase {
+			value, msg := parsePlatformAPITimeout(c.value)
+			assert.Equal(t, c.respVal, value)
+			assert.Equal(t, c.msg, msg)
 		}
 	})
 

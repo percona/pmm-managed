@@ -30,13 +30,18 @@ import (
 
 // PostgreSQLService PostgreSQL Management Service.
 type PostgreSQLService struct {
-	db       *reform.DB
-	registry agentsRegistry
+	db    *reform.DB
+	state agentsStateUpdater
+	cc    connectionChecker
 }
 
 // NewPostgreSQLService creates new PostgreSQL Management Service.
-func NewPostgreSQLService(db *reform.DB, registry agentsRegistry) *PostgreSQLService {
-	return &PostgreSQLService{db, registry}
+func NewPostgreSQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker) *PostgreSQLService {
+	return &PostgreSQLService{
+		db:    db,
+		state: state,
+		cc:    cc,
+	}
 }
 
 // Add adds "PostgreSQL Service", "PostgreSQL Exporter Agent" and "QAN PostgreSQL PerfSchema Agent".
@@ -52,6 +57,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
 			NodeID:         nodeID,
+			Database:       req.Database,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
@@ -80,17 +86,19 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 			ServiceID:         service.ServiceID,
 			Username:          req.Username,
 			Password:          req.Password,
+			AgentPassword:     req.AgentPassword,
 			TLS:               req.Tls,
 			TLSSkipVerify:     req.TlsSkipVerify,
 			PushMetrics:       isPushMode(req.MetricsMode),
 			DisableCollectors: req.DisableCollectors,
+			PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 		})
 		if err != nil {
 			return err
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -103,12 +111,13 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 
 		if req.QanPostgresqlPgstatementsAgent {
 			row, err = models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, &models.CreateAgentParams{
-				PMMAgentID:    req.PmmAgentId,
-				ServiceID:     service.ServiceID,
-				Username:      req.Username,
-				Password:      req.Password,
-				TLS:           req.Tls,
-				TLSSkipVerify: req.TlsSkipVerify,
+				PMMAgentID:        req.PmmAgentId,
+				ServiceID:         service.ServiceID,
+				Username:          req.Username,
+				Password:          req.Password,
+				TLS:               req.Tls,
+				TLSSkipVerify:     req.TlsSkipVerify,
+				PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 			})
 			if err != nil {
 				return err
@@ -130,6 +139,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 				QueryExamplesDisabled: req.DisableQueryExamples,
 				TLS:                   req.Tls,
 				TLSSkipVerify:         req.TlsSkipVerify,
+				PostgreSQLOptions:     models.PostgreSQLOptionsFromRequest(req),
 			})
 			if err != nil {
 				return err
@@ -147,6 +157,6 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

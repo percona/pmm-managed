@@ -21,6 +21,7 @@ import (
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
@@ -32,7 +33,9 @@ func TestNodeExporterConfig(t *testing.T) {
 		exporter := &models.Agent{
 			AgentID: "agent-id",
 		}
-		actual := nodeExporterConfig(node, exporter)
+		agentVersion := version.MustParse("2.15.1")
+
+		actual := nodeExporterConfig(node, exporter, agentVersion)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -61,9 +64,9 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.standard.go",
 				"--collector.standard.process",
 				"--collector.stat",
-				"--collector.textfile.directory.hr=/usr/local/percona/pmm2/collectors/textfile-collector/high-resolution",
-				"--collector.textfile.directory.lr=/usr/local/percona/pmm2/collectors/textfile-collector/low-resolution",
-				"--collector.textfile.directory.mr=/usr/local/percona/pmm2/collectors/textfile-collector/medium-resolution",
+				"--collector.textfile.directory.hr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/high-resolution",
+				"--collector.textfile.directory.lr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/low-resolution",
+				"--collector.textfile.directory.mr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/medium-resolution",
 				"--collector.textfile.hr",
 				"--collector.textfile.lr",
 				"--collector.textfile.mr",
@@ -119,7 +122,9 @@ func TestNodeExporterConfig(t *testing.T) {
 			AgentID:            "agent-id",
 			DisabledCollectors: []string{"cpu", "netstat", "netstat.fields", "vmstat", "meminfo"},
 		}
-		actual := nodeExporterConfig(node, exporter)
+		agentVersion := version.MustParse("2.15.1")
+
+		actual := nodeExporterConfig(node, exporter, agentVersion)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -139,9 +144,9 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.standard.go",
 				"--collector.standard.process",
 				"--collector.stat",
-				"--collector.textfile.directory.hr=/usr/local/percona/pmm2/collectors/textfile-collector/high-resolution",
-				"--collector.textfile.directory.lr=/usr/local/percona/pmm2/collectors/textfile-collector/low-resolution",
-				"--collector.textfile.directory.mr=/usr/local/percona/pmm2/collectors/textfile-collector/medium-resolution",
+				"--collector.textfile.directory.hr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/high-resolution",
+				"--collector.textfile.directory.lr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/low-resolution",
+				"--collector.textfile.directory.mr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/medium-resolution",
 				"--collector.textfile.hr",
 				"--collector.textfile.lr",
 				"--collector.textfile.mr",
@@ -197,15 +202,17 @@ func TestNodeExporterConfig(t *testing.T) {
 		exporter := &models.Agent{
 			AgentID: "agent-id",
 		}
-		actual := nodeExporterConfig(node, exporter)
+		agentVersion := version.MustParse("2.15.1")
+
+		actual := nodeExporterConfig(node, exporter, agentVersion)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
 			TemplateRightDelim: "}}",
 			Args: []string{
-				"--collector.textfile.directory.hr=/usr/local/percona/pmm2/collectors/textfile-collector/high-resolution",
-				"--collector.textfile.directory.lr=/usr/local/percona/pmm2/collectors/textfile-collector/low-resolution",
-				"--collector.textfile.directory.mr=/usr/local/percona/pmm2/collectors/textfile-collector/medium-resolution",
+				"--collector.textfile.directory.hr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/high-resolution",
+				"--collector.textfile.directory.lr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/low-resolution",
+				"--collector.textfile.directory.mr=" + pathsBase(agentVersion, "{{", "}}") + "/collectors/textfile-collector/medium-resolution",
 				"--web.disable-exporter-metrics",
 				"--web.listen-address=:{{ .listen_port }}",
 			},

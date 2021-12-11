@@ -538,9 +538,133 @@ var databaseSchema = [][]string{
 	},
 	40: {
 		`ALTER TABLE artifacts
-			ADD COLUMN type VARCHAR NOT NULL CHECK (type <> '') DEFAULT 'on_demand',
-			ADD COLUMN schedule_id VARCHAR`,
+      ADD COLUMN type VARCHAR NOT NULL CHECK (type <> '') DEFAULT 'on_demand',
+      ADD COLUMN schedule_id VARCHAR`,
 		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
+	},
+	41: {
+		`ALTER TABLE agents ADD COLUMN postgresql_options JSONB`,
+	},
+	42: {
+		`ALTER TABLE agents
+		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
+	},
+	43: {
+		`UPDATE artifacts SET schedule_id = '' WHERE schedule_id IS NULL`,
+		`ALTER TABLE artifacts ALTER COLUMN schedule_id SET NOT NULL`,
+	},
+	44: {
+		`CREATE TABLE service_software_versions (
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			service_type VARCHAR NOT NULL CHECK (service_type <> ''),
+			software_versions JSONB,
+			next_check_at TIMESTAMP,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (service_id),
+			FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE
+		);`,
+		`INSERT INTO service_software_versions(
+			service_id,
+			service_type,
+			software_versions,
+			next_check_at,
+			created_at,
+			updated_at
+		)
+		SELECT
+			service_id,
+			service_type,
+			'[]' AS software_versions,
+			(NOW() AT TIME ZONE 'utc') AS next_check_at,
+			(NOW() AT TIME ZONE 'utc') AS created_at,
+			(NOW() AT TIME ZONE 'utc') AS updated_at
+		FROM services
+        WHERE service_type = 'mysql';`,
+	},
+	45: {
+		`ALTER TABLE artifacts
+			ADD COLUMN updated_at TIMESTAMP`,
+		`UPDATE artifacts SET updated_at = created_at`,
+		`ALTER TABLE artifacts ALTER COLUMN updated_at SET NOT NULL`,
+		`ALTER TABLE job_results RENAME TO jobs`,
+		`ALTER TABLE jobs
+			ADD COLUMN data JSONB,
+			ADD COLUMN retries INTEGER,
+			ADD COLUMN interval BIGINT,
+			ADD COLUMN timeout BIGINT
+		`,
+	},
+	46: {
+		`ALTER TABLE artifacts ADD COLUMN db_version VARCHAR NOT NULL DEFAULT ''`,
+		`ALTER TABLE artifacts ALTER COLUMN db_version DROP DEFAULT`,
+	},
+	47: {
+		`CREATE TABLE job_logs (
+			job_id VARCHAR NOT NULL,
+			chunk_id INTEGER NOT NULL,
+			data TEXT NOT NULL,
+			last_chunk BOOLEAN NOT NULL,
+			FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE,
+			PRIMARY KEY (job_id, chunk_id)
+		)`,
+	},
+	48: {
+		`ALTER TABLE artifacts
+      ADD COLUMN mode VARCHAR NOT NULL CHECK (mode <> '') DEFAULT 'snapshot'`,
+		`ALTER TABLE artifacts ALTER COLUMN mode DROP DEFAULT`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mysql_backup, data_model}', '"physical"') WHERE type = 'mysql_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mysql_backup, mode}', '"snapshot"') WHERE type = 'mysql_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mongodb_backup, data_model}', '"logical"') WHERE type = 'mongodb_backup'`,
+		`UPDATE scheduled_tasks set data = jsonb_set(data::jsonb, '{mongodb_backup, mode}', '"snapshot"') WHERE type = 'mongodb_backup'`,
+		`UPDATE jobs SET data = jsonb_set(data::jsonb, '{mongo_db_backup, mode}', '"snapshot"') WHERE type = 'mongodb_backup'`,
+		`UPDATE jobs SET data = data - 'mongo_db_backup' || jsonb_build_object('mongodb_backup', data->'mongo_db_backup') WHERE type = 'mongodb_backup';`,
+		`UPDATE jobs SET data = data - 'mongo_db_restore_backup' || jsonb_build_object('mongodb_restore_backup', data->'mongo_db_restore_backup') WHERE type = 'mongodb_restore_backup';`,
+	},
+	49: {
+		`CREATE TABLE percona_sso_details (
+			client_id VARCHAR NOT NULL,
+			client_secret VARCHAR NOT NULL,
+			issuer_url VARCHAR NOT NULL,
+			scope VARCHAR NOT NULL,
+			created_at TIMESTAMP NOT NULL
+		)`,
+	},
+	50: {
+		`INSERT INTO job_logs(
+			job_id,
+			chunk_id,
+			data,
+			last_chunk
+		)
+        SELECT
+            id AS job_id,
+            0 AS chunk_id,
+            '' AS data,
+            TRUE AS last_chunk
+        FROM jobs j
+			WHERE type = 'mongodb_backup' AND NOT EXISTS (
+				SELECT FROM job_logs
+				WHERE job_id = j.id
+			);`,
+	},
+	51: {
+		`ALTER TABLE services
+			ADD COLUMN database_name VARCHAR NOT NULL DEFAULT ''`,
+	},
+	52: {
+		`UPDATE services SET database_name = 'postgresql' 
+			WHERE service_type = 'postgresql' and database_name = ''`,
+	},
+	53: {
+		`UPDATE services SET database_name = 'postgres' 
+			WHERE service_type = 'postgresql' and database_name = 'postgresql'`,
+	},
+	54: {
+		`ALTER TABLE percona_sso_details
+			ADD COLUMN access_token VARCHAR`,
 	},
 }
 
@@ -589,13 +713,15 @@ const (
 // SetupDBParams represents SetupDB parameters.
 type SetupDBParams struct {
 	Logf             reform.Printf
+	Address          string
+	Name             string
 	Username         string
 	Password         string
 	SetupFixtures    SetupFixturesMode
 	MigrationVersion *int
 }
 
-// SetupDB runs PostgreSQL database migrations and optionally adds initial data.
+// SetupDB runs PostgreSQL database migrations and optionally creates database and adds initial data.
 func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	var logger reform.Logger
 	if params.Logf != nil {
@@ -608,19 +734,68 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 		latestVersion = *params.MigrationVersion
 	}
 	var currentVersion int
-	err := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
-		err = nil
+	errDB := db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
+
+	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" {
+		// invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+		var databaseName = params.Name
+		var roleName = params.Username
+
+		if params.Logf != nil {
+			params.Logf("Creating database %s and role %s", databaseName, roleName)
+		}
+		// we use empty password/db and postgres user for creating database
+		db, err := OpenDB(params.Address, "", "postgres", "")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		defer db.Close() //nolint:errcheck
+
+		var countDatabases int
+		err = db.QueryRow(`SELECT COUNT(*) FROM pg_database WHERE datname = $1`, databaseName).Scan(&countDatabases)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if countDatabases == 0 {
+			_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+
+		var countRoles int
+		err = db.QueryRow(`SELECT COUNT(*) FROM pg_roles WHERE rolname=$1`, roleName).Scan(&countRoles)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if countRoles == 0 {
+			_, err = db.Exec(fmt.Sprintf(`CREATE USER "%s" LOGIN PASSWORD '%s'`, roleName, params.Password))
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			_, err = db.Exec(`GRANT ALL PRIVILEGES ON DATABASE $1 TO $2`, databaseName, roleName)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+		errDB = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
 	}
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
+		errDB = nil
+	}
+
+	if errDB != nil {
+		return nil, errors.WithStack(errDB)
 	}
 	if params.Logf != nil {
 		params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
 	}
 
 	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
-	err = db.InTransaction(func(tx *reform.TX) error {
+	err := db.InTransaction(func(tx *reform.TX) error {
 		for version := currentVersion + 1; version <= latestVersion; version++ {
 			if params.Logf != nil {
 				params.Logf("Migrating database to schema version %d ...", version)
@@ -630,7 +805,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
 				q = strings.TrimSpace(q)
-				if _, err = tx.Exec(q); err != nil {
+				if _, err := tx.Exec(q); err != nil {
 					return errors.Wrapf(err, "failed to execute statement:\n%s", q)
 				}
 			}
