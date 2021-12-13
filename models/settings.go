@@ -33,10 +33,6 @@ type MetricsResolutions struct {
 
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
-	// Percona Platform user email
-	Email string `json:"email"`
-	// Percona Platform session Id
-	SessionID string `json:"session_id"`
 	// Security Threat Tool enabled
 	STTEnabled bool `json:"stt_enabled"`
 	// List of disabled STT checks
@@ -98,6 +94,9 @@ type Settings struct {
 	BackupManagement struct {
 		Enabled bool `json:"enabled"`
 	} `json:"backup_management"`
+
+	// PMMServerID is generated on the first start of PMM server.
+	PMMServerID string `json:"pmmServerID"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.
