@@ -426,15 +426,12 @@ func (s *Service) EnableChecks(checkNames []string) error {
 // ChangeInterval changes a check's interval to the value received from the UI.
 func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 	checkMap := s.GetAllChecks()
-	if len(checkMap) == 0 {
-		return errors.New("no checks loaded")
-	}
-
 	for name, interval := range params {
 		c, ok := checkMap[name]
 		if !ok {
 			return errors.Errorf("check: %s not found", name)
 		}
+		oldInterval := c.Interval
 		c.Interval = interval
 
 		// since we re-run checks at regular intervals using a call
@@ -442,70 +439,63 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		// to load/download checks, we must persist any changes
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
-		e := s.db.InTransaction(func(tx *reform.TX) error {
+		errTx := s.db.InTransaction(func(tx *reform.TX) error {
 			cs, err := models.FindCheckSettingsByName(tx.Querier, c.Name)
-			// record interval change for the first time.
-			if err == reform.ErrNoRows {
-				cs, err := models.CreateCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
+			if err != nil && !errors.Is(err, reform.ErrNoRows) {
+				return err
+			}
+
+			if cs == nil {
+				// record interval change for the first time.
+				cs, err = models.CreateCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
 				if err != nil {
 					return err
 				}
 				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
-				s.updateCheck(c)
-				return nil
-			}
-
-			// update existing interval change.
-			if cs != nil {
-				cs, err := models.ChangeCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
+			} else {
+				// update existing interval change.
+				cs, err = models.ChangeCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
 				if err != nil {
 					return err
 				}
 				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-				s.updateCheck(c)
-				return nil
 			}
-			return err
+
+			return nil
 		})
-		if e != nil {
-			return e
+		if errTx != nil {
+			return errTx
 		}
+
+		s.replaceInMemoryCheck(c)
+		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", c.Name, oldInterval, interval)
 	}
 
 	return nil
 }
 
-// updateCheck updates a check with an updated interval in the appropriate check group.
-func (s *Service) updateCheck(newCheck check.Check) {
+// replaceInMemoryCheck replaces check with an updated interval in the appropriate check group.
+func (s *Service) replaceInMemoryCheck(newCheck check.Check) {
+	s.cm.Lock()
+	defer s.cm.Unlock()
+
 	switch newCheck.Type {
 	case check.MySQLSelect:
 		fallthrough
 	case check.MySQLShow:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.mySQLChecks[newCheck.Name]
 		s.mySQLChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 	case check.PostgreSQLSelect:
 		fallthrough
 	case check.PostgreSQLShow:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.postgreSQLChecks[newCheck.Name]
 		s.postgreSQLChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 	case check.MongoDBGetParameter:
 		fallthrough
 	case check.MongoDBBuildInfo:
 		fallthrough
 	case check.MongoDBGetCmdLineOpts:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.mongoDBChecks[newCheck.Name]
 		s.mongoDBChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 	default:
 		s.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)
