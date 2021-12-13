@@ -217,7 +217,7 @@ func TestChannelsAPI(t *testing.T) {
 			channelID, body := createChannel(t)
 			defer deleteChannel(t, channelsClient.Default.Channels, channelID)
 
-			params := createAlertRuleParams(templateName, channelID, nil)
+			params := createAlertRuleParams(templateName, "", channelID, nil)
 			rule, err := channelsClient.Default.Rules.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, channelsClient.Default.Rules, rule.Payload.RuleID)

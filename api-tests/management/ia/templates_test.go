@@ -352,7 +352,7 @@ func TestTemplatesAPI(t *testing.T) {
 			channelID, _ := createChannel(t)
 			defer deleteChannel(t, templatesClient.Default.Channels, channelID)
 
-			params := createAlertRuleParams(name, channelID, &rules.FiltersItems0{
+			params := createAlertRuleParams(name, "", channelID, &rules.FiltersItems0{
 				Type:  pointer.ToString("EQUAL"),
 				Key:   "threshold",
 				Value: "12",
