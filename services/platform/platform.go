@@ -152,10 +152,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-
-	err = s.disconnect(nCtx, &disconnectPMMParams{
+	err = s.disconnect(ctx, &disconnectPMMParams{
 		PMMServerID: settings.PMMServerID,
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
@@ -286,7 +283,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s", s.host, params.PMMServerID)
-	client := http.Client{Timeout: platformAPITimeout}
+	client := http.Client{Timeout: s.platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build Disconnect to Platform request: %s", err)
