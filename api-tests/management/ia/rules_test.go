@@ -40,7 +40,7 @@ import (
 // ENABLE_ALERTING env var.
 func TestRulesAPI(t *testing.T) {
 	rulesClient := client.Default.Rules
-	temlatesClient := client.Default.Templates
+	templatesClient := client.Default.Templates
 	channelsClient := client.Default.Channels
 
 	dummyFilter := &rules.FiltersItems0{
@@ -50,15 +50,17 @@ func TestRulesAPI(t *testing.T) {
 	}
 
 	templateName := createTemplate(t)
-	defer deleteTemplate(t, client.Default.Templates, templateName)
-
 	channelID, _ := createChannel(t)
-	defer deleteChannel(t, channelsClient, channelID)
-
 	newChannelID, _ := createChannel(t)
-	defer deleteChannel(t, channelsClient, newChannelID)
+	t.Cleanup(func() {
+		deleteTemplate(t, client.Default.Templates, templateName)
+		deleteChannel(t, channelsClient, channelID)
+		deleteChannel(t, channelsClient, newChannelID)
+	})
 
 	t.Run("add", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal from template", func(t *testing.T) {
 			t.Parallel()
 
@@ -133,7 +135,7 @@ func TestRulesAPI(t *testing.T) {
 			require.NoError(t, err)
 			defer deleteRule(t, rulesClient, sourceRule.Payload.RuleID)
 
-			deleteTemplate(t, temlatesClient, sourceTemplateName)
+			deleteTemplate(t, templatesClient, sourceTemplateName)
 
 			copyRuleParams := createAlertRuleParams("", sourceRule.Payload.RuleID, channelID, dummyFilter)
 			copyRule, err := rulesClient.CreateAlertRule(copyRuleParams)
@@ -223,6 +225,8 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
@@ -445,6 +449,8 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("toggle", func(t *testing.T) {
+		t.Parallel()
+
 		cParams := createAlertRuleParams(templateName, "", channelID, dummyFilter)
 		rule, err := rulesClient.CreateAlertRule(cParams)
 		require.NoError(t, err)
@@ -487,6 +493,8 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 

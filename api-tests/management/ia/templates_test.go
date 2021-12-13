@@ -130,6 +130,8 @@ func TestTemplatesAPI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("add", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
@@ -206,6 +208,8 @@ func TestTemplatesAPI(t *testing.T) {
 	})
 
 	t.Run("change", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
@@ -304,6 +308,8 @@ func TestTemplatesAPI(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 

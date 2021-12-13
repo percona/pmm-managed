@@ -38,6 +38,8 @@ func TestChannelsAPI(t *testing.T) {
 	client := channelsClient.Default.Channels
 
 	t.Run("add", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
@@ -93,6 +95,8 @@ func TestChannelsAPI(t *testing.T) {
 	})
 
 	t.Run("change", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
 
