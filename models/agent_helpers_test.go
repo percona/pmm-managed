@@ -200,7 +200,7 @@ func TestAgentHelpers(t *testing.T) {
 		agents, err := models.FindAgents(q, models.AgentFilters{NodeID: "N1"})
 		require.NoError(t, err)
 		expected := []*models.Agent{
-			&models.Agent{
+			{
 				CreatedAt:      now,
 				UpdatedAt:      now,
 				Status:         models.AgentStatusUnknown,
