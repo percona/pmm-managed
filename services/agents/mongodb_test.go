@@ -71,7 +71,7 @@ func TestMongodbExporterConfig225(t *testing.T) {
 
 	t.Run("Having collstats limit", func(t *testing.T) {
 		exporter.MongoDBOptions = &models.MongoDBOptions{
-			StatsCollections: "col1,col2,col3",
+			StatsCollections: []string{"col1", "col2", "col3"},
 			CollectionsLimit: 79014,
 		}
 		expected.Args = []string{
