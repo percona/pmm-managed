@@ -128,7 +128,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 // Disconnect disconnects a PMM server from the organization created on Percona Portal.
 func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequest) (*platformpb.DisconnectResponse, error) {
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
-	if err == nil {
+	if err != nil {
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
