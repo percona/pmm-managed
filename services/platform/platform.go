@@ -282,7 +282,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 }
 
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
-	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s", s.host, params.PMMServerID)
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s:disconnect", s.host, params.PMMServerID)
 	client := http.Client{Timeout: s.platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
