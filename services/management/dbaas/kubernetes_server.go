@@ -18,6 +18,7 @@ package dbaas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -31,6 +32,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -38,6 +40,7 @@ import (
 var (
 	operatorIsForbiddenRegexp  = regexp.MustCompile(`.*\.percona\.com is forbidden`)
 	resourceDoesntExistsRegexp = regexp.MustCompile(`the server doesn't have a resource type "(PerconaXtraDBCluster|PerconaServerMongoDB)"`)
+	errKubeconfigIsEmpty       = errors.New("kubeconfig is empty")
 )
 
 type kubernetesServer struct {
@@ -139,10 +142,91 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 	return &dbaasv1beta1.ListKubernetesClustersResponse{KubernetesClusters: clusters}, nil
 }
 
+type kubectlUserExec struct {
+	APIVersion         string              `yaml:"apiVersion,omitempty"`
+	Args               []string            `yaml:"args,omitempty"`
+	Command            string              `yaml:"command,omitempty"`
+	Env                []map[string]string `yaml:"env,omitempty"`
+	ProvideClusterInfo bool                `yaml:"provideClusterInfo"`
+}
+
+type kubectlUser struct {
+	Exec kubectlUserExec `yaml:"exec,omitempty"`
+}
+
+type kubectlUserWithName struct {
+	Name string      `yaml:"name,omitempty"`
+	User kubectlUser `yaml:"user,omitempty"`
+}
+
+type kubectlConfig struct {
+	Kind           string                 `yaml:"kind,omitempty"`
+	ApiVersion     string                 `yaml:"apiVersion,omitempty"`
+	CurrentContext string                 `yaml:"current-context,omitempty"`
+	Clusters       []interface{}          `yaml:"clusters,omitempty"`
+	Contexts       []interface{}          `yaml:"contexts,omitempty"`
+	Preferences    map[string]interface{} `yaml:"preferences"`
+	Users          []*kubectlUserWithName `yaml:"users,omitempty"`
+}
+
+func getFlagValue(args []string, flagName string) string {
+	for i, arg := range args {
+		if arg == flagName && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+// replaceAWSAuthIfPresent replaces use of aws binary with aws-iam-authenticator if use of aws binary is found.
+// If such use is not found, it returns passed kubeconfig without any change.
+func replaceAWSAuthIfPresent(kubeconfig string) (string, error) {
+	if kubeconfig == "" {
+		return "", errKubeconfigIsEmpty
+	}
+	var config kubectlConfig
+	err := yaml.Unmarshal([]byte(kubeconfig), &config)
+	if err != nil {
+		return "", err
+	}
+	var changed bool
+	for i, user := range config.Users {
+		if user.User.Exec.Command == "aws" {
+			user.User.Exec.Command = "aws-iam-authenticator"
+			clusterName := getFlagValue(user.User.Exec.Args, "--cluster-name")
+			if clusterName == "" {
+				return "", errors.New("failed to get cluster name out of kubeconfig")
+			}
+			converted := []string{"token", "-i", clusterName}
+			if region := getFlagValue(user.User.Exec.Args, "--region"); region != "" {
+				converted = append(converted, "--region", region)
+			}
+			user.User.Exec.Args = converted
+			config.Users[i] = user
+			changed = true
+		}
+	}
+	if !changed {
+		return kubeconfig, nil
+	}
+	c, err := yaml.Marshal(config)
+	return string(c), err
+}
+
 // RegisterKubernetesCluster registers an existing Kubernetes cluster in PMM.
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
+	var err error
+	req.KubeAuth.Kubeconfig, err = replaceAWSAuthIfPresent(req.KubeAuth.Kubeconfig)
+	if err != nil {
+		if errors.Is(err, errKubeconfigIsEmpty) {
+			return nil, status.Error(codes.InvalidArgument, "Kubeconfig can't be empty")
+		}
+		k.l.Errorf("Failed to transform kubeconfig to work with aws-iam-authenticator: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
 	var clusterInfo *dbaascontrollerv1beta1.CheckKubernetesClusterConnectionResponse
-	err := k.db.InTransaction(func(t *reform.TX) error {
+	err = k.db.InTransaction(func(t *reform.TX) error {
 		var e error
 		clusterInfo, e = k.dbaasClient.CheckKubernetesClusterConnection(ctx, req.KubeAuth.Kubeconfig)
 		if e != nil {

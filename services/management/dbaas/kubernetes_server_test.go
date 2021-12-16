@@ -142,3 +142,155 @@ func TestKubernetesServer(t *testing.T) {
 		assert.Empty(t, clusters.KubernetesClusters)
 	})
 }
+
+func TestGetFlagValue(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		args          []string
+		flagName      string
+		expectedValue string
+	}{
+		{
+			args:          []string{"token", "--foo", "bar"},
+			flagName:      "--foo",
+			expectedValue: "bar",
+		},
+		{
+			args:          []string{"token", "--foo", "bar"},
+			flagName:      "--bar",
+			expectedValue: "",
+		},
+		{
+			args:          []string{"token", "--foo"},
+			flagName:      "--foo",
+			expectedValue: "",
+		},
+	}
+	for _, tt := range testCases {
+		value := getFlagValue(tt.args, tt.flagName)
+		assert.Equal(t, tt.expectedValue, value)
+	}
+}
+
+const awsIAMAuthenticatorKubeconfig = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: base64data
+    server: https://EEFFDD.bla.location-1.eks.amazonaws.com
+  name: arn:aws:eks:location-1:123456:cluster/cluster2
+contexts:
+- context:
+    cluster: arn:aws:eks:location-1:123456:cluster/cluster2
+    user: arn:aws:eks:location-1:123456:cluster/cluster2
+  name: arn:aws:eks:location-1:123456:cluster/cluster2
+current-context: arn:aws:eks:location-1:123456:cluster/cluster2
+kind: Config
+preferences: {}
+users:
+- name: arn:aws:eks:location-1:123456:cluster/cluster2
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      command: aws-iam-authenticator
+      args:
+        - "token"
+        - "-i"
+        - "cluster2"
+        - --region
+        - location-1
+      env:
+         - name: AWS_ACCESS_KEY_ID
+           value: "asdf"
+         - name: AWS_SECRET_ACCESS_KEY
+           value: "asdf"
+`
+
+func TestUseIAMAuthenticator(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		kubeconfig        string
+		expectedError     error
+		expectedTransform string
+	}{
+		{kubeconfig: `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: base64data
+    name: arn:aws:eks:zone-2:123465545:cluster/cluster
+    server: https://DDDDD.bla.zone-2.eks.amazonaws.com
+contexts:
+- context:
+    cluster: arn:aws:eks:zone-2:123465545:cluster/cluster
+    name: arn:aws:eks:zone-2:123465545:cluster/cluster
+    user: arn:aws:eks:zone-2:123465545:cluster/cluster
+current-context: "arn:aws:eks:zone-2:123465545:cluster/cluster"
+kind: Config
+preferences: {}
+users:
+- name: arn:aws:eks:zone-2:123465545:cluster/cluster
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      args:
+      - eks
+      - get-token
+      - --cluster-name
+      - test-cluster1
+      - --region
+      - zone-2
+      command: aws
+      env:
+      - name: AWS_STS_REGIONAL_ENDPOINTS
+        value: regional
+      provideClusterInfo: false
+`,
+			expectedTransform: `kind: Config
+apiVersion: v1
+current-context: arn:aws:eks:zone-2:123465545:cluster/cluster
+clusters:
+    - cluster:
+        certificate-authority-data: base64data
+        name: arn:aws:eks:zone-2:123465545:cluster/cluster
+        server: https://DDDDD.bla.zone-2.eks.amazonaws.com
+contexts:
+    - context:
+        cluster: arn:aws:eks:zone-2:123465545:cluster/cluster
+        name: arn:aws:eks:zone-2:123465545:cluster/cluster
+        user: arn:aws:eks:zone-2:123465545:cluster/cluster
+preferences: {}
+users:
+    - name: arn:aws:eks:zone-2:123465545:cluster/cluster
+      user:
+        exec:
+            apiVersion: client.authentication.k8s.io/v1alpha1
+            args:
+                - token
+                - -i
+                - test-cluster1
+                - --region
+                - zone-2
+            command: aws-iam-authenticator
+            env:
+                - name: AWS_STS_REGIONAL_ENDPOINTS
+                  value: regional
+            provideClusterInfo: false
+`,
+			expectedError: nil,
+		},
+		{
+			kubeconfig:        "",
+			expectedTransform: "",
+			expectedError:     errKubeconfigIsEmpty,
+		},
+		{
+			kubeconfig:        awsIAMAuthenticatorKubeconfig,
+			expectedTransform: awsIAMAuthenticatorKubeconfig,
+			expectedError:     nil,
+		},
+	}
+	for _, tt := range testCases {
+		value, err := replaceAWSAuthIfPresent(tt.kubeconfig)
+		assert.ErrorIs(t, tt.expectedError, err)
+		assert.Equal(t, tt.expectedTransform, value)
+	}
+}
