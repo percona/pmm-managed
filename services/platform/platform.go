@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -50,11 +49,11 @@ type supervisordService interface {
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
-	db                 *reform.DB
-	host               string
-	l                  *logrus.Entry
-	supervisord        supervisordService
-	platformAPITimeout time.Duration
+	db          *reform.DB
+	host        string
+	l           *logrus.Entry
+	supervisord supervisordService
+	client      http.Client
 }
 
 // New returns platform Service.
@@ -69,11 +68,11 @@ func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
 	timeout := envvars.GetPlatformAPITimeout(l)
 
 	s := Service{
-		host:               host,
-		db:                 db,
-		l:                  l,
-		supervisord:        supervisord,
-		platformAPITimeout: timeout,
+		host:        host,
+		db:          db,
+		l:           l,
+		supervisord: supervisord,
+		client:      http.Client{Timeout: timeout},
 	}
 
 	return &s, nil
@@ -138,7 +137,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
-	if err := s.CleanSupervisordConfigurations(ctx); err != nil {
+	if err := s.supervisord.UpdateConfiguration(settings, nil); err != nil {
 		s.l.Errorf("Failed to clean configuration of grafana during removing PMM from Portal: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
@@ -173,18 +172,6 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	}
 
 	return &platformpb.DisconnectResponse{}, nil
-}
-
-func (s *Service) CleanSupervisordConfigurations(ctx context.Context) error {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		return errors.Wrap(err, "failed to get settings")
-	}
-
-	if err := s.supervisord.UpdateConfiguration(settings, nil); err != nil {
-		return errors.Wrap(err, "failed to update supervisord configuration")
-	}
-	return nil
 }
 
 func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
@@ -249,14 +236,13 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
-	client := http.Client{Timeout: s.platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 	req.SetBasicAuth(params.email, params.password)
-	resp, err := client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
@@ -283,7 +269,6 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s:disconnect", s.host, params.PMMServerID)
-	client := http.Client{Timeout: s.platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build Disconnect to Platform request: %s", err)
@@ -293,7 +278,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	h := req.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", params.AccessToken))
 
-	resp, err := client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
 		return status.Error(codes.Internal, internalServerError)
