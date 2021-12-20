@@ -50,11 +50,12 @@ type Service struct {
 	l                  *logrus.Entry
 	supervisord        supervisordService
 	platformAPITimeout time.Duration
+	client             http.Client
 }
 
 // New returns platform Service.
 func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
-	l := logrus.WithField("component", "auth")
+	l := logrus.WithField("component", "platform")
 
 	host, err := envvars.GetSAASHost()
 	if err != nil {
@@ -69,6 +70,7 @@ func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
 		l:                  l,
 		supervisord:        supervisord,
 		platformAPITimeout: timeout,
+		client:             http.Client{Timeout: timeout},
 	}
 
 	return &s, nil
@@ -90,7 +92,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 
-	ssoParams, err := s.connect(ctx, &connectPMMParams{
+	resp, err := s.connect(ctx, &connectPMMParams{
 		serverName:                req.ServerName,
 		email:                     req.Email,
 		password:                  req.Password,
@@ -102,11 +104,13 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		return nil, err // this is already a status error
 	}
 
+	ssoParams := resp.SSODetails
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 		ClientID:     ssoParams.ClientID,
 		ClientSecret: ssoParams.ClientSecret,
 		IssuerURL:    ssoParams.IssuerURL,
 		Scope:        ssoParams.Scope,
+		OrgID:        resp.OrgID,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
@@ -157,6 +161,7 @@ type ssoDetails struct {
 
 type connectPMMResponse struct {
 	SSODetails *ssoDetails `json:"sso_details"`
+	OrgID      string      `json:"org_id"`
 }
 
 type grpcGatewayError struct {
@@ -164,7 +169,7 @@ type grpcGatewayError struct {
 	Code    uint32 `json:"code"`
 }
 
-func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDetails, error) {
+func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*connectPMMResponse, error) {
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory", s.host)
 	marshaled, err := json.Marshal(connectPMMRequest{
 		PMMServerID:               params.pmmServerID,
@@ -177,14 +182,13 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 
-	client := http.Client{Timeout: s.platformAPITimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 	req.SetBasicAuth(params.email, params.password)
-	resp, err := client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
@@ -201,10 +205,51 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
-	var response connectPMMResponse
-	if err := decoder.Decode(&response); err != nil {
+	response := &connectPMMResponse{}
+	if err := decoder.Decode(response); err != nil {
 		s.l.Errorf("Failed to decode response into SSO details: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
-	return response.SSODetails, nil
+	return response, nil
+}
+
+func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb.SearchOrganizationTicketsRequest) (*platformpb.SearchOrganizationTicketsResponse, error) {
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+	}
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrgID)
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		s.l.Errorf("Failed to build SearchOrganizationTickets request: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	h := r.Header
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", ssoDetails.AccessToken.AccessToken))
+
+	resp, err := s.client.Do(r)
+	if err != nil {
+		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	decoder := json.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		var gwErr grpcGatewayError
+		if err := decoder.Decode(&gwErr); err != nil {
+			s.l.Errorf("Disconnect to Platform request failed and we failed to decode error message: %s", err)
+			return nil, status.Error(codes.Internal, "Internal server error")
+		}
+		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
+	}
+
+	response := &platformpb.SearchOrganizationTicketsResponse{}
+	if err := decoder.Decode(response); err != nil {
+		s.l.Errorf("Failed to decode response into SSO details: %s", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+	return response, nil
 }

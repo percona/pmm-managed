@@ -34,6 +34,7 @@ type PerconaSSODetails struct {
 	IssuerURL    string                 `reform:"issuer_url"`
 	Scope        string                 `reform:"scope"`
 	AccessToken  *PerconaSSOAccessToken `reform:"access_token"`
+	OrgID        string                 `reform:"org_id"`
 
 	CreatedAt time.Time `reform:"created_at"`
 }
@@ -45,6 +46,7 @@ type PerconaSSODetailsInsert struct {
 	ClientSecret string
 	IssuerURL    string
 	Scope        string
+	OrgID        string
 }
 
 // PerconaSSOAccessToken represents structure for special access token options.

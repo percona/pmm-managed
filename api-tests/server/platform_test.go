@@ -38,9 +38,10 @@ import (
 func TestPlatform(t *testing.T) {
 	client := platformClient.Default.Platform
 	serverClient := serverClient.Default.Server
+	const serverName string = "my PMM"
+	email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
+
 	t.Run("connect", func(t *testing.T) {
-		const serverName string = "my PMM"
-		email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
 		if email == "" || password == "" {
 			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
@@ -144,6 +145,36 @@ func TestPlatform(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, settings)
 			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
+		})
+	})
+
+	t.Run("search_tickets", func(t *testing.T) {
+		if email == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		}
+
+		t.Run("success", func(t *testing.T) {
+			t.Skip("Skip this test until we've got disconnect")
+
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
+					ServerName: serverName,
+					Email:      email,
+					Password:   password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			// Confirm we are connected to Portal.
+			settings, err := serverClient.GetSettings(nil)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
+
+			resp, err := client.SearchOrganizationTickets(&platform.SearchOrganizationTicketsParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+			require.NotNil(t, resp.GetPayload().Tickets)
 		})
 	})
 }
