@@ -18,7 +18,6 @@ package dbaas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -28,6 +27,7 @@ import (
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	pmmversion "github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,9 +38,10 @@ import (
 )
 
 var (
-	operatorIsForbiddenRegexp  = regexp.MustCompile(`.*\.percona\.com is forbidden`)
-	resourceDoesntExistsRegexp = regexp.MustCompile(`the server doesn't have a resource type "(PerconaXtraDBCluster|PerconaServerMongoDB)"`)
-	errKubeconfigIsEmpty       = errors.New("kubeconfig is empty")
+	operatorIsForbiddenRegexp          = regexp.MustCompile(`.*\.percona\.com is forbidden`)
+	resourceDoesntExistsRegexp         = regexp.MustCompile(`the server doesn't have a resource type "(PerconaXtraDBCluster|PerconaServerMongoDB)"`)
+	errKubeconfigIsEmpty               = errors.New("kubeconfig is empty")
+	errMissingRequiredKubeconfigEnvVar = errors.New("required environment variable is not defined in kubeconfig")
 )
 
 type kubernetesServer struct {
@@ -155,8 +156,8 @@ type kubectlUser struct {
 }
 
 type kubectlUserWithName struct {
-	Name string      `yaml:"name,omitempty"`
-	User kubectlUser `yaml:"user,omitempty"`
+	Name string       `yaml:"name,omitempty"`
+	User *kubectlUser `yaml:"user,omitempty"`
 }
 
 type kubectlConfig struct {
@@ -178,9 +179,18 @@ func getFlagValue(args []string, flagName string) string {
 	return ""
 }
 
+func getKubeconfigUserExecEnvValue(envs []map[string]string, variableName string) string {
+	for _, env := range envs {
+		if name := env["name"]; name == variableName {
+			return env["value"]
+		}
+	}
+	return ""
+}
+
 // replaceAWSAuthIfPresent replaces use of aws binary with aws-iam-authenticator if use of aws binary is found.
 // If such use is not found, it returns passed kubeconfig without any change.
-func replaceAWSAuthIfPresent(kubeconfig string) (string, error) {
+func replaceAWSAuthIfPresent(kubeconfig string, keyID, key string) (string, error) {
 	if kubeconfig == "" {
 		return "", errKubeconfigIsEmpty
 	}
@@ -190,19 +200,27 @@ func replaceAWSAuthIfPresent(kubeconfig string) (string, error) {
 		return "", err
 	}
 	var changed bool
-	for i, user := range config.Users {
+	for _, user := range config.Users {
 		if user.User.Exec.Command == "aws" {
 			user.User.Exec.Command = "aws-iam-authenticator"
-			clusterName := getFlagValue(user.User.Exec.Args, "--cluster-name")
-			if clusterName == "" {
-				return "", errors.New("failed to get cluster name out of kubeconfig")
-			}
-			converted := []string{"token", "-i", clusterName}
-			if region := getFlagValue(user.User.Exec.Args, "--region"); region != "" {
-				converted = append(converted, "--region", region)
+			// check and set flags
+			converted := []string{"token"}
+			for oldFlag, newFlag := range map[string]string{"--cluster-name": "-i", "--region": "--region", "--role-arn": "-r"} {
+				if flag := getFlagValue(user.User.Exec.Args, oldFlag); flag != "" {
+					converted = append(converted, newFlag, flag)
+				}
 			}
 			user.User.Exec.Args = converted
-			config.Users[i] = user
+
+			// check and set authentication environment variables
+			for variable, newValue := range map[string]string{"AWS_ACCESS_KEY_ID": keyID, "AWS_SECRET_ACCESS_KEY": key} {
+				if value := getKubeconfigUserExecEnvValue(user.User.Exec.Env, variable); value == "" {
+					if newValue == "" {
+						return "", errors.Wrapf(errMissingRequiredKubeconfigEnvVar, "%q is not set", variable)
+					}
+					user.User.Exec.Env = append(user.User.Exec.Env, map[string]string{"name": variable, "value": newValue})
+				}
+			}
 			changed = true
 		}
 	}
@@ -216,7 +234,7 @@ func replaceAWSAuthIfPresent(kubeconfig string) (string, error) {
 // RegisterKubernetesCluster registers an existing Kubernetes cluster in PMM.
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
 	var err error
-	req.KubeAuth.Kubeconfig, err = replaceAWSAuthIfPresent(req.KubeAuth.Kubeconfig)
+	req.KubeAuth.Kubeconfig, err = replaceAWSAuthIfPresent(req.KubeAuth.Kubeconfig, req.AwsAccessKeyId, req.AwsSecretAccessKey)
 	if err != nil {
 		if errors.Is(err, errKubeconfigIsEmpty) {
 			return nil, status.Error(codes.InvalidArgument, "Kubeconfig can't be empty")
