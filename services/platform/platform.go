@@ -156,15 +156,15 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
-		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
-			s.l.Errorf("%s %s", rollbackFailed, e)
-		}
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 			ClientID:     ssoDetails.ClientID,
 			ClientSecret: ssoDetails.ClientSecret,
 			IssuerURL:    ssoDetails.IssuerURL,
 			Scope:        ssoDetails.Scope,
 		}); e != nil {
+			s.l.Errorf("%s %s", rollbackFailed, e)
+		}
+		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
 
