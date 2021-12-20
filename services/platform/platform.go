@@ -20,6 +20,7 @@ package platform
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -267,7 +268,51 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	return response.SSODetails, nil
 }
 
+type grafanaSSODetails struct {
+	UserAccessToken string `json:"access_token"`
+}
+
+func (s *Service) getGrafanaUserAccessToken(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://localhost/percona-api/user/oauth-token", nil)
+	if err != nil {
+		return "", err
+	}
+
+	h := req.Header
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	s.client.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("%s", "failed to get user access token from Grafana API")
+	}
+
+	var sso grafanaSSODetails
+	decoder := json.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		if err := decoder.Decode(&sso); err != nil {
+			return "", err
+		}
+		return "", err
+	}
+
+	return sso.UserAccessToken, nil
+}
+
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
+	userAccessToken, err := s.getGrafanaUserAccessToken(ctx, params.AccessToken)
+	if err != nil {
+		s.l.Errorf("Disconnect to Platform request failed: %s", err)
+		return status.Error(codes.Internal, internalServerError)
+	}
+
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s:disconnect", s.host, params.PMMServerID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
@@ -276,7 +321,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	}
 
 	h := req.Header
-	h.Add("Authorization", fmt.Sprintf("Bearer %s", params.AccessToken))
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
 
 	resp, err := s.client.Do(req)
 	if err != nil {
