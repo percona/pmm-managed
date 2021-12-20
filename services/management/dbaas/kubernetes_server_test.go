@@ -276,7 +276,7 @@ func TestUseIAMAuthenticator(t *testing.T) {
 	}
 	for i, tt := range testCases {
 		value, err := replaceAWSAuthIfPresent(tt.kubeconfig, tt.keyID, tt.key)
-		assert.ErrorIsf(t, tt.expectedError, err, "Errors don't match in the test case number %d.", i)
+		assert.ErrorIsf(t, err, tt.expectedError, "Errors don't match in the test case number %d.", i)
 		assert.Equalf(t, tt.expectedTransform, value, "Given and expected kubeconfigs don't match in the test case number %d.", i)
 	}
 }
