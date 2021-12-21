@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -50,8 +51,6 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
-const platformAPITimeout = 10 * time.Second
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                   *reform.DB
@@ -63,11 +62,11 @@ type Server struct {
 	checksService        checksService
 	supervisord          supervisordService
 	telemetryService     telemetryService
-	platformService      platformService
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
+	emailer              emailer
 
 	l *logrus.Entry
 
@@ -100,11 +99,11 @@ type Params struct {
 	VMAlertExternalRules vmAlertExternalRules
 	Supervisord          supervisordService
 	TelemetryService     telemetryService
-	PlatformService      platformService
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
+	Emailer              emailer
 }
 
 // NewServer returns new server for Server service.
@@ -125,11 +124,11 @@ func NewServer(params *Params) (*Server, error) {
 		vmalertExternalRules: params.VMAlertExternalRules,
 		supervisord:          params.Supervisord,
 		telemetryService:     params.TelemetryService,
-		platformService:      params.PlatformService,
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
 		dbaasClient:          params.DbaasClient,
+		emailer:              params.Emailer,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
@@ -152,7 +151,7 @@ func (s *Server) UpdateSettingsFromEnv(env []string) []error {
 	}
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.UpdateSettings(tx.Querier, envSettings)
+		_, err := models.UpdateSettings(tx, envSettings)
 		return err
 	})
 	if err != nil {
@@ -425,7 +424,8 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 }
 
 // convertSettings merges database settings and settings from environment variables into API response.
-func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
+// Checking if PMM is connected to Platform is separated from settings for security and concurrency reasons.
+func (s *Server) convertSettings(settings *models.Settings, connectedToPlatform bool) *serverpb.Settings {
 	res := &serverpb.Settings{
 		UpdatesDisabled:  settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
@@ -444,24 +444,26 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AwsPartitions:        settings.AWSPartitions,
 		AlertManagerUrl:      settings.AlertManagerURL,
 		SttEnabled:           settings.SaaS.STTEnabled,
-		PlatformEmail:        settings.SaaS.Email,
 		DbaasEnabled:         settings.DBaaS.Enabled,
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
 		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
+
+		ConnectedToPlatform: connectedToPlatform,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		res.EmailAlertingSettings = &serverpb.EmailAlertingSettings{
-			From:      settings.IntegratedAlerting.EmailAlertingSettings.From,
-			Smarthost: settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
-			Hello:     settings.IntegratedAlerting.EmailAlertingSettings.Hello,
-			Username:  settings.IntegratedAlerting.EmailAlertingSettings.Username,
-			Password:  "",
-			Identity:  settings.IntegratedAlerting.EmailAlertingSettings.Identity,
-			Secret:    settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			From:       settings.IntegratedAlerting.EmailAlertingSettings.From,
+			Smarthost:  settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
+			Hello:      settings.IntegratedAlerting.EmailAlertingSettings.Hello,
+			Username:   settings.IntegratedAlerting.EmailAlertingSettings.Username,
+			Password:   "",
+			Identity:   settings.IntegratedAlerting.EmailAlertingSettings.Identity,
+			Secret:     settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+			RequireTls: settings.IntegratedAlerting.EmailAlertingSettings.RequireTLS,
 		}
 	}
 
@@ -490,15 +492,15 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		return nil, err
 	}
 
+	_, err = models.GetPerconaSSODetails(ctx, s.db.Querier)
+
 	return &serverpb.GetSettingsResponse{
-		Settings: s.convertSettings(settings),
+		Settings: s.convertSettings(settings, err == nil),
 	}, nil
 }
 
 func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverpb.ChangeSettingsRequest) error {
 	metricsRes := req.MetricsResolutions
-
-	// check request parameters
 
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
@@ -527,9 +529,6 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
 	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
-	}
-	if req.EnableStt && s.envSettings.DisableTelemetry {
-		return status.Error(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
 	// ignore req.EnableAlerting even if they are present since that will not change anything
@@ -574,11 +573,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	var newSettings, oldSettings *models.Settings
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		var e error
-
-		if oldSettings, e = models.GetSettings(tx); e != nil {
-			return errors.WithStack(e)
+	errTX := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		if oldSettings, err = models.GetSettings(tx); err != nil {
+			return errors.WithStack(err)
 		}
 
 		metricsRes := req.MetricsResolutions
@@ -623,12 +621,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		if req.EmailAlertingSettings != nil {
 			settingsParams.EmailAlertingSettings = &models.EmailAlertingSettings{
-				From:      req.EmailAlertingSettings.From,
-				Smarthost: req.EmailAlertingSettings.Smarthost,
-				Hello:     req.EmailAlertingSettings.Hello,
-				Username:  req.EmailAlertingSettings.Username,
-				Identity:  req.EmailAlertingSettings.Identity,
-				Secret:    req.EmailAlertingSettings.Secret,
+				From:       req.EmailAlertingSettings.From,
+				Smarthost:  req.EmailAlertingSettings.Smarthost,
+				Hello:      req.EmailAlertingSettings.Hello,
+				Username:   req.EmailAlertingSettings.Username,
+				Identity:   req.EmailAlertingSettings.Identity,
+				Secret:     req.EmailAlertingSettings.Secret,
+				RequireTLS: req.EmailAlertingSettings.RequireTls,
 			}
 			if req.EmailAlertingSettings.Password != "" {
 				settingsParams.EmailAlertingSettings.Password = req.EmailAlertingSettings.Password
@@ -641,35 +640,41 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		if newSettings, e = models.UpdateSettings(tx, settingsParams); e != nil {
-			return status.Error(codes.InvalidArgument, e.Error())
+		var errInvalidArgument *models.ErrInvalidArgument
+		newSettings, err = models.UpdateSettings(tx, settingsParams)
+		switch {
+		case err == nil:
+		case errors.As(err, &errInvalidArgument):
+			return status.Errorf(codes.InvalidArgument, "Invalid argument: %s.", errInvalidArgument.Details)
+		default:
+			return errors.WithStack(err)
 		}
 
 		// absent value means "do not change"
 		if req.SshKey != "" {
-			if e = s.writeSSHKey(req.SshKey); e != nil {
-				return errors.WithStack(e)
+			if err = s.writeSSHKey(req.SshKey); err != nil {
+				return errors.WithStack(err)
 			}
 		}
 
 		// absent value means "do not change"
 		if req.AlertManagerRules != "" {
-			if e = s.vmalertExternalRules.WriteRules(req.AlertManagerRules); e != nil {
-				return errors.WithStack(e)
+			if err = s.vmalertExternalRules.WriteRules(req.AlertManagerRules); err != nil {
+				return errors.WithStack(err)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = s.vmalertExternalRules.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
-				return errors.WithStack(e)
+			if err = s.vmalertExternalRules.RemoveRulesFile(); err != nil && !os.IsNotExist(err) {
+				return errors.WithStack(err)
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	if errTX != nil {
+		return nil, errTX
 	}
 
-	if err := s.UpdateConfigurations(); err != nil {
+	if err := s.UpdateConfigurations(ctx); err != nil {
 		return nil, err
 	}
 
@@ -697,8 +702,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	if !oldSettings.SaaS.STTEnabled && newSettings.SaaS.STTEnabled {
 		go func() {
 			// Start all checks from all groups.
-			err = s.checksService.StartChecks(context.Background(), "", nil)
-			if err != nil {
+			if err := s.checksService.StartChecks(context.Background(), "", nil); err != nil {
 				s.l.Error(err)
 			}
 		}()
@@ -731,19 +735,64 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
+	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+
 	return &serverpb.ChangeSettingsResponse{
-		Settings: s.convertSettings(newSettings),
+		Settings: s.convertSettings(newSettings, err == nil),
 	}, nil
 }
 
+// TestEmailAlertingSettings tests email alerting SMTP settings by sending testing email.
+func (s *Server) TestEmailAlertingSettings(
+	ctx context.Context,
+	req *serverpb.TestEmailAlertingSettingsRequest,
+) (*serverpb.TestEmailAlertingSettingsResponse, error) {
+	eas := req.EmailAlertingSettings
+	settings := &models.EmailAlertingSettings{
+		From:       eas.From,
+		Smarthost:  eas.Smarthost,
+		Hello:      eas.Hello,
+		Username:   eas.Username,
+		Password:   eas.Password,
+		Identity:   eas.Identity,
+		Secret:     eas.Secret,
+		RequireTLS: eas.RequireTls,
+	}
+
+	if err := settings.Validate(); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid argument: %s.", err.Error())
+	}
+
+	if !govalidator.IsEmail(req.EmailTo) {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid \"emailTo\" email %q", req.EmailTo)
+	}
+
+	err := s.emailer.Send(ctx, settings, req.EmailTo)
+	if err != nil {
+		var errInvalidArgument *models.ErrInvalidArgument
+		if errors.As(err, &errInvalidArgument) {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot send email: %s.", errInvalidArgument.Details)
+		}
+		return nil, status.Errorf(codes.Internal, "Cannot send email: %s.", err.Error())
+	}
+
+	return &serverpb.TestEmailAlertingSettingsResponse{}, nil
+}
+
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
-func (s *Server) UpdateConfigurations() error {
+func (s *Server) UpdateConfigurations(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get settings")
 	}
-	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
-		return err
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		if !errors.Is(err, reform.ErrNoRows) {
+			return errors.Wrap(err, "failed to get SSO details")
+		}
+	}
+	if err := s.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
+		return errors.Wrap(err, "failed to update supervisord configuration")
 	}
 	s.vmdb.RequestConfigurationUpdate()
 	s.vmalert.RequestConfigurationUpdate()
@@ -820,39 +869,6 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil
-}
-
-// PlatformSignUp creates new Percona Platform user with given email and password.
-func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.SignUp(nCtx, req.Email, req.FirstName, req.LastName); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformSignUpResponse{}, nil
-}
-
-// PlatformSignIn links that PMM instance to Percona Platform user and created new session.
-func (s *Server) PlatformSignIn(ctx context.Context, req *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.SignIn(nCtx, req.Email, req.Password); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformSignInResponse{}, nil
-}
-
-// PlatformSignOut logouts that PMM instance from Percona Platform account.
-func (s *Server) PlatformSignOut(ctx context.Context, _ *serverpb.PlatformSignOutRequest) (*serverpb.PlatformSignOutResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.SignOut(nCtx); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformSignOutResponse{}, nil
 }
 
 // isAgentsStateUpdateNeeded - checks metrics resolution changes,

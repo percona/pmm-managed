@@ -36,9 +36,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var (
-	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
-)
+var checkExternalExporterConnectionPMMVersion = version.MustParse("2.14.99")
 
 // ConnectionChecker checks if connection can be established to service.
 type ConnectionChecker struct {
@@ -135,7 +133,7 @@ func connectionRequest(q *reform.Querier, service *models.Service, agent *models
 		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
+			Dsn:     agent.DSN(service, 2*time.Second, service.DatabaseName, nil),
 			Timeout: durationpb.New(3 * time.Second),
 			TextFiles: &agentpb.TextFiles{
 				Files:              agent.Files(),
@@ -148,7 +146,7 @@ func connectionRequest(q *reform.Querier, service *models.Service, agent *models
 		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
+			Dsn:     agent.DSN(service, 2*time.Second, service.DatabaseName, nil),
 			Timeout: durationpb.New(3 * time.Second),
 			TextFiles: &agentpb.TextFiles{
 				Files:              agent.Files(),
@@ -160,7 +158,7 @@ func connectionRequest(q *reform.Querier, service *models.Service, agent *models
 		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
+			Dsn:     agent.DSN(service, 2*time.Second, service.DatabaseName, nil),
 			Timeout: durationpb.New(3 * time.Second),
 			TextFiles: &agentpb.TextFiles{
 				Files:              agent.Files(),
@@ -171,7 +169,7 @@ func connectionRequest(q *reform.Querier, service *models.Service, agent *models
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_PROXYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
+			Dsn:     agent.DSN(service, 2*time.Second, service.DatabaseName, nil),
 			Timeout: durationpb.New(3 * time.Second),
 		}
 	case models.ExternalServiceType:

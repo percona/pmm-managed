@@ -55,7 +55,6 @@ func TestDownloadLogs(t *testing.T) {
 		"client/pmm-agent-version.txt",
 		"client/status.json",
 		"cron.log",
-		"dashboard-upgrade.log",
 		"grafana.log",
 		"installed.json",
 		"nginx.conf",

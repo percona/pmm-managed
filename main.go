@@ -46,6 +46,7 @@ import (
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/percona/pmm/api/platformpb"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -148,6 +149,7 @@ type gRPCServerDeps struct {
 	backupRemovalService *backup.RemovalService
 	minioService         *minio.Service
 	versionCache         *versioncache.Service
+	supervisord          *supervisord.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -214,10 +216,18 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, managementbackup.NewRestoreHistoryService(deps.db))
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
-	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
-	dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
+	dbaasv1beta1.RegisterDBClustersServer(gRPCServer, managementdbaas.NewDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
+	dbaasv1beta1.RegisterPXCClustersServer(gRPCServer, managementdbaas.NewPXCClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
+	dbaasv1beta1.RegisterPSMDBClustersServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
+
+	platformService, err := platform.New(deps.db, deps.supervisord)
+	if err == nil {
+		platformpb.RegisterPlatformServer(gRPCServer, platformService)
+	} else {
+		l.Fatalf("Failed to register platform service: %s", err.Error())
+	}
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -323,10 +333,13 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		backupv1beta1.RegisterRestoreHistoryHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
-		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
-		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
+		dbaasv1beta1.RegisterDBClustersHandlerFromEndpoint,
+		dbaasv1beta1.RegisterPXCClustersHandlerFromEndpoint,
+		dbaasv1beta1.RegisterPSMDBClustersHandlerFromEndpoint,
 		dbaasv1beta1.RegisterLogsAPIHandlerFromEndpoint,
 		dbaasv1beta1.RegisterComponentsHandlerFromEndpoint,
+
+		platformpb.RegisterPlatformHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -455,7 +468,11 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
-	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
+	if err != nil {
+		deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+	}
+	if err = deps.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
@@ -604,6 +621,12 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
+	// Generate unique PMM Server ID if it's not already set.
+	err = models.SetPMMServerID(db)
+	if err != nil {
+		l.Panicf("failed to set PMM Server ID")
+	}
+
 	cleaner := clean.New(db)
 	externalRules := vmalert.NewExternalRules()
 
@@ -632,10 +655,10 @@ func main() {
 
 	connectionCheck := agents.NewConnectionChecker(agentsRegistry)
 
-	alertmanager := alertmanager.New(db)
+	alertManager := alertmanager.New(db)
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
 	// Generate configuration file before reloading with supervisord, checking status, etc.
-	alertmanager.GenerateBaseConfigs()
+	alertManager.GenerateBaseConfigs()
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
@@ -657,17 +680,12 @@ func main() {
 
 	actionsService := agents.NewActionsService(agentsRegistry)
 
-	checksService, err := checks.New(actionsService, alertmanager, db)
+	checksService, err := checks.New(actionsService, alertManager, db)
 	if err != nil {
 		l.Fatalf("Could not create checks service: %s", err)
 	}
 
 	prom.MustRegister(checksService)
-
-	platformService, err := platform.New(db)
-	if err != nil {
-		l.Fatalf("Could not create platform service: %s", err)
-	}
 
 	// Integrated alerts services
 	templatesService, err := ia.NewTemplatesService(db)
@@ -676,8 +694,8 @@ func main() {
 	}
 	// We should collect templates before rules service created, because it will regenerate rule files on startup.
 	templatesService.Collect(ctx)
-	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
-	alertsService := ia.NewAlertsService(db, alertmanager, templatesService)
+	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager)
+	alertsService := ia.NewAlertsService(db, alertManager, templatesService)
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
@@ -686,22 +704,23 @@ func main() {
 	backupService := backup.NewService(db, jobsService, agentsRegistry, versioner)
 	schedulerService := scheduler.New(db, backupService)
 	versionCache := versioncache.New(db, versioner)
+	emailer := alertmanager.NewEmailer(logrus.WithField("component", "alertmanager-emailer").Logger)
 
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
 		VMAlert:              vmalert,
 		AgentsStateUpdater:   agentsStateUpdater,
-		Alertmanager:         alertmanager,
+		Alertmanager:         alertManager,
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
-		PlatformService:      platformService,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
+		Emailer:              emailer,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -724,7 +743,7 @@ func main() {
 				return
 			case s := <-updateSignals:
 				l.Infof("Got %s, reloading configuration...", unix.SignalName(s.(unix.Signal)))
-				err := server.UpdateConfigurations()
+				err := server.UpdateConfigurations(ctx)
 				if err != nil {
 					l.Warnf("Couldn't reload configuration: %s", err)
 				} else {
@@ -740,7 +759,7 @@ func main() {
 		supervisord:  supervisord,
 		vmdb:         vmdb,
 		vmalert:      vmalert,
-		alertmanager: alertmanager,
+		alertmanager: alertManager,
 		server:       server,
 		l:            logrus.WithField("component", "setup"),
 	}
@@ -821,19 +840,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		alertmanager.Run(ctx)
+		alertManager.Run(ctx)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		checksService.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		platformService.Run(ctx)
 	}()
 
 	wg.Add(1)
@@ -875,7 +888,7 @@ func main() {
 			grafanaClient:        grafanaClient,
 			checksService:        checksService,
 			dbaasClient:          dbaasClient,
-			alertmanager:         alertmanager,
+			alertmanager:         alertManager,
 			vmalert:              vmalert,
 			settings:             settings,
 			alertsService:        alertsService,
@@ -888,6 +901,7 @@ func main() {
 			backupRemovalService: backupRemovalService,
 			minioService:         minioService,
 			versionCache:         versionCache,
+			supervisord:          supervisord,
 		})
 	}()
 

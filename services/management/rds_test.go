@@ -71,6 +71,7 @@ func TestRDSService(t *testing.T) {
 				"ap-east-1",
 				"ap-northeast-1",
 				"ap-northeast-2",
+				"ap-northeast-3",
 				"ap-south-1",
 				"ap-southeast-1",
 				"ap-southeast-2",
@@ -373,6 +374,7 @@ func TestRDSService(t *testing.T) {
 				Cluster:        "c-01",
 				ReplicationSet: "rs-01",
 				ServiceName:    "rds-postgresql",
+				DatabaseName:   "postgres",
 				CustomLabels: map[string]string{
 					"foo": "bar",
 				},

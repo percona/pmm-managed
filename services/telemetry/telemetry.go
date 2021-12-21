@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/uuid"
 	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
@@ -37,14 +38,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasdial"
+	"github.com/percona/pmm-managed/utils/saasreq"
 )
 
 const (
@@ -287,10 +288,14 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 	}
 
 	id := uuid.New()
+	now := time.Now()
 	req := &reporter.ReportRequest{
 		Events: []*reporter.Event{{
-			Id:   id[:],
-			Time: timestamppb.Now(),
+			Id: id[:],
+			Time: &timestamp.Timestamp{
+				Seconds: now.Unix(),
+				Nanos:   int32(now.Nanosecond()),
+			},
 			Event: &reporter.AnyEvent{
 				TypeUrl: proto.MessageName(event), //nolint:staticcheck
 				Binary:  eventB,
@@ -340,26 +345,22 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	settings, err := models.GetSettings(s.db)
+	var accessToken string
+	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+		accessToken = ssoDetails.AccessToken.AccessToken
+	}
+
+	reqByte, err := protojson.Marshal(req)
 	if err != nil {
 		return err
 	}
 
-	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.v2Host)
+	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
-	defer cc.Close() //nolint:errcheck
 
-	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
-		// if credentials are invalid then force a logout so that the next retry can
-		// successfully send the telemetry event to platform.
-		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
-		if logoutErr != nil {
-			s.l.Warnf("Failed to force logout: %v", logoutErr)
-		}
-		return errors.Wrap(err, "failed to report")
-	}
 	return nil
 }
 

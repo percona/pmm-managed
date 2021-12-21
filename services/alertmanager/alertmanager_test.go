@@ -463,13 +463,14 @@ templates: []
 		rule1, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			RuleParams: []models.RuleParam{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
 			}},
-			For:      5 * time.Second,
-			Severity: models.Severity(common.Warning),
+			For:             5 * time.Second,
+			DefaultSeverity: models.Severity(common.Warning),
+			Severity:        models.Severity(common.Warning),
 			CustomLabels: map[string]string{
 				"foo": "bar",
 			},
@@ -486,13 +487,14 @@ templates: []
 		rule2, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			RuleParams: []models.RuleParam{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
 			}},
-			For:      5 * time.Second,
-			Severity: models.Severity(common.Warning),
+			For:             5 * time.Second,
+			DefaultSeverity: models.Severity(common.Warning),
+			Severity:        models.Severity(common.Warning),
 			CustomLabels: map[string]string{
 				"foo": "baz",
 			},
@@ -509,13 +511,14 @@ templates: []
 		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			RuleParams: []models.RuleParam{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
 			}},
-			For:      5 * time.Second,
-			Severity: models.Severity(common.Warning),
+			For:             5 * time.Second,
+			DefaultSeverity: models.Severity(common.Warning),
+			Severity:        models.Severity(common.Warning),
 			CustomLabels: map[string]string{
 				"foo": "baz",
 			},
@@ -526,7 +529,7 @@ templates: []
 		rule4, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: "test_template",
 			Disabled:     true,
-			RuleParams: []models.RuleParam{{
+			ParamsValues: []models.AlertExprParamValue{{
 				Name:       "test",
 				Type:       models.Float,
 				FloatValue: 3.14,
@@ -536,8 +539,9 @@ templates: []
 				Key:  "service_name",
 				Val:  "mysql3",
 			}},
-			For:      5 * time.Second,
-			Severity: models.Severity(common.Warning),
+			For:             5 * time.Second,
+			DefaultSeverity: models.Severity(common.Warning),
+			Severity:        models.Severity(common.Warning),
 			CustomLabels: map[string]string{
 				"foo": "baz",
 			},
@@ -547,13 +551,14 @@ templates: []
 
 		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
-				From:      "from@test.com",
-				Smarthost: "1.2.3.4:80",
-				Hello:     "host",
-				Username:  "user",
-				Password:  "password",
-				Identity:  "id",
-				Secret:    "secret",
+				From:       "from@test.com",
+				Smarthost:  "1.2.3.4:80",
+				Hello:      "host",
+				Username:   "user",
+				Password:   "password",
+				Identity:   "id",
+				Secret:     "secret",
+				RequireTLS: true,
 			},
 			SlackAlertingSettings: &models.SlackAlertingSettings{
 				URL: "https://hooks.slack.com/services/abc/456/xyz",
@@ -625,7 +630,7 @@ global:
     smtp_auth_password: password
     smtp_auth_secret: secret
     smtp_auth_identity: id
-    smtp_require_tls: false
+    smtp_require_tls: true
     slack_api_url: https://hooks.slack.com/services/abc/456/xyz
 route:
     receiver: empty
