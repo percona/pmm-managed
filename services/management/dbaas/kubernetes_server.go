@@ -238,9 +238,11 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 	if err != nil {
 		if errors.Is(err, errKubeconfigIsEmpty) {
 			return nil, status.Error(codes.InvalidArgument, "Kubeconfig can't be empty")
+		} else if errors.Is(err, errMissingRequiredKubeconfigEnvVar) {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Failed to transform kubeconfig to work with aws-iam-authenticator: %s", err))
 		}
-		k.l.Errorf("Failed to transform kubeconfig to work with aws-iam-authenticator: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
+
 	}
 
 	var clusterInfo *dbaascontrollerv1beta1.CheckKubernetesClusterConnectionResponse
