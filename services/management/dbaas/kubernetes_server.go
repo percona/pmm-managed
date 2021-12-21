@@ -243,7 +243,6 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		}
 		k.l.Error("Replacing `aws` with `aim-authenticator` failed: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
-
 	}
 
 	var clusterInfo *dbaascontrollerv1beta1.CheckKubernetesClusterConnectionResponse
