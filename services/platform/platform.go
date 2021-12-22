@@ -20,7 +20,6 @@ package platform
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,15 +49,20 @@ type supervisordService interface {
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
-	db          *reform.DB
-	host        string
-	l           *logrus.Entry
-	supervisord supervisordService
-	client      http.Client
+	db            *reform.DB
+	host          string
+	l             *logrus.Entry
+	supervisord   supervisordService
+	client        http.Client
+	grafanaClient grafanaClient
+}
+
+type grafanaClient interface {
+	GetCurrentUserAccessToken(ctx context.Context) (string, error)
 }
 
 // New returns platform Service.
-func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
+func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient) (*Service, error) {
 	l := logrus.WithField("component", "auth")
 
 	host, err := envvars.GetSAASHost()
@@ -69,11 +73,12 @@ func New(db *reform.DB, supervisord supervisordService) (*Service, error) {
 	timeout := envvars.GetPlatformAPITimeout(l)
 
 	s := Service{
-		host:        host,
-		db:          db,
-		l:           l,
-		supervisord: supervisord,
-		client:      http.Client{Timeout: timeout},
+		host:          host,
+		db:            db,
+		l:             l,
+		supervisord:   supervisord,
+		client:        http.Client{Timeout: timeout},
+		grafanaClient: grafanaClient,
 	}
 
 	return &s, nil
@@ -129,17 +134,13 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequest) (*platformpb.DisconnectResponse, error) {
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
+		s.l.Error("failed to get SSO details: %s", err)
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
-	}
-
-	if err := s.supervisord.UpdateConfiguration(settings, nil); err != nil {
-		s.l.Errorf("Failed to clean configuration of grafana during removing PMM from Portal: %s", err)
 		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
@@ -154,7 +155,6 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 
 	err = s.disconnect(ctx, &disconnectPMMParams{
 		PMMServerID: settings.PMMServerID,
-		AccessToken: ssoDetails.AccessToken.AccessToken,
 	})
 	if err != nil {
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
@@ -170,6 +170,11 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		}
 
 		return nil, err // this is already a status error
+	}
+
+	if err = s.UpdateSupervisordConfigurations(ctx); err != nil {
+		s.l.Errorf("Failed to update configuration of grafana after disconnect from Platform: %s", err)
+		return nil, status.Error(codes.Internal, internalServerError)
 	}
 
 	return &platformpb.DisconnectResponse{}, nil
@@ -205,7 +210,6 @@ type connectPMMRequest struct {
 
 type disconnectPMMParams struct {
 	PMMServerID string
-	AccessToken string
 }
 
 type ssoDetails struct {
@@ -268,46 +272,8 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	return response.SSODetails, nil
 }
 
-type grafanaSSODetails struct {
-	UserAccessToken string `json:"access_token"`
-}
-
-func (s *Service) getGrafanaUserAccessToken(ctx context.Context, accessToken string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://localhost/percona-api/user/oauth-token", nil)
-	if err != nil {
-		return "", err
-	}
-
-	h := req.Header
-	h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
-	s.client.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%s", "failed to get user access token from Grafana API")
-	}
-
-	var sso grafanaSSODetails
-	decoder := json.NewDecoder(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		if err := decoder.Decode(&sso); err != nil {
-			return "", err
-		}
-		return "", err
-	}
-
-	return sso.UserAccessToken, nil
-}
-
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
-	userAccessToken, err := s.getGrafanaUserAccessToken(ctx, params.AccessToken)
+	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
 		return status.Error(codes.Internal, internalServerError)
