@@ -256,7 +256,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		}, nil
 
 	case models.MongoDBExporterType:
-		exporter := &inventorypb.MongoDBExporter{
+		return &inventorypb.MongoDBExporter{
 			AgentId:            agent.AgentID,
 			PmmAgentId:         pointer.GetString(agent.PMMAgentID),
 			ServiceId:          serviceID,
@@ -269,12 +269,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			TlsSkipVerify:      agent.TLSSkipVerify,
 			PushMetricsEnabled: agent.PushMetrics,
 			DisabledCollectors: agent.DisabledCollectors,
-		}
-		if agent.MongoDBOptions != nil {
-			exporter.StatsCollections = agent.MongoDBOptions.StatsCollections
-			exporter.CollectionsLimit = agent.MongoDBOptions.CollectionsLimit
-		}
-		return exporter, nil
+		}, nil
 
 	case models.PostgresExporterType:
 		return &inventorypb.PostgresExporter{
