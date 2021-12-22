@@ -81,6 +81,7 @@ type MongoDBOptionsParams interface {
 type MongoDBExtendedOptionsParams interface {
 	GetStatsCollections() string
 	GetCollectionsLimit() int32
+	GetEnableAllCollectors() bool
 }
 
 // MongoDBOptionsFromRequest creates MongoDBOptionsParams object from request.
@@ -98,12 +99,13 @@ func MongoDBOptionsFromRequest(params MongoDBOptionsParams) *MongoDBOptions {
 
 	// MongoDB exporter has these parameters but they are not needed for QAN agent.
 	if extendedOptions, ok := params.(MongoDBExtendedOptionsParams); ok {
-		if extendedOptions.GetStatsCollections() != "" || extendedOptions.GetCollectionsLimit() > 0 {
+		if extendedOptions != nil {
 			if mdbOptions == nil {
 				mdbOptions = &MongoDBOptions{}
 			}
 			mdbOptions.StatsCollections = extendedOptions.GetStatsCollections()
 			mdbOptions.CollectionsLimit = extendedOptions.GetCollectionsLimit()
+			mdbOptions.EnableAllCollectors = extendedOptions.GetEnableAllCollectors()
 		}
 	}
 

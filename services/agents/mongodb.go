@@ -31,6 +31,11 @@ import (
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
+type collectorArgs struct {
+	enabled     bool
+	enableParam string
+}
+
 var (
 	// New MongoDB Exporter will be released with PMM agent v2.10.0.
 	newMongoExporterPMMVersion = version.MustParse("2.9.99")
@@ -49,7 +54,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	// was specified in the command line.
 	switch {
 	case !pmmAgentVersion.Less(v2_24_99): // >= 2.25
-		args = v225Args(exporter, exporter.DisabledCollectors, tdp)
+		args = v225Args(exporter, tdp)
 	case !pmmAgentVersion.Less(newMongoExporterPMMVersion): // >= 2.10
 		args = []string{
 			"--mongodb.global-conn-pool",
@@ -99,35 +104,20 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	return res
 }
 
-func v225Args(exporter *models.Agent, disabledCollectors []string, tdp *models.DelimiterPair) []string {
-	type collectorArgs struct {
-		enabled      bool
-		enableParam  string
-		disableParam string
+func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
+	collectAll := false
+	if exporter.MongoDBOptions != nil {
+		collectAll = exporter.MongoDBOptions.EnableAllCollectors
 	}
 
-	collectors := map[string]collectorArgs{
-		"diagnosticdata": {
-			enabled:      true,
-			disableParam: "--no-collector.diagnosticdata",
-		},
-		"replicasetstatus": {
-			enabled:      true,
-			disableParam: "--no-collector.replicasetstatus",
-		},
-		// disabled until we have better information on the resources usage impact
-		"dbstats": {
-			enabled:     false,
-			enableParam: "--collector.dbstats",
-		},
-		// disabled until we have better information on the resources usage impact
-		"topmetrics": {
-			enabled:     false,
-			enableParam: "--collector.topmetrics",
-		},
+	collstatsLimit := int32(-1)
+	if exporter.MongoDBOptions != nil {
+		collstatsLimit = exporter.MongoDBOptions.CollectionsLimit
 	}
 
-	for _, collector := range disabledCollectors {
+	collectors := defaultCollectors(collectAll, collstatsLimit)
+
+	for _, collector := range exporter.DisabledCollectors {
 		col := collectors[strings.ToLower(collector)]
 		col.enabled = false
 		collectors[strings.ToLower(collector)] = col
@@ -144,7 +134,7 @@ func v225Args(exporter *models.Agent, disabledCollectors []string, tdp *models.D
 		args = append(args, "--mongodb.collstats-colls="+exporter.MongoDBOptions.StatsCollections)
 	}
 
-	if exporter.MongoDBOptions != nil && exporter.MongoDBOptions.CollectionsLimit != 0 {
+	if exporter.MongoDBOptions != nil {
 		args = append(args, fmt.Sprintf("--collector.collstats-limit=%d", exporter.MongoDBOptions.CollectionsLimit))
 	}
 
@@ -152,12 +142,42 @@ func v225Args(exporter *models.Agent, disabledCollectors []string, tdp *models.D
 		if collector.enabled && collector.enableParam != "" {
 			args = append(args, collector.enableParam)
 		}
-		if !collector.enabled && collector.disableParam != "" {
-			args = append(args, collector.disableParam)
-		}
 	}
 
 	return args
+}
+
+func defaultCollectors(collectAll bool, collstatsLimit int32) map[string]collectorArgs {
+	return map[string]collectorArgs{
+		"diagnosticdata": {
+			enabled:     true,
+			enableParam: "--collector.diagnosticdata",
+		},
+		"replicasetstatus": {
+			enabled:     true,
+			enableParam: "--collector.replicasetstatus",
+		},
+		// disabled until we have better information on the resources usage impact
+		"collstats": {
+			enabled:     false || (collectAll && collstatsLimit != 0),
+			enableParam: "--collector.collstats",
+		},
+		// disabled until we have better information on the resources usage impact
+		"dbstats": {
+			enabled:     false || collectAll,
+			enableParam: "--collector.dbstats",
+		},
+		// disabled until we have better information on the resources usage impact
+		"indexstats": {
+			enabled:     false || (collectAll && collstatsLimit != 0),
+			enableParam: "--collector.indexstats",
+		},
+		// disabled until we have better information on the resources usage impact
+		"topmetrics": {
+			enabled:     false || collectAll,
+			enableParam: "--collector.topmetrics",
+		},
+	}
 }
 
 // qanMongoDBProfilerAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.

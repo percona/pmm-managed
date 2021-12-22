@@ -90,6 +90,7 @@ type MongoDBOptions struct {
 	AuthenticationDatabase        string `json:"authentication_database"`
 	StatsCollections              string `json:"stats_collections"`
 	CollectionsLimit              int32  `json:"collections_limit"`
+	EnableAllCollectors           bool   `json:"enable_all_collectors"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
