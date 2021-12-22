@@ -33,6 +33,7 @@ import (
 	"github.com/percona/pmm/api/platformpb"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -275,6 +276,9 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
+		if errors.Is(err, services.ErrFailedToGetToken) {
+			return status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
+		}
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
 		return status.Error(codes.Internal, internalServerError)
 	}
