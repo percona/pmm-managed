@@ -429,7 +429,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 		"ClickhouseHostname": clickhouseHostname,
 		"ClickhouseDatabase": clickhouseDatabase,
-		"ClickhousePort": clickhousePort,
+		"ClickhousePort":     clickhousePort,
 	}
 
 	if ssoDetails != nil {
