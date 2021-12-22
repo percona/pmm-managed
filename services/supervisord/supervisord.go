@@ -47,6 +47,12 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const (
+	defaultClickhouseDatabase = "pmm"
+	defaultClickhouseHostname = "127.0.0.1"
+	defaultClickhousePort     = "9000"
+)
+
 // Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
 	configDir         string
@@ -400,12 +406,30 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
+	clickhouseDatabase, ok := os.LookupEnv("PMM_CLICKHOUSE_DATABASE")
+	if !ok {
+		clickhouseDatabase = defaultClickhouseDatabase
+	}
+
+	clickhouseHostname, ok := os.LookupEnv("PMM_CLICKHOUSE_HOST")
+	if !ok {
+		clickhouseHostname = defaultClickhouseHostname
+	}
+
+	clickhousePort, ok := os.LookupEnv("PMM_CLICKHOUSE_PORT")
+	if !ok {
+		clickhousePort = defaultClickhousePort
+	}
+
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
+		"ClickhouseHostname": clickhouseHostname,
+		"ClickhouseDatabase": clickhouseDatabase,
+		"ClickhousePort": clickhousePort,
 	}
 
 	if ssoDetails != nil {
@@ -679,6 +703,10 @@ priority = 13
 command =
 	/usr/sbin/percona-qan-api2
 		--data-retention={{ .DataRetentionDays }}
+environment =
+	PMM_CLICKHOUSE_HOST="{{ .ClickhouseHostname }}",
+	PMM_CLICKHOUSE_PORT="{{ .ClickhousePort }}",
+	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
 user = pmm
 autorestart = true
 autostart = true
@@ -715,9 +743,12 @@ command =
         cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
         cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
-
-environment=GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
         {{- end}}
+environment =
+	PMM_CLICKHOUSE_HOST="{{ .ClickhouseHostname }}",
+	PMM_CLICKHOUSE_PORT="{{ .ClickhousePort }}",
+	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
+	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 user = grafana
 directory = /usr/share/grafana
 autorestart = true
