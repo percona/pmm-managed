@@ -135,7 +135,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequest) (*platformpb.DisconnectResponse, error) {
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
-		s.l.Error("failed to get SSO details: %s", err)
+		s.l.Errorf("failed to get SSO details: %s", err)
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
