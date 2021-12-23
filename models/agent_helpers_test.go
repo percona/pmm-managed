@@ -169,6 +169,7 @@ func TestAgentHelpers(t *testing.T) {
 					AuthenticationDatabase:        "authentication_database",
 					StatsCollections:              []string{"col1", "col2", "col3"},
 					CollectionsLimit:              79014,
+					EnableAllCollectors:           true,
 				},
 			},
 			&models.Agent{
@@ -282,6 +283,7 @@ func TestAgentHelpers(t *testing.T) {
 					AuthenticationDatabase:        "authentication_database",
 					StatsCollections:              []string{"col1", "col2", "col3"},
 					CollectionsLimit:              79014,
+					EnableAllCollectors:           true,
 				},
 			},
 		}

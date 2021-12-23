@@ -273,6 +273,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		if agent.MongoDBOptions != nil {
 			exporter.StatsCollections = agent.MongoDBOptions.StatsCollections
 			exporter.CollectionsLimit = agent.MongoDBOptions.CollectionsLimit
+			exporter.EnableAllCollectors = agent.MongoDBOptions.EnableAllCollectors
 		}
 		return exporter, nil
 

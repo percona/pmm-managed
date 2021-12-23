@@ -88,7 +88,7 @@ func TestMongodbExporterConfig225(t *testing.T) {
 
 	t.Run("Enabling all collectors", func(t *testing.T) {
 		exporter.MongoDBOptions = &models.MongoDBOptions{
-			StatsCollections:    "col1,col2,col3",
+			StatsCollections:    []string{"col1", "col2", "col3"},
 			CollectionsLimit:    79014,
 			EnableAllCollectors: true,
 		}
@@ -114,7 +114,7 @@ func TestMongodbExporterConfig225(t *testing.T) {
 	t.Run("Enabling all collectors but collstats-limit=0", func(t *testing.T) {
 		exporter.MongoDBOptions = &models.MongoDBOptions{
 			EnableAllCollectors: true,
-			StatsCollections:    "db1.col1.one,db2.col2,db3",
+			StatsCollections:    []string{"db1.col1.one", "db2.col2", "db3"},
 		}
 
 		expected.Args = []string{
