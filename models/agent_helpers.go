@@ -79,7 +79,7 @@ type MongoDBOptionsParams interface {
 
 // MongoDBExtendedOptionsParams contains extended parameters for MongoDB exporter.
 type MongoDBExtendedOptionsParams interface {
-	GetStatsCollections() string
+	GetStatsCollections() []string
 	GetCollectionsLimit() int32
 	GetEnableAllCollectors() bool
 }

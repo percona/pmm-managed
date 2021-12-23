@@ -130,8 +130,8 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 		"--discovering-mode",
 	}
 
-	if exporter.MongoDBOptions != nil && exporter.MongoDBOptions.StatsCollections != "" {
-		args = append(args, "--mongodb.collstats-colls="+exporter.MongoDBOptions.StatsCollections)
+	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) > 0 {
+		args = append(args, "--mongodb.collstats-colls="+strings.Join(exporter.MongoDBOptions.StatsCollections, ","))
 	}
 
 	if exporter.MongoDBOptions != nil {
