@@ -22,6 +22,11 @@ func (_m *mockChecksService) CleanupAlerts() {
 	_m.Called()
 }
 
+// CollectChecks provides a mock function with given fields: ctx
+func (_m *mockChecksService) CollectChecks(ctx context.Context) {
+	_m.Called(ctx)
+}
+
 // StartChecks provides a mock function with given fields: ctx, group, checkNames
 func (_m *mockChecksService) StartChecks(ctx context.Context, group check.Interval, checkNames []string) error {
 	ret := _m.Called(ctx, group, checkNames)
