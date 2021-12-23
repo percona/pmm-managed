@@ -129,7 +129,7 @@ func (s *TemplatesService) getTemplates() map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]templateInfo)
+	res := make(map[string]templateInfo, len(s.templates))
 	for n, r := range s.templates {
 		res[n] = r
 	}
