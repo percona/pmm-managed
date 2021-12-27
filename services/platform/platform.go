@@ -37,10 +37,9 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
-const (
-	internalServerError = "Internal server error"
-	rollbackFailed      = "Failed to rollback:"
-)
+const rollbackFailed = "Failed to rollback:"
+
+var internalServerError = status.Error(codes.Internal, "Internal server error")
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -94,7 +93,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 	if settings.PMMPublicAddress == "" {
 		return nil, status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
@@ -121,12 +120,12 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 
 	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 	return &platformpb.ConnectResponse{}, nil
 }
@@ -142,7 +141,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 
 	err = models.DeletePerconaSSODetails(s.db.Querier)
@@ -151,7 +150,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 
 	err = s.disconnect(ctx, &disconnectPMMParams{
@@ -175,7 +174,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 
 	if err = s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after disconnect from Platform: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 
 	return &platformpb.DisconnectResponse{}, nil
@@ -239,19 +238,19 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	})
 	if err != nil {
 		s.l.Errorf("Failed to marshal request data: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 	req.SetBasicAuth(params.email, params.password)
 	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -260,7 +259,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Connect to Platform request failed and we failed to decode error message: %s", err)
-			return nil, status.Error(codes.Internal, internalServerError)
+			return nil, internalServerError
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -268,7 +267,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 	var response connectPMMResponse
 	if err := decoder.Decode(&response); err != nil {
 		s.l.Errorf("Failed to decode response into SSO details: %s", err)
-		return nil, status.Error(codes.Internal, internalServerError)
+		return nil, internalServerError
 	}
 	return response.SSODetails, nil
 }
@@ -280,14 +279,14 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 			return status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return internalServerError
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s:disconnect", s.host, params.PMMServerID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build Disconnect to Platform request: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return internalServerError
 	}
 
 	h := req.Header
@@ -296,7 +295,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
-		return status.Error(codes.Internal, internalServerError)
+		return internalServerError
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -305,7 +304,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Disconnect to Platform request failed and we failed to decode error message: %s", err)
-			return status.Error(codes.Internal, internalServerError)
+			return internalServerError
 		}
 		return status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
