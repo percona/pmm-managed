@@ -516,6 +516,7 @@ type currentUser struct {
 
 var errCookieIsNotSet = errors.Errorf("cookie %q is not set", grpcGatewayCookie)
 
+// GetCurrentUserAccessToken return users access token from Grafana.
 func (c *Client) GetCurrentUserAccessToken(ctx context.Context) (string, error) {
 	// We need to set cookie to the request to make it execute in grafana user context.
 	md, ok := metadata.FromIncomingContext(ctx)
