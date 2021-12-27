@@ -38,7 +38,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
@@ -534,7 +533,7 @@ func (c *Client) GetCurrentUserAccessToken(ctx context.Context) (string, error) 
 	if err := c.do(ctx, http.MethodGet, "/percona-api/user/oauth-token", "", headers, nil, &user); err != nil {
 		var e *clientError
 		if errors.As(err, &e) && e.ErrorMessage == "Failed to get token" && e.Code == http.StatusInternalServerError {
-			return "", services.ErrFailedToGetToken
+			return "", errors.New("failed to get token")
 		}
 		return "", errors.Wrap(err, "unknown error occured during getting of user's token")
 	}
