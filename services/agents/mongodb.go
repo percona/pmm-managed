@@ -135,7 +135,7 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 	}
 
 	if exporter.MongoDBOptions != nil {
-		args = append(args, fmt.Sprintf("--collector.collstats-limit=%d", exporter.MongoDBOptions.CollectionsLimit))
+		args = append(args, fmt.Sprintf("--collector.collstats-limit=%d", collstatsLimit))
 	}
 
 	for _, collector := range collectors {
