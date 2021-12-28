@@ -110,8 +110,8 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 		collectAll = exporter.MongoDBOptions.EnableAllCollectors
 	}
 
-	collstatsLimit := int32(-1)
-	if exporter.MongoDBOptions != nil {
+	collstatsLimit := int32(200)
+	if exporter.MongoDBOptions != nil && exporter.MongoDBOptions.CollectionsLimit != -1 {
 		collstatsLimit = exporter.MongoDBOptions.CollectionsLimit
 	}
 
