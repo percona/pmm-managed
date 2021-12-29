@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 	"sync"
 
 	goversion "github.com/hashicorp/go-version"
@@ -42,6 +43,12 @@ var (
 	resourceDoesntExistsRegexp         = regexp.MustCompile(`the server doesn't have a resource type "(PerconaXtraDBCluster|PerconaServerMongoDB)"`)
 	errKubeconfigIsEmpty               = errors.New("kubeconfig is empty")
 	errMissingRequiredKubeconfigEnvVar = errors.New("required environment variable is not defined in kubeconfig")
+
+	flagClusterName              = "--cluster-name"
+	flagRegion                   = "--region"
+	flagRole                     = "--role-arn"
+	kubeconfigFlagsConversionMap = map[string]string{flagClusterName: "-i", flagRegion: "--region", flagRole: "-r"}
+	kubeconfigFlagsList          = []string{flagClusterName, flagRegion, flagRole}
 )
 
 type kubernetesServer struct {
@@ -191,7 +198,7 @@ func getKubeconfigUserExecEnvValue(envs []map[string]string, variableName string
 // replaceAWSAuthIfPresent replaces use of aws binary with aws-iam-authenticator if use of aws binary is found.
 // If such use is not found, it returns passed kubeconfig without any change.
 func replaceAWSAuthIfPresent(kubeconfig string, keyID, key string) (string, error) {
-	if kubeconfig == "" {
+	if strings.TrimSpace(kubeconfig) == "" {
 		return "", errKubeconfigIsEmpty
 	}
 	var config kubectlConfig
@@ -205,23 +212,21 @@ func replaceAWSAuthIfPresent(kubeconfig string, keyID, key string) (string, erro
 			user.User.Exec.Command = "aws-iam-authenticator"
 			// check and set flags
 			converted := []string{"token"}
-			for oldFlag, newFlag := range map[string]string{"--cluster-name": "-i", "--region": "--region", "--role-arn": "-r"} {
+			for _, oldFlag := range kubeconfigFlagsList {
 				if flag := getFlagValue(user.User.Exec.Args, oldFlag); flag != "" {
-					converted = append(converted, newFlag, flag)
+					converted = append(converted, kubeconfigFlagsConversionMap[oldFlag], flag)
 				}
 			}
 			user.User.Exec.Args = converted
-
-			// check and set authentication environment variables
-			for variable, newValue := range map[string]string{"AWS_ACCESS_KEY_ID": keyID, "AWS_SECRET_ACCESS_KEY": key} {
-				if value := getKubeconfigUserExecEnvValue(user.User.Exec.Env, variable); value == "" {
-					if newValue == "" {
-						return "", errors.Wrapf(errMissingRequiredKubeconfigEnvVar, "%q is not set", variable)
-					}
-					user.User.Exec.Env = append(user.User.Exec.Env, map[string]string{"name": variable, "value": newValue})
-				}
-			}
 			changed = true
+		}
+
+		// check and set authentication environment variables
+		for variable, newValue := range map[string]string{"AWS_ACCESS_KEY_ID": keyID, "AWS_SECRET_ACCESS_KEY": key} {
+			if value := getKubeconfigUserExecEnvValue(user.User.Exec.Env, variable); value == "" && newValue != "" {
+				user.User.Exec.Env = append(user.User.Exec.Env, map[string]string{"name": variable, "value": newValue})
+				changed = true
+			}
 		}
 	}
 	if !changed {
@@ -383,7 +388,7 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 }
 
 // GetKubernetesCluster return KubeAuth with Kubernetes config.
-func (k kubernetesServer) GetKubernetesCluster(ctx context.Context, req *dbaasv1beta1.GetKubernetesClusterRequest) (*dbaasv1beta1.GetKubernetesClusterResponse, error) {
+func (k kubernetesServer) GetKubernetesCluster(_ context.Context, req *dbaasv1beta1.GetKubernetesClusterRequest) (*dbaasv1beta1.GetKubernetesClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(k.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
