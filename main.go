@@ -580,10 +580,10 @@ func main() {
 	versionServiceAPIURLF := kingpin.Flag("version-service-api-url", "Version Service API URL").
 		Default("https://check.percona.com/versions/v1").Envar("PERCONA_TEST_VERSION_SERVICE_URL").String()
 
-	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
-	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
-	postgresDBUsernameF := kingpin.Flag("postgres-username", "PostgreSQL database username").Default("pmm-managed").String()
-	postgresDBPasswordF := kingpin.Flag("postgres-password", "PostgreSQL database password").Default("pmm-managed").String()
+	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Envar("PMM_POSTGRES_HOSTNAME").Default("127.0.0.1:5432").String()
+	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Envar("PMM_POSTGRES_DBNAME").Required().String()
+	postgresDBUsernameF := kingpin.Flag("postgres-username", "PostgreSQL database username").Envar("PMM_POSTGRES_USER").Default("pmm-managed").String()
+	postgresDBPasswordF := kingpin.Flag("postgres-password", "PostgreSQL database password").Envar("PMM_POSTGRES_PASS").Default("pmm-managed").String()
 
 	supervisordConfigDirF := kingpin.Flag("supervisord-config-dir", "Supervisord configuration directory").Required().String()
 
