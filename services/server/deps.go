@@ -110,6 +110,11 @@ type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
 }
 
+// telemetryServiceV2 is a subset of methods of telemetry_v2.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type telemetryServiceV2 interface {
+}
+
 // agentsStateUpdater is subset of methods of agents.StateUpdater used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type agentsStateUpdater interface {

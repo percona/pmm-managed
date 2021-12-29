@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"html/template"
 	"log"
 	"net"
@@ -670,6 +671,11 @@ func main() {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}
 
+	telemetryV2, err := telemetry_v2.NewService(db)
+	if err != nil {
+		l.Fatalf("Could not create telemetry_v2 service: %s", err)
+	}
+
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
@@ -715,6 +721,7 @@ func main() {
 		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
+		TelemetryV2Service:   telemetryV2,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -859,6 +866,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		telemetryV2.Run(ctx)
 	}()
 
 	wg.Add(1)
