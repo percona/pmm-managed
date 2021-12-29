@@ -22,7 +22,9 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"net"
@@ -560,6 +562,23 @@ func migrateDB(ctx context.Context, sqlDB *sql.DB, dbName, dbAddress, dbUsername
 }
 
 func main() {
+	if _, err := os.Stat(".env"); !errors.Is(err, os.ErrNotExist) {
+		log.Println("Overriding ENV with .env")
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file: %s", err)
+		}
+	}
+
+	if v, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_WAIT_FOR_DEBUG_SESSION")); err == nil && v {
+		shouldWait := true // will be overridden via debug session
+		//goland:noinspection ALL
+		for shouldWait {
+			log.Println("Waiting for debugging session...")
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
 		panic("pmm-managed version is not set during build.")
