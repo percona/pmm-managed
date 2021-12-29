@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
-	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"net"
@@ -560,7 +559,7 @@ func migrateDB(ctx context.Context, sqlDB *sql.DB, dbName, dbAddress, dbUsername
 }
 
 func main() {
-	if _, err := os.Stat(".env"); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(".env"); err == nil {
 		log.Println("Overriding ENV with .env")
 		err := godotenv.Load()
 		if err != nil {
