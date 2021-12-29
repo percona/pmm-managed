@@ -348,7 +348,7 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
 				{
-					Targets: []string{"127.0.0.1:9090"},
+					Targets: []string{"pmm-server:9090"},
 					Labels:  map[string]string{"instance": "pmm-server"},
 				},
 			},
@@ -366,7 +366,7 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
 				{
-					Targets: []string{"127.0.0.1:8880"},
+					Targets: []string{"pmm-server:8880"},
 					Labels:  map[string]string{"instance": "pmm-server"},
 				},
 			},
