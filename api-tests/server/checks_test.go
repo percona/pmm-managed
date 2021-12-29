@@ -274,6 +274,8 @@ func TestChangeSecurityChecks(t *testing.T) {
 		require.NotEmpty(t, resp.Payload.Checks)
 
 		for _, check := range resp.Payload.Checks {
+			t.Logf("Check Description: %v", check.Description)
+			t.Logf("Check Interval   : %v", *check.Interval)
 			assert.Equal(t, "RARE", *check.Interval)
 		}
 
