@@ -223,22 +223,22 @@ func defaultCollectors(collectAll bool, collstatsLimit int32) map[string]collect
 		},
 		// disabled until we have better information on the resources usage impact
 		"collstats": {
-			enabled:     false || (collectAll && collstatsLimit != 0),
+			enabled:     collectAll && collstatsLimit != 0,
 			enableParam: "--collector.collstats",
 		},
 		// disabled until we have better information on the resources usage impact
 		"dbstats": {
-			enabled:     false || collectAll,
+			enabled:     collectAll,
 			enableParam: "--collector.dbstats",
 		},
 		// disabled until we have better information on the resources usage impact
 		"indexstats": {
-			enabled:     false || (collectAll && collstatsLimit != 0),
+			enabled:     collectAll && collstatsLimit != 0,
 			enableParam: "--collector.indexstats",
 		},
 		// disabled until we have better information on the resources usage impact
 		"topmetrics": {
-			enabled:     false || collectAll,
+			enabled:     collectAll,
 			enableParam: "--collector.topmetrics",
 		},
 	}
