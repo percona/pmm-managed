@@ -188,6 +188,31 @@ func TestMongodbExporterConfig226(t *testing.T) {
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
 		require.Equal(t, expected.Args, actual.Args)
 	})
+
+	t.Run("collstats-limit=-1 -> automatically set the limit", func(t *testing.T) {
+		exporter.MongoDBOptions = &models.MongoDBOptions{
+			EnableAllCollectors: true,
+			StatsCollections:    []string{"db1.col1.one", "db2.col2", "db3"},
+			CollectionsLimit:    -1,
+		}
+
+		expected.Args = []string{
+			"--collector.collstats",
+			"--collector.collstats-limit=200", // 200 is the default for auto-set
+			"--collector.dbstats",
+			"--collector.diagnosticdata",
+			"--collector.indexstats",
+			"--collector.replicasetstatus",
+			"--collector.topmetrics",
+			"--compatible-mode",
+			"--discovering-mode",
+			"--mongodb.collstats-colls=db1.col1.one,db2.col2,db3",
+			"--mongodb.global-conn-pool",
+			"--web.listen-address=:{{ .listen_port }}",
+		}
+		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
+		require.Equal(t, expected.Args, actual.Args)
+	})
 }
 
 func TestMongodbExporterConfig(t *testing.T) {
