@@ -40,6 +40,7 @@ var (
 	// New MongoDB Exporter will be released with PMM agent v2.10.0.
 	newMongoExporterPMMVersion = version.MustParse("2.9.99")
 	v2_24_99                   = version.MustParse("2.24.99")
+	v2_25_99                   = version.MustParse("2.25.99")
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
@@ -53,6 +54,8 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	// Until now, discovering mode was not workign properly and was enabled only if mongodb.collstats-colls=
 	// was specified in the command line.
 	switch {
+	case !pmmAgentVersion.Less(v2_25_99): // >= 2.26
+		args = v226Args(exporter, tdp)
 	case !pmmAgentVersion.Less(v2_24_99): // >= 2.25
 		args = v225Args(exporter, tdp)
 	case !pmmAgentVersion.Less(newMongoExporterPMMVersion): // >= 2.10
@@ -104,7 +107,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	return res
 }
 
-func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
+func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 	collectAll := false
 	if exporter.MongoDBOptions != nil {
 		collectAll = exporter.MongoDBOptions.EnableAllCollectors
@@ -141,6 +144,67 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 	for _, collector := range collectors {
 		if collector.enabled && collector.enableParam != "" {
 			args = append(args, collector.enableParam)
+		}
+	}
+
+	return args
+}
+
+func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
+	type collectorArgs struct {
+		enabled      bool
+		enableParam  string
+		disableParam string
+	}
+
+	collectors := map[string]collectorArgs{
+		"diagnosticdata": {
+			enabled:      true,
+			disableParam: "--no-collector.diagnosticdata",
+		},
+		"replicasetstatus": {
+			enabled:      true,
+			disableParam: "--no-collector.replicasetstatus",
+		},
+		// disabled until we have better information on the resources usage impact
+		"dbstats": {
+			enabled:     false,
+			enableParam: "--collector.dbstats",
+		},
+		// disabled until we have better information on the resources usage impact
+		"topmetrics": {
+			enabled:     false,
+			enableParam: "--collector.topmetrics",
+		},
+	}
+
+	for _, collector := range exporter.DisabledCollectors {
+		col := collectors[strings.ToLower(collector)]
+		col.enabled = false
+		collectors[strings.ToLower(collector)] = col
+	}
+
+	args := []string{
+		"--mongodb.global-conn-pool",
+		"--compatible-mode",
+		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
+		"--discovering-mode",
+	}
+
+	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) > 0 {
+		args = append(args, "--mongodb.collstats-colls="+strings.Join(exporter.MongoDBOptions.StatsCollections, ","))
+	}
+
+	if exporter.MongoDBOptions != nil && exporter.MongoDBOptions.CollectionsLimit != 0 {
+		args = append(args, fmt.Sprintf("--collector.collstats-limit=%d", exporter.MongoDBOptions.CollectionsLimit))
+	}
+
+	for _, collector := range collectors {
+		if collector.enabled && collector.enableParam != "" {
+			args = append(args, collector.enableParam)
+		}
+		if !collector.enabled && collector.disableParam != "" {
+			args = append(args, collector.disableParam)
 		}
 	}
 
