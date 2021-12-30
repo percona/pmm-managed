@@ -121,7 +121,10 @@ func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 	collectors := defaultCollectors(collectAll, collstatsLimit)
 
 	for _, collector := range exporter.DisabledCollectors {
-		col := collectors[strings.ToLower(collector)]
+		col, ok := collectors[strings.ToLower(collector)]
+		if !ok {
+			continue
+		}
 		col.enabled = false
 		collectors[strings.ToLower(collector)] = col
 	}
