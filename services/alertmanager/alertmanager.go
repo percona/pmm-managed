@@ -54,29 +54,12 @@ import (
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
-const (
-	updateBatchDelay           = time.Second
-	configurationUpdateTimeout = 3 * time.Second
-
-	alertmanagerDir     = "/srv/alertmanager"
-	alertmanagerCertDir = "/srv/alertmanager/cert"
-	alertmanagerDataDir = "/srv/alertmanager/data"
-	dirPerm             = os.FileMode(0o775)
-
-	alertmanagerConfigPath     = "/etc/alertmanager.yml"
-	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
-
-	receiverNameSeparator = " + "
-)
-
-var notificationLabels = []string{"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
-	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job"}
-
 //go:embed email_template.html
 var emailTemplate string
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
+	Config Config
 	db     *reform.DB
 	client *http.Client
 
@@ -85,8 +68,9 @@ type Service struct {
 }
 
 // New creates new service.
-func New(db *reform.DB) *Service {
+func New(db *reform.DB, config Config) *Service {
 	return &Service{
+		Config:   config,
 		db:       db,
 		client:   new(http.Client), // TODO instrument with utils/irt; see vmalert package https://jira.percona.com/browse/PMM-7229
 		l:        logrus.WithField("component", "alertmanager"),
@@ -99,6 +83,11 @@ func New(db *reform.DB) *Service {
 // It is needed because Alertmanager was added to PMM
 // with invalid configuration file (it will fail with "no route provided in config" error).
 func (svc *Service) GenerateBaseConfigs() {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip GenerateBaseConfigs")
+		return
+	}
+
 	for _, dirPath := range []string{alertmanagerDir, alertmanagerDataDir, alertmanagerCertDir} {
 		if err := dir.CreateDataDir(dirPath, "pmm", "pmm", dirPerm); err != nil {
 			svc.l.Error(err)
@@ -144,6 +133,11 @@ func (svc *Service) Run(ctx context.Context) {
 	// If you change this and related methods,
 	// please do similar changes in victoriametrics and vmalert packages.
 
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip Run")
+		return
+	}
+
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
@@ -181,6 +175,11 @@ func (svc *Service) Run(ctx context.Context) {
 
 // RequestConfigurationUpdate requests Alertmanager configuration update.
 func (svc *Service) RequestConfigurationUpdate() {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip RequestConfigurationUpdate")
+		return
+	}
+
 	select {
 	case svc.reloadCh <- struct{}{}:
 	default:
@@ -189,6 +188,11 @@ func (svc *Service) RequestConfigurationUpdate() {
 
 // updateConfiguration updates Alertmanager configuration.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip updateConfiguration")
+		return nil
+	}
+
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
@@ -716,6 +720,11 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 // SendAlerts sends given alerts. It is the caller's responsibility
 // to call this method every now and then.
 func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip SendAlerts")
+		return
+	}
+
 	if len(alerts) == 0 {
 		svc.l.Debug("0 alerts to send, exiting.")
 		return
@@ -733,6 +742,11 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 
 // GetAlerts returns alerts available in alertmanager.
 func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip GetAlerts")
+		return []*ammodels.GettableAlert{}, nil
+	}
+
 	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
 		Context: ctx,
 	})
@@ -745,6 +759,11 @@ func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, e
 
 // FindAlertByID searches alert by ID in alertmanager.
 func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.GettableAlert, error) {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip FindAlertByID")
+		return nil, nil
+	}
+
 	alerts, err := svc.GetAlerts(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")
@@ -761,6 +780,11 @@ func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.Get
 
 // Silence mutes alert with specified id.
 func (svc *Service) Silence(ctx context.Context, id string) error {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip Silence")
+		return nil
+	}
+
 	a, err := svc.FindAlertByID(ctx, id)
 	if err != nil {
 		return err
@@ -801,6 +825,11 @@ func (svc *Service) Silence(ctx context.Context, id string) error {
 
 // Unsilence unmutes alert with specified id.
 func (svc *Service) Unsilence(ctx context.Context, id string) error {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip Unsilence")
+		return nil
+	}
+
 	a, err := svc.FindAlertByID(ctx, id)
 	if err != nil {
 		return err
@@ -822,6 +851,11 @@ func (svc *Service) Unsilence(ctx context.Context, id string) error {
 
 // IsReady verifies that Alertmanager works.
 func (svc *Service) IsReady(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		svc.l.Debugf("service is disabled, skip IsReady")
+		return nil
+	}
+
 	u := "http://127.0.0.1:9093/alertmanager/-/ready"
 	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
