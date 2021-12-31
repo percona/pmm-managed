@@ -23,6 +23,7 @@ import (
 	_ "expvar" // register /debug/vars
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/percona/pmm-managed/services/config"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"html/template"
 	"log"
@@ -495,12 +496,16 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmalert.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking Alertmanager...")
-	if err = deps.alertmanager.IsReady(ctx); err != nil {
-		deps.l.Warnf("Alertmanager problem: %+v.", err)
-		return false
+	if deps.alertmanager.Config.Enabled {
+		deps.l.Infof("Checking AlertManager...")
+		if err = deps.alertmanager.IsReady(ctx); err != nil {
+			deps.l.Warnf("Alertmanager problem: %+v.", err)
+			return false
+		}
+		deps.alertmanager.RequestConfigurationUpdate()
+	} else {
+		deps.l.Debugf("AlertManager is disabled")
 	}
-	deps.alertmanager.RequestConfigurationUpdate()
 
 	deps.l.Info("Setup completed.")
 	return true
@@ -629,6 +634,11 @@ func main() {
 	ctx = logger.Set(ctx, "main")
 	defer l.Info("Done.")
 
+	cfg := config.NewService()
+	if err := cfg.Load(); err != nil {
+		l.Panicf("Failed to load config: %+v", err)
+	}
+
 	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
@@ -676,7 +686,7 @@ func main() {
 
 	connectionCheck := agents.NewConnectionChecker(agentsRegistry)
 
-	alertManager := alertmanager.New(db)
+	alertManager := alertmanager.New(db, cfg.Config.Services.AlertManager)
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
 	// Generate configuration file before reloading with supervisord, checking status, etc.
 	alertManager.GenerateBaseConfigs()
