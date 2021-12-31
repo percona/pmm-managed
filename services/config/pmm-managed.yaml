@@ -1,0 +1,36 @@
+services:
+  alert_manager:
+    enabled: true
+
+telemetry:
+  - id: MySQLVersion
+    source: VM
+    query: mysql_version_info{service_type=”mysql”}
+    summary: “Select version of monitored MySQL service”
+    data:
+      - metric_name: "mysql_version"
+        label: "version"
+  - id: NodeLoad1min
+    source: VM
+    query: node_load1
+    summary: “Select monitored nodes load 1 minute”
+    data:
+      - metric_name: "node_load1"
+        value: 1
+  - id: PMMAgentVersion
+    source: PMMDB_SELECT
+    # only SELECT statements are supported
+    query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
+    summary: “Select PMM Agents version”
+    data:
+      - metric_name: "pmm_server_agent_version"
+        column: "version"
+  - id: PMMServerQAN
+    source: QANDB_SELECT
+    # only SELECT statements are supported
+    query: |
+      <colunm 1>, <colunm 2> from metrics where ...
+    summary: “Select QAN ...”
+    data:
+      - metric_name: "<metric name>"
+        column: "<column 1>"
