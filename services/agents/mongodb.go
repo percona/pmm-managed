@@ -51,7 +51,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	var args []string
 	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
 	// Starting with PMM 2.25.0, we changes the discovering-mode making it to discover all databases.
-	// Until now, discovering mode was not workign properly and was enabled only if mongodb.collstats-colls=
+	// Until now, discovering mode was not working properly and was enabled only if mongodb.collstats-colls=
 	// was specified in the command line.
 	switch {
 	case !pmmAgentVersion.Less(v2_25_99): // >= 2.26

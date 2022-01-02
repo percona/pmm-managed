@@ -17,6 +17,7 @@
 package agents
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/percona/pmm/api/agentpb"
@@ -24,7 +25,7 @@ import (
 )
 
 // vmAgentConfig returns desired configuration of vmagent process.
-func vmAgentConfig(scrapeCfg string) *agentpb.SetStateRequest_AgentProcess {
+func vmAgentConfig(scrapeCfg string, agentsCount int) *agentpb.SetStateRequest_AgentProcess {
 	args := []string{
 		"-remoteWrite.url={{.server_url}}/victoriametrics/api/v1/write",
 		"-remoteWrite.tlsInsecureSkipVerify={{.server_insecure}}",
@@ -32,6 +33,7 @@ func vmAgentConfig(scrapeCfg string) *agentpb.SetStateRequest_AgentProcess {
 		"-promscrape.config={{.TextFiles.vmagentscrapecfg}}",
 		// 1GB disk queue size.
 		"-remoteWrite.maxDiskUsagePerURL=1073741824",
+		fmt.Sprintf("-memory.allowedBytes=%dMB", agentsCount*30), // 30MB per agent
 		"-loggerLevel=INFO",
 		"-httpListenAddr=127.0.0.1:{{.listen_port}}",
 		// needed for login/password at client side.

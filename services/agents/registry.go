@@ -231,7 +231,7 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", status.Error(codes.PermissionDenied, "Empty Agent ID.")
 	}
 
-	agent, err := models.FindAgentByID(q, md.ID)
+	pmmAgent, err := models.FindAgentByID(q, md.ID)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return "", status.Errorf(codes.PermissionDenied, "No Agent with ID %q.", md.ID)
@@ -239,11 +239,11 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", errors.Wrap(err, "failed to find agent")
 	}
 
-	if agent.AgentType != models.PMMAgentType {
+	if pmmAgent.AgentType != models.PMMAgentType {
 		return "", status.Errorf(codes.PermissionDenied, "No pmm-agent with ID %q.", md.ID)
 	}
 
-	if pointer.GetString(agent.RunsOnNodeID) == "" {
+	if pointer.GetString(pmmAgent.RunsOnNodeID) == "" {
 		return "", status.Errorf(codes.PermissionDenied, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
@@ -252,16 +252,16 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
 	}
 
-	if err := addOrRemoveVMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID), agentVersion); err != nil {
+	if err := addOrRemoveVMAgent(q, md.ID, pointer.GetString(pmmAgent.RunsOnNodeID), agentVersion); err != nil {
 		return "", err
 	}
 
-	agent.Version = &md.Version
-	if err := q.Update(agent); err != nil {
+	pmmAgent.Version = &md.Version
+	if err := q.Update(pmmAgent); err != nil {
 		return "", errors.Wrap(err, "failed to update agent")
 	}
 
-	return pointer.GetString(agent.RunsOnNodeID), nil
+	return pointer.GetString(pmmAgent.RunsOnNodeID), nil
 }
 
 // unregister removes pmm-agent with given ID from the registry.
