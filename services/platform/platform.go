@@ -311,3 +311,51 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 
 	return nil
 }
+
+// SearchOrganizationTickets fetches the list of ticket associated with the Portal organization this PMM server is registered with.
+func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb.SearchOrganizationTicketsRequest) (*platformpb.SearchOrganizationTicketsResponse, error) {
+	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
+	if err != nil {
+		if errors.Is(err, services.ErrFailedToGetToken) {
+			return nil, status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
+		}
+		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
+		return nil, internalServerError
+	}
+	// Since PMM doesn't store the orgID we leave it empty and let Portal figure it out
+	// using the perconaPortal.orgID claim in the access token.
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, "")
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		s.l.Errorf("Failed to build SearchOrganizationTickets request: %s", err)
+		return nil, internalServerError
+	}
+
+	h := r.Header
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
+
+	resp, err := s.client.Do(r)
+	if err != nil {
+		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
+		return nil, internalServerError
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	decoder := json.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		var gwErr grpcGatewayError
+		if err := decoder.Decode(&gwErr); err != nil {
+			s.l.Errorf("SearchOrganizationRequest failed to decode error message: %s", err)
+			return nil, internalServerError
+		}
+		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
+	}
+
+	response := &platformpb.SearchOrganizationTicketsResponse{}
+	if err := decoder.Decode(response); err != nil {
+		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
+		return nil, internalServerError
+	}
+	return response, nil
+}
