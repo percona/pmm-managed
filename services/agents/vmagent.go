@@ -33,7 +33,7 @@ func vmAgentConfig(scrapeCfg string, agentsCount int) *agentpb.SetStateRequest_A
 		"-promscrape.config={{.TextFiles.vmagentscrapecfg}}",
 		// 1GB disk queue size.
 		"-remoteWrite.maxDiskUsagePerURL=1073741824",
-		fmt.Sprintf("-memory.allowedBytes=%dMB", agentsCount*30), // 30MB per agent
+		fmt.Sprintf("-memory.allowedBytes=%dMB", agentsCount*25), // 25MB per agent
 		"-loggerLevel=INFO",
 		"-httpListenAddr=127.0.0.1:{{.listen_port}}",
 		// needed for login/password at client side.
