@@ -201,18 +201,20 @@ func TestChangeSecurityChecks(t *testing.T) {
 	})
 
 	t.Run("change interval error", func(t *testing.T) {
+		t.Cleanup(func() { restoreCheckIntervalDefaults(t) })
+
 		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, resp.Payload.Checks)
 
 		check := resp.Payload.Checks[0]
-		interval := "unknown_interval"
+		interval := *check.Interval
 		params := &security_checks.ChangeSecurityChecksParams{
 			Body: security_checks.ChangeSecurityChecksBody{
 				Params: []*security_checks.ParamsItems0{
 					{
 						Name:     check.Name,
-						Interval: &interval,
+						Interval: pointer.ToString("unknown_interval"),
 					},
 				},
 			},
@@ -221,6 +223,20 @@ func TestChangeSecurityChecks(t *testing.T) {
 
 		_, err = managementClient.Default.SecurityChecks.ChangeSecurityChecks(params)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "unknown value \"\\\"unknown_interval\\\"\" for enum management.SecurityCheckInterval")
+
+		resp, err = managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, resp.Payload.Checks)
+
+		var found bool
+		for _, c := range resp.Payload.Checks {
+			if c.Name == check.Name {
+				found = true
+				assert.Equal(t, interval, *c.Interval)
+			}
+		}
+
+		assert.True(t, found, "required check wasn't found")
 	})
 
 	t.Run("change interval normal", func(t *testing.T) {
