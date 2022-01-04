@@ -49,6 +49,7 @@ import (
 
 // Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
+	Config            Config
 	configDir         string
 	supervisorctlPath string
 	l                 *logrus.Entry
@@ -76,9 +77,10 @@ const (
 )
 
 // New creates new service.
-func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.VictoriaMetricsParams) *Service {
+func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.VictoriaMetricsParams, config Config) *Service {
 	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
+		Config:            config,
 		configDir:         configDir,
 		supervisorctlPath: path,
 		l:                 logrus.WithField("component", "supervisord"),
@@ -91,6 +93,11 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.Vi
 
 // Run reads supervisord's log (maintail) and sends events to subscribers.
 func (s *Service) Run(ctx context.Context) {
+	if !s.Config.Enabled {
+		s.l.Debugf("service is disabled, skip Run")
+		return
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -510,6 +517,11 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 
 // UpdateConfiguration updates Prometheus, Alertmanager, Grafana and qan-api2 configurations, restarting them if needed.
 func (s *Service) UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error {
+	if !s.Config.Enabled {
+		s.l.Debugf("service is disabled, skip UpdateConfiguration")
+		return nil
+	}
+
 	if s.supervisorctlPath == "" {
 		s.l.Errorf("supervisorctl not found, configuration updates are disabled.")
 		return nil
@@ -547,6 +559,11 @@ func (s *Service) UpdateConfiguration(settings *models.Settings, ssoDetails *mod
 
 // RestartSupervisedService restarts given service.
 func (s *Service) RestartSupervisedService(serviceName string) error {
+	if !s.Config.Enabled {
+		s.l.Debugf("service is disabled, skip RestartSupervisedService")
+		return nil
+	}
+
 	_, err := s.supervisorctl("restart", serviceName)
 	return err
 }

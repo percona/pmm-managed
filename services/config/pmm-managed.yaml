@@ -1,6 +1,19 @@
 services:
   alert_manager:
     enabled: true
+  vmalert:
+    enabled: true
+  victoria_metrics:
+    enabled: true
+  supervisord:
+    enabled: true
+  management:
+    ia:
+      enabled: true
+      templates_dir: "/srv/ia/templates"
+      rules_dir: "/etc/ia/rules"
+      dir_owner: "pmm"
+      dir_owner_group: "pmm"
 
 telemetry:
   - id: MySQLVersion
