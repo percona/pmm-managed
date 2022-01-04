@@ -52,10 +52,6 @@ import (
 	"github.com/percona/pmm-managed/utils/signatures"
 )
 
-const (
-	templatesDir = "/srv/ia/templates"
-)
-
 // templateInfo represents alerting rule template information from various sources.
 //
 // TODO We already have models.Template, iav1beta1.Template, and alert.Template.
@@ -81,10 +77,10 @@ type TemplatesService struct {
 }
 
 // NewTemplatesService creates a new TemplatesService.
-func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
+func NewTemplatesService(db *reform.DB, config Config) (*TemplatesService, error) {
 	l := logrus.WithField("component", "management/ia/templates")
 
-	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
+	err := dir.CreateDataDir(*config.TemplatesDir, *config.DirOwner, *config.DirOwnerGroup, dirPerm)
 	if err != nil {
 		l.Error(err)
 	}
@@ -97,7 +93,7 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 	s := &TemplatesService{
 		db:                db,
 		l:                 l,
-		userTemplatesPath: templatesDir,
+		userTemplatesPath: *config.TemplatesDir,
 		host:              host,
 		templates:         make(map[string]templateInfo),
 	}
@@ -376,7 +372,7 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 	s.l.Infof("Downloading templates from %s ...", s.host)
 
 	var accessToken string
-	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+	if ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 

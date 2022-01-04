@@ -86,7 +86,7 @@ func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaCli
 
 // Connect connects a PMM server to the organization created on Percona Portal. That allows the user to sign in to the PMM server with their Percona Account.
 func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (*platformpb.ConnectResponse, error) {
-	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	_, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err == nil {
 		return nil, status.Error(codes.AlreadyExists, "PMM server is already connected to Portal")
 	}
@@ -132,7 +132,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 
 // Disconnect disconnects a PMM server from the organization created on Percona Portal.
 func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequest) (*platformpb.DisconnectResponse, error) {
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
@@ -185,7 +185,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		if !errors.Is(err, reform.ErrNoRows) {
 			return errors.Wrap(err, "failed to get SSO details")

@@ -1055,7 +1055,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
 	var accessToken string
-	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+	if ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 
