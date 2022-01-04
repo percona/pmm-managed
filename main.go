@@ -473,28 +473,40 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
+	ssoDetails, err, critical := models.GetPerconaSSODetails(ctx, db.Querier)
 	if err != nil {
-		deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+		if critical {
+			deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+		} else {
+			deps.l.Warnf("Failed to get Percona SSO Details: %v.", err)
+		}
 	}
 	if err = deps.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
 
-	deps.l.Infof("Checking VictoriaMetrics...")
-	if err = deps.vmdb.IsReady(ctx); err != nil {
-		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
-		return false
+	if deps.vmdb.Config.Enabled {
+		deps.l.Infof("Checking VictoriaMetrics...")
+		if err = deps.vmdb.IsReady(ctx); err != nil {
+			deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
+			return false
+		}
+		deps.vmdb.RequestConfigurationUpdate()
+	} else {
+		deps.l.Debugf("[victoriametrics] service is disabled")
 	}
-	deps.vmdb.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking VMAlert...")
-	if err = deps.vmalert.IsReady(ctx); err != nil {
-		deps.l.Warnf("VMAlert problem: %+v.", err)
-		return false
+	if deps.vmalert.Config.Enabled {
+		deps.l.Infof("Checking VMAlert...")
+		if err = deps.vmalert.IsReady(ctx); err != nil {
+			deps.l.Warnf("VMAlert problem: %+v.", err)
+			return false
+		}
+		deps.vmalert.RequestConfigurationUpdate()
+	} else {
+		deps.l.Debugf("[vmalert] service is disabled")
 	}
-	deps.vmalert.RequestConfigurationUpdate()
 
 	if deps.alertmanager.Config.Enabled {
 		deps.l.Infof("Checking AlertManager...")
@@ -504,7 +516,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		}
 		deps.alertmanager.RequestConfigurationUpdate()
 	} else {
-		deps.l.Debugf("AlertManager is disabled")
+		deps.l.Debugf("[AlertManager] service is disabled")
 	}
 
 	deps.l.Info("Setup completed.")
@@ -665,11 +677,11 @@ func main() {
 	if err != nil {
 		l.Panicf("cannot load victoriametrics params problem: %+v", err)
 	}
-	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams)
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams, cfg.Config.Services.VictoriaMetrics)
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF)
+	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF, cfg.Config.Services.VMAlert)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
@@ -694,7 +706,7 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams, cfg.Config.Services.Supervisord)
 
 	telemetry, err := telemetry.NewService(db, version.Version)
 	if err != nil {
@@ -724,12 +736,14 @@ func main() {
 	prom.MustRegister(checksService)
 
 	// Integrated alerts services
-	templatesService, err := ia.NewTemplatesService(db)
+	templatesService, err := ia.NewTemplatesService(db, cfg.Config.Services.Management.IntegratedAlerting)
 	if err != nil {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
 	// We should collect templates before rules service created, because it will regenerate rule files on startup.
-	templatesService.CollectTemplates(ctx)
+	if cfg.Config.Services.Management.IntegratedAlerting.Enabled {
+		templatesService.CollectTemplates(ctx)
+	}
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager)
 	alertsService := ia.NewAlertsService(db, alertManager, templatesService)
 

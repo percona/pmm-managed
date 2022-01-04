@@ -958,7 +958,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	defer cancel()
 
 	var accessToken string
-	if ssoDetails, err := models.GetPerconaSSODetails(nCtx, s.db.Querier); err == nil {
+	if ssoDetails, err, _ := models.GetPerconaSSODetails(nCtx, s.db.Querier); err == nil {
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 

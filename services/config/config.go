@@ -19,7 +19,11 @@ package config
 import (
 	_ "embed"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/management/ia"
+	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"github.com/percona/pmm-managed/services/victoriametrics"
+	"github.com/percona/pmm-managed/services/vmalert"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -42,7 +46,13 @@ type Service struct {
 
 type Config struct {
 	Services struct {
-		AlertManager alertmanager.Config `yaml:"alert_manager"`
+		AlertManager    alertmanager.Config    `yaml:"alert_manager"`
+		VMAlert         vmalert.Config         `yaml:"vmalert"`
+		VictoriaMetrics victoriametrics.Config `yaml:"victoria_metrics"`
+		Supervisord     supervisord.Config     `yaml:"supervisord"`
+		Management      struct {
+			IntegratedAlerting ia.Config `yaml:"ia"`
+		} `yaml:"management"`
 	} `yaml:"services"`
 	Telemetry []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
 }
@@ -81,6 +91,19 @@ func (s *Service) Load() error {
 		if err := yaml.Unmarshal([]byte(defaultConfig), &cfg); err != nil {
 			return errors.Wrapf(err, "cannot unmashal config [%s]", configPath)
 		}
+	}
+
+	if cfg.Services.Management.IntegratedAlerting.TemplatesDir == nil {
+		*cfg.Services.Management.IntegratedAlerting.TemplatesDir = "/srv/ia/templates"
+	}
+	if cfg.Services.Management.IntegratedAlerting.RulesDir == nil {
+		*cfg.Services.Management.IntegratedAlerting.RulesDir = "/etc/ia/rules"
+	}
+	if cfg.Services.Management.IntegratedAlerting.DirOwner == nil {
+		*cfg.Services.Management.IntegratedAlerting.DirOwner = "pmm"
+	}
+	if cfg.Services.Management.IntegratedAlerting.DirOwnerGroup == nil {
+		*cfg.Services.Management.IntegratedAlerting.DirOwnerGroup = "pmm"
 	}
 
 	s.Config = cfg

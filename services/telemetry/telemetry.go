@@ -346,7 +346,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
 	var accessToken string
-	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+	if ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
 		accessToken = ssoDetails.AccessToken.AccessToken
 	}
 

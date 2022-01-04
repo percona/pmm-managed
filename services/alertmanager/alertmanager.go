@@ -902,8 +902,7 @@ func (svc *Service) unsilenceAlerts(ctx context.Context, alerts []*ammodels.Gett
 // IsReady verifies that Alertmanager works.
 func (svc *Service) IsReady(ctx context.Context) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip IsReady")
-		return nil
+		return errors.Errorf("service is disabled")
 	}
 
 	u := "http://127.0.0.1:9093/alertmanager/-/ready"
