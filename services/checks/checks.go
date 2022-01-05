@@ -83,7 +83,7 @@ var (
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
 	agentsRegistry      agentsRegistry
-	alertmanagerService alertmanagerService
+	alertmanagerService AlertmanagerService
 	db                  *reform.DB
 	alertsRegistry      *registry
 
@@ -107,7 +107,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) (*Service, error) {
+func New(agentsRegistry agentsRegistry, alertmanagerService AlertmanagerService, db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
 	resendInterval := defaultResendInterval
@@ -219,18 +219,22 @@ func (s *Service) Run(ctx context.Context) {
 
 // resendAlerts resends collected alerts until ctx is canceled.
 func (s *Service) resendAlerts(ctx context.Context) {
-	t := time.NewTicker(s.resendInterval)
-	defer t.Stop()
+	if s.alertmanagerService.GetConfig().Enabled {
+		t := time.NewTicker(s.resendInterval)
+		defer t.Stop()
 
-	for {
-		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+		for {
+			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			// nothing, continue for loop
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				// nothing, continue for loop
+			}
 		}
+	} else {
+		s.l.Warn("[AlertmanagerService] service is disabled")
 	}
 }
 

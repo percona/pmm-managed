@@ -14,6 +14,36 @@ services:
       rules_dir: "/etc/ia/rules"
       dir_owner: "pmm"
       dir_owner_group: "pmm"
+  telemetry:
+    enabled: true
+    # priority is as follows, from the highest priority
+    #   1. this config value
+    #   2. PERCONA_TEST_SAAS_HOST env variable
+    #   3. check.percona.com
+    #saas_hostname:
+    reporting:
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `interval_env`
+      #   2. this config value
+      interval: 24h
+      interval_env: "PERCONA_TEST_TELEMETRY_INTERVAL"
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `retry_backoff_env`
+      #   2. this config value
+      retry_backoff: 1h
+      retry_backoff_env: "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
+      retry_count: 20
+      send_timeout: 5s
+    v1_url_env: "PERCONA_VERSION_CHECK_URL"
+    # priority is as follows, from the highest priority
+    #   1. value from env name provided by `v1_url_env`
+    #   2. this config value
+    v1_url: https://v.percona.com/
+    endpoints:
+      # %s is substituted with `saas_hostname`
+      report: https://%s/v1/telemetry/Report
+  telemetry_v2:
+    enabled: true
 
 telemetry:
   - id: MySQLVersion

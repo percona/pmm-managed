@@ -94,7 +94,7 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 // Run runs VictoriaMetrics configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip Run")
+		svc.l.Warn("service is disabled, skip Run")
 		return
 	}
 

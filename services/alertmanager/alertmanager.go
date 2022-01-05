@@ -65,6 +65,10 @@ type Service struct {
 	reloadCh chan struct{}
 }
 
+func (svc *Service) GetConfig() Config {
+	return svc.Config
+}
+
 // New creates new service.
 func New(db *reform.DB, config Config) *Service {
 	return &Service{
@@ -82,7 +86,7 @@ func New(db *reform.DB, config Config) *Service {
 // with invalid configuration file (it will fail with "no route provided in config" error).
 func (svc *Service) GenerateBaseConfigs() {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip GenerateBaseConfigs")
+		svc.l.Warn("service is disabled, skip GenerateBaseConfigs")
 		return
 	}
 
@@ -132,7 +136,7 @@ func (svc *Service) Run(ctx context.Context) {
 	// please do similar changes in victoriametrics and vmalert packages.
 
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip Run")
+		svc.l.Warn("service is disabled, skip Run")
 		return
 	}
 
@@ -174,7 +178,7 @@ func (svc *Service) Run(ctx context.Context) {
 // RequestConfigurationUpdate requests Alertmanager configuration update.
 func (svc *Service) RequestConfigurationUpdate() {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip RequestConfigurationUpdate")
+		svc.l.Warn("service is disabled, skip RequestConfigurationUpdate")
 		return
 	}
 
@@ -187,7 +191,7 @@ func (svc *Service) RequestConfigurationUpdate() {
 // updateConfiguration updates Alertmanager configuration.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip updateConfiguration")
+		svc.l.Warn("service is disabled, skip updateConfiguration")
 		return nil
 	}
 
@@ -719,7 +723,7 @@ func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSe
 // to call this method every now and then.
 func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip SendAlerts")
+		svc.l.Warn("service is disabled, skip SendAlerts")
 		return
 	}
 
@@ -741,7 +745,7 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 // GetAlerts returns alerts available in alertmanager.
 func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip GetAlerts")
+		svc.l.Warn("service is disabled, skip GetAlerts")
 		return []*ammodels.GettableAlert{}, nil
 	}
 
@@ -758,7 +762,7 @@ func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, e
 // FindAlertByID searches alert by ID in alertmanager.
 func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.GettableAlert, error) {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip FindAlertByID")
+		svc.l.Warn("service is disabled, skip FindAlertByID")
 		return nil, nil
 	}
 
@@ -800,7 +804,7 @@ func (svc *Service) Silence(ctx context.Context, ids []string) error {
 // Silence mutes alert with specified id.
 func (svc *Service) Silence(ctx context.Context, id string) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip Silence")
+		svc.l.Warn("service is disabled, skip Silence")
 		return nil
 	}
 
@@ -869,7 +873,7 @@ func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
 // Unsilence unmutes alert with specified id.
 func (svc *Service) Unsilence(ctx context.Context, id string) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip Unsilence")
+		svc.l.Warn("service is disabled, skip Unsilence")
 		return nil
 	}
 
