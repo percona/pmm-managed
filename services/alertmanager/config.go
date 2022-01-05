@@ -26,3 +26,6 @@ var notificationLabels = []string{"node_name", "node_id", "service_name", "servi
 type Config struct {
 	Enabled bool `yaml:"enabled"`
 }
+
+func (c *Config) Init() {
+}

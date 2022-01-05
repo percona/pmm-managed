@@ -21,6 +21,7 @@ import (
 	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/supervisord"
+	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/services/vmalert"
@@ -53,6 +54,9 @@ type Config struct {
 		Management      struct {
 			IntegratedAlerting ia.Config `yaml:"ia"`
 		} `yaml:"management"`
+		Telemetry   telemetry.Config `yaml:"telemetry"`
+		TelemetryV2 struct {
+		} `yaml:"telemetry_v2"`
 	} `yaml:"services"`
 	Telemetry []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
 }
@@ -93,18 +97,12 @@ func (s *Service) Load() error {
 		}
 	}
 
-	if cfg.Services.Management.IntegratedAlerting.TemplatesDir == nil {
-		*cfg.Services.Management.IntegratedAlerting.TemplatesDir = "/srv/ia/templates"
-	}
-	if cfg.Services.Management.IntegratedAlerting.RulesDir == nil {
-		*cfg.Services.Management.IntegratedAlerting.RulesDir = "/etc/ia/rules"
-	}
-	if cfg.Services.Management.IntegratedAlerting.DirOwner == nil {
-		*cfg.Services.Management.IntegratedAlerting.DirOwner = "pmm"
-	}
-	if cfg.Services.Management.IntegratedAlerting.DirOwnerGroup == nil {
-		*cfg.Services.Management.IntegratedAlerting.DirOwnerGroup = "pmm"
-	}
+	cfg.Services.AlertManager.Init()
+	cfg.Services.VMAlert.Init()
+	cfg.Services.VictoriaMetrics.Init()
+	cfg.Services.Supervisord.Init()
+	cfg.Services.Management.IntegratedAlerting.Init()
+	cfg.Services.Telemetry.Init()
 
 	s.Config = cfg
 

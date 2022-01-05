@@ -18,6 +18,7 @@ package checks
 
 import (
 	"context"
+	"github.com/percona/pmm-managed/services/alertmanager"
 
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 
@@ -39,8 +40,13 @@ type agentsRegistry interface {
 	StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair) error
 }
 
-// alertmanagerService is is a subset of methods of alertmanager.Service used by this package.
+// AlertmanagerService is is a subset of methods of alertmanager.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
-type alertmanagerService interface {
+type AlertmanagerService interface {
+	GetConfig() alertmanager.Config
 	SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts)
 }
+
+var (
+	_ AlertmanagerService = (*alertmanager.Service)(nil)
+)

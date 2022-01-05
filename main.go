@@ -492,7 +492,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		}
 		deps.vmdb.RequestConfigurationUpdate()
 	} else {
-		deps.l.Debugf("[victoriametrics] service is disabled")
+		deps.l.Warn("[victoriametrics] service is disabled")
 	}
 
 	if deps.vmalert.Config.Enabled {
@@ -503,7 +503,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		}
 		deps.vmalert.RequestConfigurationUpdate()
 	} else {
-		deps.l.Debugf("[vmalert] service is disabled")
+		deps.l.Warn("[vmalert] service is disabled")
 	}
 
 	if deps.alertmanager.Config.Enabled {
@@ -514,7 +514,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		}
 		deps.alertmanager.RequestConfigurationUpdate()
 	} else {
-		deps.l.Debugf("[AlertManager] service is disabled")
+		deps.l.Warn("[AlertManager] service is disabled")
 	}
 
 	deps.l.Info("Setup completed.")
@@ -706,7 +706,7 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams, cfg.Config.Services.Supervisord)
 
-	telemetry, err := telemetry.NewService(db, version.Version)
+	telemetry, err := telemetry.NewService(db, version.Version, cfg.Config.Services.Telemetry)
 	if err != nil {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}

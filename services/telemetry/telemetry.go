@@ -48,33 +48,13 @@ import (
 	"github.com/percona/pmm-managed/utils/saasreq"
 )
 
-const (
-	defaultV1URL        = "https://v.percona.com/"
-	defaultInterval     = 24 * time.Hour
-	defaultRetryBackoff = time.Hour
-	defaultRetryCount   = 20
-
-	// Environment variables that affect telemetry service; only for testing.
-	// DISABLE_TELEMETRY environment variable is handled elsewere.
-	envV1URL        = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envInterval     = "PERCONA_TEST_TELEMETRY_INTERVAL"
-	envRetryBackoff = "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
-
-	timeout = 5 * time.Second
-)
-
 // Service is responsible for interactions with Percona Check / Telemetry service.
 type Service struct {
+	config     Config
 	db         *reform.DB
 	pmmVersion string
 	start      time.Time
 	l          *logrus.Entry
-
-	v1URL        string
-	v2Host       string
-	interval     time.Duration
-	retryBackoff time.Duration
-	retryCount   int
 
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
@@ -82,40 +62,39 @@ type Service struct {
 }
 
 // NewService creates a new service with given UUID and PMM version.
-func NewService(db *reform.DB, pmmVersion string) (*Service, error) {
+func NewService(db *reform.DB, pmmVersion string, config Config) (*Service, error) {
 	l := logrus.WithField("component", "telemetry")
 
-	host, err := envvars.GetSAASHost()
-	if err != nil {
-		return nil, err
+	if config.SaasHostname == "" {
+		host, err := envvars.GetSAASHost()
+		if err != nil {
+			return nil, err
+		}
+		config.SaasHostname = host
 	}
 
 	s := &Service{
-		db:           db,
-		pmmVersion:   pmmVersion,
-		start:        time.Now(),
-		l:            l,
-		v1URL:        defaultV1URL,
-		v2Host:       host,
-		interval:     defaultInterval,
-		retryBackoff: defaultRetryBackoff,
-		retryCount:   defaultRetryCount,
+		config:     config,
+		db:         db,
+		pmmVersion: pmmVersion,
+		start:      time.Now(),
+		l:          l,
 	}
 
 	s.sDistributionMethod, s.tDistributionMethod, s.os = getDistributionMethodAndOS(l)
 
-	if u := os.Getenv(envV1URL); u != "" {
+	if u := os.Getenv(s.config.V1URLEnv); u != "" {
 		l.Warnf("v1URL changed to %q.", u)
-		s.v1URL = u
+		s.config.V1URL = u
 	}
 
-	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
+	if d, err := time.ParseDuration(os.Getenv(s.config.Reporting.IntervalEnv)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
-		s.interval = d
+		s.config.Reporting.Interval = d
 	}
-	if d, err := time.ParseDuration(os.Getenv(envRetryBackoff)); err == nil && d > 0 {
+	if d, err := time.ParseDuration(os.Getenv(s.config.Reporting.RetryBackoffEnv)); err == nil && d > 0 {
 		l.Warnf("Retry backoff changed to %s.", d)
-		s.retryBackoff = d
+		s.config.Reporting.RetryBackoff = d
 	}
 
 	s.l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, tDistributionMethod=%q.",
@@ -125,9 +104,9 @@ func NewService(db *reform.DB, pmmVersion string) (*Service, error) {
 }
 
 func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, events.DistributionMethod, string) {
-	b, err := ioutil.ReadFile("/srv/pmm-distribution")
+	b, err := ioutil.ReadFile(distributionInfoFilePath)
 	if err != nil {
-		l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
+		l.Debugf("Failed to read %s: %s", distributionInfoFilePath, err)
 	}
 
 	b = bytes.ToLower(bytes.TrimSpace(b))
@@ -141,8 +120,8 @@ func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, e
 	case "digitalocean":
 		return serverpb.DistributionMethod_DO, events.DistributionMethod_DO, "digitalocean"
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
-		if b, err = ioutil.ReadFile("/proc/version"); err != nil {
-			l.Debugf("Failed to read /proc/version: %s", err)
+		if b, err = ioutil.ReadFile(osInfoFilePath); err != nil {
+			l.Debugf("Failed to read %s: %s", osInfoFilePath, err)
 		}
 		return serverpb.DistributionMethod_DOCKER, events.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
 	default:
@@ -157,7 +136,12 @@ func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 
 // Run runs telemetry service after delay, sending data every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
-	ticker := time.NewTicker(s.interval)
+	if !s.config.Enabled {
+		s.l.Warn("service is disabled, skip Run")
+		return
+	}
+
+	ticker := time.NewTicker(s.config.Reporting.Interval)
 	defer ticker.Stop()
 
 	// delay the very first report too to let users opt-out
@@ -179,7 +163,7 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) sendOneEvent(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, s.interval)
+	ctx, cancel := context.WithTimeout(ctx, s.config.Reporting.SendTimeout)
 	defer cancel()
 
 	var settings *models.Settings
@@ -234,19 +218,19 @@ func (s *Service) makeV1Payload(uuid string) []byte {
 }
 
 func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
-	if s.v1URL == "" {
+	if s.config.V1URL == "" {
 		return errors.New("v1 telemetry disabled via the empty URL")
 	}
 
 	body := bytes.NewReader(data)
-	req, err := http.NewRequest("POST", s.v1URL, body)
+	req, err := http.NewRequest("POST", s.config.V1URL, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Content-Type", "plain/text")
 	req.Header.Add("X-Percona-Toolkit-Tool", "pmm")
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, s.config.Reporting.SendTimeout)
 	defer cancel()
 	req = req.WithContext(ctx)
 
@@ -312,7 +296,7 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 }
 
 func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.ReportRequest) error {
-	if s.v2Host == "" {
+	if s.config.SaasHostname == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
 
@@ -321,17 +305,17 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 	for {
 		err = s.sendV2Request(ctx, req)
 		attempt++
-		s.l.Debugf("sendV2Request (attempt %d/%d) result: %v", attempt, s.retryCount, err)
+		s.l.Debugf("sendV2Request (attempt %d/%d) result: %v", attempt, s.config.Reporting.RetryCount, err)
 		if err == nil {
 			return nil
 		}
 
-		if attempt >= s.retryCount {
+		if attempt >= s.config.Reporting.RetryCount {
 			s.l.Debug("Failed to send v2 event, will not retry (too much attempts).")
 			return err
 		}
 
-		retryCtx, retryCancel := context.WithTimeout(ctx, s.retryBackoff)
+		retryCtx, retryCancel := context.WithTimeout(ctx, s.config.Reporting.RetryBackoff)
 		<-retryCtx.Done()
 		retryCancel()
 
@@ -343,7 +327,7 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 }
 
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
-	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
+	s.l.Debugf("Using %s as telemetry host.", s.config.SaasHostname)
 
 	var accessToken string
 	if ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
@@ -355,8 +339,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		return err
 	}
 
-	endpoint := fmt.Sprintf("https://%s/v1/telemetry/Report", s.v2Host)
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, bytes.NewReader(reqByte))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte))
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

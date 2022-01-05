@@ -87,7 +87,7 @@ func NewVMAlert(externalRules *ExternalRules, baseURL string, config Config) (*S
 // Run runs VMAlert configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip Run")
+		svc.l.Warn("service is disabled, skip Run")
 		return
 	}
 
@@ -141,7 +141,7 @@ func (svc *Service) RequestConfigurationUpdate() {
 // compares it with cached and replace if needed.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip updateConfiguration")
+		svc.l.Warn("service is disabled, skip updateConfiguration")
 		return nil
 	}
 
@@ -163,7 +163,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 // reload asks VMAlert to reload configuration.
 func (svc *Service) reload(ctx context.Context) error {
 	if !svc.Config.Enabled {
-		svc.l.Debugf("service is disabled, skip reload")
+		svc.l.Warn("service is disabled, skip reload")
 		return nil
 	}
 

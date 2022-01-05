@@ -94,7 +94,7 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.Vi
 // Run reads supervisord's log (maintail) and sends events to subscribers.
 func (s *Service) Run(ctx context.Context) {
 	if !s.Config.Enabled {
-		s.l.Debugf("service is disabled, skip Run")
+		s.l.Warn("service is disabled, skip Run")
 		return
 	}
 
@@ -518,7 +518,7 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 // UpdateConfiguration updates Prometheus, Alertmanager, Grafana and qan-api2 configurations, restarting them if needed.
 func (s *Service) UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error {
 	if !s.Config.Enabled {
-		s.l.Debugf("service is disabled, skip UpdateConfiguration")
+		s.l.Warn("service is disabled, skip UpdateConfiguration")
 		return nil
 	}
 
@@ -560,7 +560,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings, ssoDetails *mod
 // RestartSupervisedService restarts given service.
 func (s *Service) RestartSupervisedService(serviceName string) error {
 	if !s.Config.Enabled {
-		s.l.Debugf("service is disabled, skip RestartSupervisedService")
+		s.l.Warn("service is disabled, skip RestartSupervisedService")
 		return nil
 	}
 
