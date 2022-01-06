@@ -59,5 +59,5 @@ func (c *Config) Init() error {
 }
 
 func (c *Config) ReportEndpointURL() string {
-	return fmt.Sprintf(c.SaasHostname, c.SaasHostname)
+	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
 }
