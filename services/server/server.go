@@ -718,6 +718,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		s.checksService.CleanupAlerts()
 	}
 
+	// When telemetry state is switched force alert templates and STT checks files collection.
+	// If telemetry switched off that will drop previously downloaded files.
 	if oldSettings.Telemetry.Disabled != newSettings.Telemetry.Disabled {
 		s.templatesService.CollectTemplates(ctx)
 		if !sttStarted {
