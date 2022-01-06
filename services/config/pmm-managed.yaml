@@ -74,6 +74,15 @@ extra_headers:
 #        Auth-Status: "0"
 #        Grpc-Metadata-X-Real-IP: "188.255.42.42"
 
+extra_headers:
+  enabled: false
+#  endpoints:
+#    - method: POST
+#      endpoint: http://localhost:20202/v1/telemetry/Report
+#      headers:
+#        Auth-Status: "0"
+#        Grpc-Metadata-X-Real-IP: "188.255.42.42"
+
 telemetry:
   - id: MySQLVersion
     source: VM
