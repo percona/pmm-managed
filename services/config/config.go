@@ -58,7 +58,15 @@ type Config struct {
 		TelemetryV2 struct {
 		} `yaml:"telemetry_v2"`
 	} `yaml:"services"`
-	Telemetry []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
+	Telemetry    []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
+	ExtraHeaders struct {
+		Enabled   bool `yaml:"enabled"`
+		Endpoints []struct {
+			Method   string            `yaml:"method"`
+			Endpoint string            `yaml:"endpoint"`
+			Headers  map[string]string `yaml:"headers"`
+		} `yaml:"endpoints"`
+	} `yaml:"extra_headers"`
 }
 
 func NewService() *Service {
@@ -102,7 +110,11 @@ func (s *Service) Load() error {
 	cfg.Services.VictoriaMetrics.Init()
 	cfg.Services.Supervisord.Init()
 	cfg.Services.Management.IntegratedAlerting.Init()
-	cfg.Services.Telemetry.Init()
+	if err := cfg.Services.Telemetry.Init(); err != nil {
+		return err
+	}
+
+	cfg.configureSaasReqEnrichment()
 
 	s.Config = cfg
 
