@@ -80,6 +80,16 @@ var (
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
+// CheckSet is set of all checks
+type CheckSet struct {
+	l *logrus.Logger
+
+	m                sync.Mutex
+	mySQLChecks      map[string]check.Check
+	postgreSQLChecks map[string]check.Check
+	mongoDBChecks    map[string]check.Check
+}
+
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
 	agentsRegistry      agentsRegistry
@@ -1146,6 +1156,80 @@ func (s *Service) Describe(ch chan<- *prom.Desc) {
 func (s *Service) Collect(ch chan<- prom.Metric) {
 	s.mScriptsExecuted.Collect(ch)
 	s.mAlertsGenerated.Collect(ch)
+}
+
+func (cs *CheckSet) totalChecks() int {
+	return len(cs.mySQLChecks) + len(cs.postgreSQLChecks) + len(cs.mongoDBChecks)
+}
+
+func (cs *CheckSet) getAllChecks() []check.Check {
+	cs.m.Lock()
+	defer cs.m.Unlock()
+
+	checks := make([]check.Check, 0, cs.totalChecks())
+
+	for _, c := range cs.mySQLChecks {
+		checks = append(checks, c)
+	}
+
+	for _, c := range cs.postgreSQLChecks {
+		checks = append(checks, c)
+	}
+
+	for _, c := range cs.mongoDBChecks {
+		checks = append(checks, c)
+	}
+
+	return checks
+}
+
+func (cs *CheckSet) getCheckMap() map[string]map[string]check.Check {
+	cs.m.Lock()
+	defer cs.m.Unlock()
+
+	checkMap := make(map[string]map[string]check.Check)
+	checkMap["sql"] = cs.mySQLChecks
+	checkMap["postgres"] = cs.postgreSQLChecks
+	checkMap["mongo"] = cs.mongoDBChecks
+
+	return checkMap
+}
+
+func (cs *CheckSet) updateChecks(checks []check.Check) {
+	cs.m.Lock()
+	defer cs.m.Unlock()
+
+	for _, newCheck := range checks {
+
+		switch newCheck.Type {
+		case check.MySQLSelect:
+			fallthrough
+		case check.MySQLShow:
+			oldCheck := cs.mySQLChecks[newCheck.Name]
+			cs.mySQLChecks[newCheck.Name] = newCheck
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+
+		case check.PostgreSQLSelect:
+			fallthrough
+		case check.PostgreSQLShow:
+			oldCheck := cs.postgreSQLChecks[newCheck.Name]
+			cs.postgreSQLChecks[newCheck.Name] = newCheck
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+
+		case check.MongoDBGetParameter:
+			fallthrough
+		case check.MongoDBBuildInfo:
+			fallthrough
+		case check.MongoDBGetCmdLineOpts:
+			oldCheck := cs.mongoDBChecks[newCheck.Name]
+			cs.mongoDBChecks[newCheck.Name] = newCheck
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+
+		default:
+			cs.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)
+		}
+	}
+
 }
 
 // check interfaces
