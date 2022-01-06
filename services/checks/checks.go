@@ -86,7 +86,7 @@ var (
 
 // CheckSet is set of all checks
 type CheckSet struct {
-	l *logrus.Logger
+	l *logrus.Entry
 
 	mem              sync.Mutex
 	db               sync.Mutex
@@ -140,6 +140,13 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertmanagerService: alertmanagerService,
 		db:                  db,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
+
+		checks: CheckSet{
+			l:                l,
+			mySQLChecks:      make(map[string]check.Check),
+			postgreSQLChecks: make(map[string]check.Check),
+			mongoDBChecks:    make(map[string]check.Check),
+		},
 
 		l:               l,
 		host:            host,
