@@ -71,6 +71,10 @@ const (
 	maxSupportedVersion = 1
 
 	scriptTimeout = 5 * time.Second // time limit for running pmm-managed-starlark
+
+	mySQLKey      = "mysql"
+	postgreSQLKey = "postgres"
+	mongoDBKey    = "mongo"
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -84,7 +88,8 @@ var (
 type CheckSet struct {
 	l *logrus.Logger
 
-	m                sync.Mutex
+	mem              sync.Mutex
+	db               sync.Mutex
 	mySQLChecks      map[string]check.Check
 	postgreSQLChecks map[string]check.Check
 	mongoDBChecks    map[string]check.Check
@@ -104,10 +109,7 @@ type Service struct {
 	resendInterval  time.Duration
 	localChecksFile string // For testing
 
-	cm               sync.Mutex
-	mySQLChecks      map[string]check.Check
-	postgreSQLChecks map[string]check.Check
-	mongoDBChecks    map[string]check.Check
+	checks CheckSet
 
 	tm             sync.Mutex
 	rareTicker     *time.Ticker
@@ -326,57 +328,9 @@ func (s *Service) CleanupAlerts() {
 	s.alertsRegistry.cleanup()
 }
 
-// getMySQLChecks returns available MySQL checks.
-func (s *Service) getMySQLChecks() map[string]check.Check {
-	s.cm.Lock()
-	defer s.cm.Unlock()
-
-	r := make(map[string]check.Check)
-	for k, v := range s.mySQLChecks {
-		r[k] = v
-	}
-	return r
-}
-
-// getPostgreSQLChecks returns available PostgreSQL checks.
-func (s *Service) getPostgreSQLChecks() map[string]check.Check {
-	s.cm.Lock()
-	defer s.cm.Unlock()
-
-	r := make(map[string]check.Check)
-	for k, v := range s.postgreSQLChecks {
-		r[k] = v
-	}
-	return r
-}
-
-// getMongoDBChecks returns available MongoDB checks.
-func (s *Service) getMongoDBChecks() map[string]check.Check {
-	s.cm.Lock()
-	defer s.cm.Unlock()
-
-	r := make(map[string]check.Check)
-	for k, v := range s.mongoDBChecks {
-		r[k] = v
-	}
-	return r
-}
-
 // GetAllChecks returns all available checks.
 func (s *Service) GetAllChecks() map[string]check.Check {
-	checks := make(map[string]check.Check)
-	for k, v := range s.getMySQLChecks() {
-		checks[k] = v
-	}
-
-	for k, v := range s.getPostgreSQLChecks() {
-		checks[k] = v
-	}
-
-	for k, v := range s.getMongoDBChecks() {
-		checks[k] = v
-	}
-	return checks
+	return s.checks.getAllChecks()
 }
 
 // GetDisabledChecks returns disabled checks.
@@ -395,7 +349,7 @@ func (s *Service) DisableChecks(checkNames []string) error {
 		return nil
 	}
 
-	m := s.GetAllChecks()
+	m := s.checks.getAllChecks()
 
 	for _, c := range checkNames {
 		if _, ok := m[c]; !ok {
@@ -435,11 +389,13 @@ func (s *Service) EnableChecks(checkNames []string) error {
 
 // ChangeInterval changes a check's interval to the value received from the UI.
 func (s *Service) ChangeInterval(params map[string]check.Interval) error {
-	checkMap := s.GetAllChecks()
+	checkMap := s.checks.getAllChecks()
 	if len(checkMap) == 0 {
 		return errors.New("no checks loaded")
 	}
 
+	s.checks.db.Lock()
+	defer s.checks.db.Unlock()
 	for name, interval := range params {
 		c, ok := checkMap[name]
 		if !ok {
@@ -461,7 +417,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 					return err
 				}
 				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
-				s.updateCheck(c)
+				s.checks.updateChecks([]check.Check{c})
 				return nil
 			}
 
@@ -472,7 +428,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 					return err
 				}
 				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-				s.updateCheck(c)
+				s.checks.updateChecks([]check.Check{c})
 				return nil
 			}
 			return err
@@ -483,43 +439,6 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 	}
 
 	return nil
-}
-
-// updateCheck updates a check with an updated interval in the appropriate check group.
-func (s *Service) updateCheck(newCheck check.Check) {
-	switch newCheck.Type {
-	case check.MySQLSelect:
-		fallthrough
-	case check.MySQLShow:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.mySQLChecks[newCheck.Name]
-		s.mySQLChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-
-	case check.PostgreSQLSelect:
-		fallthrough
-	case check.PostgreSQLShow:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.postgreSQLChecks[newCheck.Name]
-		s.postgreSQLChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-
-	case check.MongoDBGetParameter:
-		fallthrough
-	case check.MongoDBBuildInfo:
-		fallthrough
-	case check.MongoDBGetCmdLineOpts:
-		s.cm.Lock()
-		defer s.cm.Unlock()
-		oldCheck := s.mongoDBChecks[newCheck.Name]
-		s.mongoDBChecks[newCheck.Name] = newCheck
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-
-	default:
-		s.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)
-	}
 }
 
 // waitForResult periodically checks result state and returns it when complete.
@@ -627,15 +546,17 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 
 	var checkResults []services.STTCheckResult
 
-	mySQLChecks := s.filterChecks(s.getMySQLChecks(), intervalGroup, disabledChecks, checkNames)
+	checksMap := s.checks.getCheckMap()
+
+	mySQLChecks := s.filterChecks(checksMap[mySQLKey], intervalGroup, disabledChecks, checkNames)
 	mySQLCheckResults := s.executeMySQLChecks(ctx, mySQLChecks)
 	checkResults = append(checkResults, mySQLCheckResults...)
 
-	postgreSQLChecks := s.filterChecks(s.getPostgreSQLChecks(), intervalGroup, disabledChecks, checkNames)
+	postgreSQLChecks := s.filterChecks(checksMap[postgreSQLKey], intervalGroup, disabledChecks, checkNames)
 	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx, postgreSQLChecks)
 	checkResults = append(checkResults, postgreSQLCheckResults...)
 
-	mongoDBChecks := s.filterChecks(s.getMongoDBChecks(), intervalGroup, disabledChecks, checkNames)
+	mongoDBChecks := s.filterChecks(checksMap[mongoDBKey], intervalGroup, disabledChecks, checkNames)
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx, mongoDBChecks)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
@@ -952,38 +873,6 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 	return targets, nil
 }
 
-// groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
-func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQLChecks, mongoDBChecks map[string]check.Check) {
-	mySQLChecks = make(map[string]check.Check)
-	postgreSQLChecks = make(map[string]check.Check)
-	mongoDBChecks = make(map[string]check.Check)
-	for _, c := range checks {
-		switch c.Type {
-		case check.MySQLSelect:
-			fallthrough
-		case check.MySQLShow:
-			mySQLChecks[c.Name] = c
-
-		case check.PostgreSQLSelect:
-			fallthrough
-		case check.PostgreSQLShow:
-			postgreSQLChecks[c.Name] = c
-
-		case check.MongoDBGetParameter:
-			fallthrough
-		case check.MongoDBBuildInfo:
-			fallthrough
-		case check.MongoDBGetCmdLineOpts:
-			mongoDBChecks[c.Name] = c
-
-		default:
-			s.l.Warnf("Unknown check type %s, skip it.", c.Type)
-		}
-	}
-
-	return
-}
-
 // filterChecksByInterval filters checks according to their interval buckets.
 func filterChecksByInterval(checks []check.Check, interval check.Interval) []check.Check {
 	if interval == "" { // all checks
@@ -1022,7 +911,9 @@ func (s *Service) collectChecks(ctx context.Context) {
 
 	checks = s.filterSupportedChecks(checks)
 
+	s.checks.db.Lock()
 	checkSettingsMap, err := models.FindCheckSettings(s.db.Querier)
+	s.checks.db.Unlock()
 	if err != nil && err != reform.ErrNoRows {
 		s.l.Errorf("Failed to retrieve checks settings: %s.", err)
 		return
@@ -1035,9 +926,7 @@ func (s *Service) collectChecks(ctx context.Context) {
 		}
 	}
 
-	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
-
-	s.updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks)
+	s.checks.updateChecks(checks)
 }
 
 // loadLocalCheck loads checks form local file.
@@ -1125,16 +1014,6 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 	return res
 }
 
-// updateChecks update service checks filed value under mutex.
-func (s *Service) updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks map[string]check.Check) {
-	s.cm.Lock()
-	defer s.cm.Unlock()
-
-	s.mySQLChecks = mySQLChecks
-	s.postgreSQLChecks = postgreSQLChecks
-	s.mongoDBChecks = mongoDBChecks
-}
-
 // UpdateIntervals updates STT restart timers intervals.
 func (s *Service) UpdateIntervals(rare, standard, frequent time.Duration) {
 	s.tm.Lock()
@@ -1158,63 +1037,74 @@ func (s *Service) Collect(ch chan<- prom.Metric) {
 	s.mAlertsGenerated.Collect(ch)
 }
 
-func (cs *CheckSet) totalChecks() int {
-	return len(cs.mySQLChecks) + len(cs.postgreSQLChecks) + len(cs.mongoDBChecks)
-}
+func (cs *CheckSet) getAllChecks() map[string]check.Check {
+	cs.mem.Lock()
+	defer cs.mem.Unlock()
 
-func (cs *CheckSet) getAllChecks() []check.Check {
-	cs.m.Lock()
-	defer cs.m.Unlock()
-
-	checks := make([]check.Check, 0, cs.totalChecks())
-
-	for _, c := range cs.mySQLChecks {
-		checks = append(checks, c)
+	checks := make(map[string]check.Check)
+	for k, v := range cs.mySQLChecks {
+		checks[k] = v
 	}
 
-	for _, c := range cs.postgreSQLChecks {
-		checks = append(checks, c)
+	for k, v := range cs.postgreSQLChecks {
+		checks[k] = v
 	}
 
-	for _, c := range cs.mongoDBChecks {
-		checks = append(checks, c)
+	for k, v := range cs.mongoDBChecks {
+		checks[k] = v
 	}
 
 	return checks
 }
 
 func (cs *CheckSet) getCheckMap() map[string]map[string]check.Check {
-	cs.m.Lock()
-	defer cs.m.Unlock()
+	cs.mem.Lock()
+	defer cs.mem.Unlock()
+
+	checksMySQL := make(map[string]check.Check)
+	for k, v := range cs.mySQLChecks {
+		checksMySQL[k] = v
+	}
+
+	checksPostgreSQL := make(map[string]check.Check)
+	for k, v := range cs.postgreSQLChecks {
+		checksPostgreSQL[k] = v
+	}
+
+	checksMongoDB := make(map[string]check.Check)
+	for k, v := range cs.mongoDBChecks {
+		checksMongoDB[k] = v
+	}
 
 	checkMap := make(map[string]map[string]check.Check)
-	checkMap["sql"] = cs.mySQLChecks
-	checkMap["postgres"] = cs.postgreSQLChecks
-	checkMap["mongo"] = cs.mongoDBChecks
+	checkMap[mySQLKey] = checksMySQL
+	checkMap[postgreSQLKey] = checksPostgreSQL
+	checkMap[mongoDBKey] = checksMongoDB
 
 	return checkMap
 }
 
 func (cs *CheckSet) updateChecks(checks []check.Check) {
-	cs.m.Lock()
-	defer cs.m.Unlock()
+	cs.mem.Lock()
+	defer cs.mem.Unlock()
 
 	for _, newCheck := range checks {
 
 		switch newCheck.Type {
+
 		case check.MySQLSelect:
 			fallthrough
 		case check.MySQLShow:
 			oldCheck := cs.mySQLChecks[newCheck.Name]
 			cs.mySQLChecks[newCheck.Name] = newCheck
-			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", newCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 		case check.PostgreSQLSelect:
 			fallthrough
 		case check.PostgreSQLShow:
 			oldCheck := cs.postgreSQLChecks[newCheck.Name]
 			cs.postgreSQLChecks[newCheck.Name] = newCheck
-			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", newCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 		case check.MongoDBGetParameter:
 			fallthrough
@@ -1223,7 +1113,7 @@ func (cs *CheckSet) updateChecks(checks []check.Check) {
 		case check.MongoDBGetCmdLineOpts:
 			oldCheck := cs.mongoDBChecks[newCheck.Name]
 			cs.mongoDBChecks[newCheck.Name] = newCheck
-			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+			cs.l.Infof("Updated check: %s, interval changed from: %s to: %s", newCheck.Name, oldCheck.Interval, newCheck.Interval)
 
 		default:
 			cs.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)

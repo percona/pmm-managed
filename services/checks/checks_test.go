@@ -68,7 +68,7 @@ func TestDownloadChecks(t *testing.T) {
 	s.host = devChecksHost
 	s.publicKeys = []string{devChecksPublicKey}
 
-	assert.Empty(t, s.GetAllChecks())
+	assert.Empty(t, s.checks.getAllChecks())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -113,10 +113,10 @@ func TestCollectChecks(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		mySQLChecks := s.getMySQLChecks()
-		postgreSQLChecks := s.getPostgreSQLChecks()
-		mongoDBChecks := s.getMongoDBChecks()
-		allChecks := s.GetAllChecks()
+		mySQLChecks := s.checks.mySQLChecks
+		postgreSQLChecks := s.checks.postgreSQLChecks
+		mongoDBChecks := s.checks.mongoDBChecks
+		allChecks := s.checks.getAllChecks()
 
 		require.Len(t, mySQLChecks, 1)
 		require.Len(t, postgreSQLChecks, 1)
@@ -137,9 +137,9 @@ func TestCollectChecks(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		assert.NotEmpty(t, s.mySQLChecks)
-		assert.NotEmpty(t, s.postgreSQLChecks)
-		assert.NotEmpty(t, s.mongoDBChecks)
+		assert.NotEmpty(t, s.checks.mySQLChecks)
+		assert.NotEmpty(t, s.checks.postgreSQLChecks)
+		assert.NotEmpty(t, s.checks.mongoDBChecks)
 	})
 }
 
@@ -153,7 +153,7 @@ func TestDisableChecks(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		checks := s.GetAllChecks()
+		checks := s.checks.getAllChecks()
 		assert.Len(t, checks, 3)
 
 		disChecks, err := s.GetDisabledChecks()
@@ -177,7 +177,7 @@ func TestDisableChecks(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		checks := s.GetAllChecks()
+		checks := s.checks.getAllChecks()
 		assert.Len(t, checks, 3)
 
 		disChecks, err := s.GetDisabledChecks()
@@ -223,7 +223,7 @@ func TestEnableChecks(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		checks := s.GetAllChecks()
+		checks := s.checks.getAllChecks()
 		assert.Len(t, checks, 3)
 
 		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name, checks["good_check_pg"].Name, checks["good_check_mongo"].Name})
@@ -250,7 +250,7 @@ func TestChangeInterval(t *testing.T) {
 
 		s.collectChecks(context.Background())
 
-		checks := s.GetAllChecks()
+		checks := s.checks.getAllChecks()
 		assert.Len(t, checks, 3)
 
 		// change all check intervals from standard to rare
@@ -261,7 +261,7 @@ func TestChangeInterval(t *testing.T) {
 		err = s.ChangeInterval(params)
 		require.NoError(t, err)
 
-		updatedChecks := s.GetAllChecks()
+		updatedChecks := s.checks.getAllChecks()
 		for _, c := range updatedChecks {
 			assert.Equal(t, check.Rare, c.Interval)
 		}
@@ -277,7 +277,7 @@ func TestChangeInterval(t *testing.T) {
 			err = s.StartChecks(context.Background(), "", nil)
 			require.NoError(t, err)
 
-			checks := s.GetAllChecks()
+			checks := s.checks.getAllChecks()
 			for _, c := range checks {
 				assert.Equal(t, check.Rare, c.Interval)
 			}
@@ -427,7 +427,11 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	s, err := New(nil, nil, nil)
 	require.NoError(t, err)
-	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
+
+	s.checks.updateChecks(checks)
+	mySQLChecks := s.checks.mySQLChecks
+	postgreSQLChecks := s.checks.postgreSQLChecks
+	mongoDBChecks := s.checks.mongoDBChecks
 
 	require.Len(t, mySQLChecks, 2)
 	require.Len(t, postgreSQLChecks, 2)
