@@ -131,6 +131,59 @@ func TestAgentHelpers(t *testing.T) {
 					SSLKey:  "ssl_key",
 				},
 			},
+			&models.Agent{
+				AgentID:       "A8",
+				AgentType:     models.MongoDBExporterType,
+				PMMAgentID:    pointer.ToString("A8"),
+				RunsOnNodeID:  nil,
+				NodeID:        pointer.ToString("N1"),
+				PushMetrics:   false,
+				ListenPort:    pointer.ToUint16(8200),
+				TLS:           true,
+				TLSSkipVerify: true,
+				MongoDBOptions: &models.MongoDBOptions{
+					TLSCertificateKey:             "tls_certificate_key",
+					TLSCertificateKeyFilePassword: "tls_certificate_key_file_password",
+					TLSCa:                         "tls_ca",
+					AuthenticationMechanism:       "authentication_mechanism",
+					AuthenticationDatabase:        "authentication_database",
+					StatsCollections:              nil,
+					CollectionsLimit:              0, // no limit
+				},
+			},
+			&models.Agent{
+				AgentID:       "A9",
+				AgentType:     models.MongoDBExporterType,
+				PMMAgentID:    pointer.ToString("A9"),
+				RunsOnNodeID:  nil,
+				NodeID:        pointer.ToString("N1"),
+				PushMetrics:   false,
+				ListenPort:    pointer.ToUint16(8200),
+				TLS:           true,
+				TLSSkipVerify: true,
+				MongoDBOptions: &models.MongoDBOptions{
+					TLSCertificateKey:             "tls_certificate_key",
+					TLSCertificateKeyFilePassword: "tls_certificate_key_file_password",
+					TLSCa:                         "tls_ca",
+					AuthenticationMechanism:       "authentication_mechanism",
+					AuthenticationDatabase:        "authentication_database",
+					StatsCollections:              []string{"col1", "col2", "col3"},
+					CollectionsLimit:              79014,
+					EnableAllCollectors:           true,
+				},
+			},
+			&models.Agent{
+				AgentID:        "A10",
+				AgentType:      models.MongoDBExporterType,
+				PMMAgentID:     pointer.ToString("A10"),
+				RunsOnNodeID:   nil,
+				NodeID:         pointer.ToString("N1"),
+				PushMetrics:    false,
+				ListenPort:     pointer.ToUint16(8200),
+				TLS:            true,
+				TLSSkipVerify:  true,
+				MongoDBOptions: nil, // this test is specific for nil MongoDBOptions
+			},
 		} {
 			require.NoError(t, q.Insert(str))
 		}
@@ -148,6 +201,21 @@ func TestAgentHelpers(t *testing.T) {
 		agents, err := models.FindAgents(q, models.AgentFilters{NodeID: "N1"})
 		require.NoError(t, err)
 		expected := []*models.Agent{
+			{
+				CreatedAt:      now,
+				UpdatedAt:      now,
+				Status:         models.AgentStatusUnknown,
+				AgentID:        "A10",
+				AgentType:      models.MongoDBExporterType,
+				PMMAgentID:     pointer.ToString("A10"),
+				RunsOnNodeID:   nil,
+				NodeID:         pointer.ToString("N1"),
+				PushMetrics:    false,
+				ListenPort:     pointer.ToUint16(8200),
+				TLS:            true,
+				TLSSkipVerify:  true,
+				MongoDBOptions: nil, // this test is specific for nil MongoDBOptions
+			},
 			{
 				AgentID:      "A3",
 				AgentType:    models.NodeExporterType,
@@ -173,6 +241,49 @@ func TestAgentHelpers(t *testing.T) {
 					SSLCa:   "ssl_ca",
 					SSLCert: "ssl_cert",
 					SSLKey:  "ssl_key",
+				},
+			},
+			{
+				AgentID:       "A8",
+				AgentType:     "mongodb_exporter",
+				NodeID:        pointer.ToStringOrNil("N1"),
+				PMMAgentID:    pointer.ToStringOrNil("A8"),
+				CreatedAt:     now,
+				UpdatedAt:     now,
+				Status:        models.AgentStatusUnknown,
+				ListenPort:    pointer.ToUint16OrNil(8200),
+				TLS:           true,
+				TLSSkipVerify: true,
+				MongoDBOptions: &models.MongoDBOptions{
+					TLSCertificateKey:             "tls_certificate_key",
+					TLSCertificateKeyFilePassword: "tls_certificate_key_file_password",
+					TLSCa:                         "tls_ca",
+					AuthenticationMechanism:       "authentication_mechanism",
+					AuthenticationDatabase:        "authentication_database",
+					StatsCollections:              nil,
+					CollectionsLimit:              0, // no limit
+				},
+			},
+			{
+				AgentID:       "A9",
+				AgentType:     "mongodb_exporter",
+				NodeID:        pointer.ToStringOrNil("N1"),
+				PMMAgentID:    pointer.ToStringOrNil("A9"),
+				CreatedAt:     now,
+				UpdatedAt:     now,
+				Status:        models.AgentStatusUnknown,
+				ListenPort:    pointer.ToUint16OrNil(8200),
+				TLS:           true,
+				TLSSkipVerify: true,
+				MongoDBOptions: &models.MongoDBOptions{
+					TLSCertificateKey:             "tls_certificate_key",
+					TLSCertificateKeyFilePassword: "tls_certificate_key_file_password",
+					TLSCa:                         "tls_ca",
+					AuthenticationMechanism:       "authentication_mechanism",
+					AuthenticationDatabase:        "authentication_database",
+					StatsCollections:              []string{"col1", "col2", "col3"},
+					CollectionsLimit:              79014,
+					EnableAllCollectors:           true,
 				},
 			},
 		}
@@ -410,9 +521,13 @@ func TestAgentHelpers(t *testing.T) {
 
 		// find all agents without push_metrics
 		agents, err = models.FindAgentsForScrapeConfig(q, nil, false)
-		assert.Equal(t, 2, len(agents))
-		assert.Equal(t, "A6", agents[0].AgentID)
-		assert.Equal(t, "A7", agents[1].AgentID)
+		assert.Equal(t, 5, len(agents))
+		assert.Equal(t, "A10", agents[0].AgentID)
+		assert.Equal(t, "A8", agents[1].AgentID)
+		assert.Equal(t, "A9", agents[2].AgentID)
+		assert.Equal(t, "A6", agents[3].AgentID)
+		assert.Equal(t, "A7", agents[4].AgentID)
+
 		require.NoError(t, err)
 	})
 

@@ -19,7 +19,9 @@ package models
 import (
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/pkg/errors"
 )
 
 // MetricsResolutions contains standard VictoriaMetrics metrics resolutions.
@@ -31,10 +33,6 @@ type MetricsResolutions struct {
 
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
-	// Percona Platform user email
-	Email string `json:"email"`
-	// Percona Platform session Id
-	SessionID string `json:"session_id"`
 	// Security Threat Tool enabled
 	STTEnabled bool `json:"stt_enabled"`
 	// List of disabled STT checks
@@ -95,6 +93,9 @@ type Settings struct {
 	BackupManagement struct {
 		Enabled bool `json:"enabled"`
 	} `json:"backup_management"`
+
+	// PMMServerID is generated on the first start of PMM server.
+	PMMServerID string `json:"pmmServerID"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.
@@ -107,6 +108,25 @@ type EmailAlertingSettings struct {
 	Identity   string `json:"identity"`
 	Secret     string `json:"secret"`
 	RequireTLS bool   `json:"require_tls"`
+}
+
+// Validate validates structure's fields.
+func (e *EmailAlertingSettings) Validate() error {
+	if !govalidator.IsEmail(e.From) {
+		return errors.Errorf("invalid \"from\" email %q", e.From)
+	}
+
+	if !govalidator.IsDialString(e.Smarthost) {
+		return errors.New("invalid server address, expected format host:port")
+	}
+
+	if e.Hello != "" {
+		if !govalidator.IsHost(e.Hello) {
+			return errors.New("invalid hello field, expected valid host")
+		}
+	}
+
+	return nil
 }
 
 // SlackAlertingSettings represents Slack settings for Integrated Alerting.

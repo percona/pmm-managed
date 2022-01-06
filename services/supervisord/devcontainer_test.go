@@ -82,7 +82,7 @@ func TestDevContainer(t *testing.T) {
 		assert.True(t, res.Latest.BuildTime.After(gaReleaseDate), "Latest.BuildTime = %s", res.Latest.BuildTime)
 		assert.NotEmpty(t, res.Latest.Repo)
 
-		// We assume that the latest public.ecr.aws/e7j3v3n0/pmm-server:dev-latest image
+		// We assume that the latest perconalab/pmm-server:dev-latest image
 		// always contains the latest pmm-update package versions.
 		// If this test fails, re-pull them and recreate devcontainer.
 		t.Log("Assuming the latest pmm-update version.")
@@ -145,7 +145,7 @@ func TestDevContainer(t *testing.T) {
 			DataRetention: 3600 * time.Hour,
 		}
 
-		b, err := s.marshalConfig(templates.Lookup("victoriametrics"), settings)
+		b, err := s.marshalConfig(templates.Lookup("victoriametrics"), settings, nil)
 		require.NoError(t, err)
 		changed, err := s.saveConfigAndReload("victoriametrics", b)
 		require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestDevContainer(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, changed)
 
-		err = s.UpdateConfiguration(settings)
+		err = s.UpdateConfiguration(settings, nil)
 		require.NoError(t, err)
 	})
 

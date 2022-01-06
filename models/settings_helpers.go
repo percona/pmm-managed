@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
@@ -37,7 +38,6 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	}
 
 	var s Settings
-
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal settings")
 	}
@@ -97,13 +97,6 @@ type ChangeSettingsParams struct {
 	// If true removes Slack alerting settings.
 	RemoveSlackAlertingSettings bool
 
-	// Percona Platform user email
-	Email string
-	// Percona Platform session Id
-	SessionID string
-	// LogOut user from Percona Platform, i.e. remove user email and session id
-	LogOut bool
-
 	// EnableVMCache enables caching for vmdb search queries
 	EnableVMCache bool
 	// DisableVMCache disables caching for vmdb search queries
@@ -119,6 +112,19 @@ type ChangeSettingsParams struct {
 	DisableBackupManagement bool
 }
 
+// SetPMMServerID should be run on start up to generate unique PMM Server ID.
+func SetPMMServerID(q reform.DBTX) error {
+	settings, err := GetSettings(q)
+	if err != nil {
+		return err
+	}
+	if settings.PMMServerID != "" {
+		return nil
+	}
+	settings.PMMServerID = uuid.NewString()
+	return SaveSettings(q, settings)
+}
+
 // UpdateSettings updates only non-zero, non-empty values.
 func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
 	err := ValidateSettings(params)
@@ -129,10 +135,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	settings, err := GetSettings(q)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := validateSettingsConflicts(params, settings); err != nil {
-		return nil, NewInvalidArgumentError(err.Error())
 	}
 
 	if params.DisableUpdates {
@@ -218,19 +220,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.DBaaS.Enabled = false
 	}
 
-	if params.LogOut {
-		settings.SaaS.SessionID = ""
-		settings.SaaS.Email = ""
-	}
-
-	if params.SessionID != "" {
-		settings.SaaS.SessionID = params.SessionID
-	}
-
-	if params.Email != "" {
-		settings.SaaS.Email = params.Email
-	}
-
 	if params.DisableVMCache {
 		settings.VictoriaMetrics.CacheEnabled = false
 	}
@@ -309,21 +298,7 @@ func validateEmailAlertingSettings(params *ChangeSettingsParams) error {
 		return nil
 	}
 
-	if !govalidator.IsEmail(params.EmailAlertingSettings.From) {
-		return errors.Errorf("invalid \"from\" email %q", params.EmailAlertingSettings.From)
-	}
-
-	if !govalidator.IsDialString(params.EmailAlertingSettings.Smarthost) {
-		return errors.New("invalid server address, expected format host:port")
-	}
-
-	if params.EmailAlertingSettings.Hello != "" {
-		if !govalidator.IsHost(params.EmailAlertingSettings.Hello) {
-			return errors.New("invalid hello field, expected valid host")
-		}
-	}
-
-	return nil
+	return params.EmailAlertingSettings.Validate()
 }
 
 // ValidateSettings validates settings changes.
@@ -440,14 +415,6 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 	if params.PMMPublicAddress != "" && params.RemovePMMPublicAddress {
 		return errors.New("both pmm_public_address and remove_pmm_public_address are present")
-	}
-
-	return nil
-}
-
-func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
-	if params.LogOut && (params.Email != "" || params.SessionID != "") {
-		return errors.New("cannot logout while updating Percona Platform user data")
 	}
 
 	return nil

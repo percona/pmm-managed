@@ -41,6 +41,7 @@ import (
 	dbaasClient "github.com/percona/pmm/api/managementpb/dbaas/json/client"
 	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
 	managementClient "github.com/percona/pmm/api/managementpb/json/client"
+	platformClient "github.com/percona/pmm/api/platformpb/json/client"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/sirupsen/logrus"
@@ -127,12 +128,11 @@ func Transport(baseURL *url.URL, insecureTLS bool) *httptransport.Runtime {
 func init() {
 	seed := time.Now().UnixNano()
 	rand.Seed(seed)
-	gofakeit.SetGlobalFaker(gofakeit.NewCustom(NewConcurrentRand(seed)))
-	gofakeit.Seed(seed)
+	gofakeit.SetGlobalFaker(gofakeit.New(seed))
 
 	debugF := flag.Bool("pmm.debug", false, "Enable debug output [PMM_DEBUG].")
 	traceF := flag.Bool("pmm.trace", false, "Enable trace output [PMM_TRACE].")
-	serverURLF := flag.String("pmm.server-url", "https://admin:admin@127.0.0.1:443/", "PMM Server URL [PMM_SERVER_URL].")
+	serverURLF := flag.String("pmm.server-url", "https://admin:admin@localhost/", "PMM Server URL [PMM_SERVER_URL].")
 	serverInsecureTLSF := flag.Bool("pmm.server-insecure-tls", false, "Skip PMM Server TLS certificate validation [PMM_SERVER_INSECURE_TLS].")
 	runUpdateTestF := flag.Bool("pmm.run-update-test", false, "Run PMM Server update test [PMM_RUN_UPDATE_TEST].")
 	kubeconfigF := flag.String("pmm.kubeconfig", "", "Pass kubeconfig file to run DBaaS tests.")
@@ -226,6 +226,7 @@ func init() {
 	amclient.Default = amclient.New(alertmanagerTransport, nil)
 	channelsClient.Default = channelsClient.New(transport, nil)
 	backupsClient.Default = backupsClient.New(transport, nil)
+	platformClient.Default = platformClient.New(transport, nil)
 
 	// do not run tests if server is not available
 	_, err = serverClient.Default.Server.Readiness(nil)

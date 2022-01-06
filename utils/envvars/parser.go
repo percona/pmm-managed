@@ -32,12 +32,14 @@ import (
 )
 
 const (
-	defaultSaaSHost = "check.percona.com:443"
+	defaultSaaSHost = "check.percona.com"
 	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
 	envPublicKey    = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
-	envTestDbaas   = "PERCONA_TEST_DBAAS"
-	envEnableDbaas = "ENABLE_DBAAS"
+	envTestDbaas              = "PERCONA_TEST_DBAAS"
+	envEnableDbaas            = "ENABLE_DBAAS"
+	envPlatfromAPITimeout     = "PERCONA_PLATFORM_API_TIMEOUT"
+	defaultPlatformAPITimeout = 30 * time.Second
 )
 
 // InvalidDurationError invalid duration error.
@@ -146,6 +148,10 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				warns = append(warns, fmt.Sprintf("environment variable %q IS DEPRECATED AND WILL BE REMOVED, USE %q INSTEAD", envTestDbaas, envEnableDbaas))
 			}
 
+		case envPlatfromAPITimeout:
+			// This variable is not part of the settings and is parsed separately.
+			continue
+
 		default:
 			// handle prefixes
 
@@ -185,6 +191,28 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
+func parsePlatformAPITimeout(d string) (time.Duration, string) {
+	if d == "" {
+		msg := fmt.Sprintf("Environment variable %q is not set, using %q as a default timeout for platform API.", envPlatfromAPITimeout, defaultPlatformAPITimeout.String())
+		return defaultPlatformAPITimeout, msg
+	}
+	duration, err := parseStringDuration(d)
+	if err != nil {
+		msg := fmt.Sprintf("Using %q as a default: failed to parse platform API timeout %q: %s.", defaultPlatformAPITimeout.String(), d, err)
+		return defaultPlatformAPITimeout, msg
+	}
+	msg := fmt.Sprintf("Using %q as a timeout for platform API.", duration.String())
+	return duration, msg
+}
+
+// GetPlatformAPITimeout returns timeout duration for requests to Platform.
+func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
+	d := os.Getenv(envPlatfromAPITimeout)
+	duration, msg := parsePlatformAPITimeout(d)
+	l.Info(msg)
+	return duration
+}
+
 // GetSAASHost returns SaaS host env variable value if it's present and valid.
 // Otherwise returns defaultSaaSHost.
 func GetSAASHost() (string, error) {
@@ -217,19 +245,14 @@ func parseSAASHost(v string) (string, error) {
 		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, v)
 	}
 
-	host, port, err := net.SplitHostPort(v)
+	host, _, err := net.SplitHostPort(v)
 	if err != nil && strings.Count(v, ":") >= 1 {
 		return "", err
 	}
 	if host == "" {
 		host = v
 	}
-	if port == "" {
-		port = "443"
-	}
-
-	v = net.JoinHostPort(host, port)
-	return v, nil
+	return host, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {
