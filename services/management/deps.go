@@ -61,7 +61,7 @@ type prometheusService interface {
 type checksService interface {
 	StartChecks(ctx context.Context, group check.Interval, checkNames []string) error
 	GetSecurityCheckResults() ([]services.STTCheckResult, error)
-	GetAllChecks() map[string]check.Check
+	GetChecks() (map[string]check.Check, error)
 	GetDisabledChecks() ([]string, error)
 	DisableChecks(checkNames []string) error
 	EnableChecks(checkNames []string) error
