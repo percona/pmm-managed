@@ -19,6 +19,7 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 	"github.com/percona/pmm/version"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/reform.v1"
 )
 
@@ -42,6 +44,7 @@ const (
 	certificateFilePlaceholder    = "certificateFilePlaceholder"
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
+	webConfigFilePlaceholder      = "webConfigPlaceholder"
 	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
 	AgentStatusUnknown = "UNKNOWN"
 )
@@ -576,7 +579,16 @@ func (s Agent) Files() map[string]string {
 		return nil
 	case ProxySQLExporterType:
 		return nil
-	case QANMongoDBProfilerAgentType, MongoDBExporterType:
+	case MongoDBExporterType:
+		files := map[string]string{
+			webConfigFilePlaceholder: s.buildWebConfigFile(s.GetAgentPassword()),
+		}
+		if s.MongoDBOptions != nil {
+			files[caFilePlaceholder] = s.MongoDBOptions.TLSCa
+			files[certificateKeyFilePlaceholder] = s.MongoDBOptions.TLSCertificateKey
+		}
+		return files
+	case QANMongoDBProfilerAgentType:
 		if s.MongoDBOptions != nil {
 			return map[string]string{
 				caFilePlaceholder:             s.MongoDBOptions.TLSCa,
@@ -629,6 +641,18 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 		templateParams...,
 	)
 	return &tdp
+}
+
+func (s *Agent) buildWebConfigFile(password string) string {
+	buf, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		log.Fatal(err, "cannot encrypt basic auth password")
+	}
+
+	content := "basic_auth_users:" + "\n" +
+		"    pmm:" + string(buf) + "\n"
+
+	return content
 }
 
 // check interfaces.

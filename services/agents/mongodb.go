@@ -41,12 +41,51 @@ var (
 	newMongoExporterPMMVersion = version.MustParse("2.9.99")
 	v2_24_99                   = version.MustParse("2.24.99")
 	v2_25_99                   = version.MustParse("2.25.99")
+	v2_26_99                   = version.MustParse("2.26.99")
 )
+
+func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
+	files := exporter.Files()
+
+	// The mongoDB exporter prior 2.26 use exporter_shared and gets basic auth config from env.
+	// Starting with pmm 2.27, the exporter uses Prometheus Web Toolkit and needs a config file
+	// with the basic auht users.
+	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
+		delete(files, "webConfigPlaceholder")
+	}
+	if len(files) == 0 {
+		return nil
+	}
+
+	return files
+}
+
+func getExporterEnv(service *models.Service, exporter *models.Agent, pmmAgentVersion *version.Parsed, database string) []string {
+	tdp := exporter.TemplateDelimiters(service)
+
+	env := []string{
+		fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, database, tdp)),
+	}
+
+	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
+		env = append(env, fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()))
+	}
+
+	return env
+}
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
 	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
+
+	database := ""
+	if exporter.MongoDBOptions != nil {
+		database = exporter.MongoDBOptions.AuthenticationDatabase
+	}
+
+	env := getExporterEnv(service, exporter, pmmAgentVersion, database)
+	files := getExporterFiles(exporter, pmmAgentVersion)
 
 	var args []string
 	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
@@ -54,6 +93,9 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	// Until now, discovering mode was not workign properly and was enabled only if mongodb.collstats-colls=
 	// was specified in the command line.
 	switch {
+	case !pmmAgentVersion.Less(v2_26_99): // >= 2.27
+		args = v226Args(exporter, tdp)
+		env = removeEntryHaving(env, "HTTP_AUTH")
 	case !pmmAgentVersion.Less(v2_25_99): // >= 2.26
 		args = v226Args(exporter, tdp)
 	case !pmmAgentVersion.Less(v2_24_99): // >= 2.25
@@ -75,6 +117,16 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		}
 	}
 
+	for k := range files {
+		switch k {
+		case "webConfigPlaceholder":
+			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
+			args = append(args, "--web.config="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
+		default:
+			continue
+		}
+	}
+
 	args = collectors.FilterOutCollectors("--collect.", args, exporter.DisabledCollectors)
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
@@ -83,28 +135,30 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 
 	sort.Strings(args)
 
-	database := ""
-	if exporter.MongoDBOptions != nil {
-		database = exporter.MongoDBOptions.AuthenticationDatabase
-	}
-	env := []string{
-		fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, database, tdp)),
-		fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
-	}
-
 	res := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
 		TemplateLeftDelim:  tdp.Left,
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env:                env,
-		TextFiles:          exporter.Files(),
+		TextFiles:          files,
 	}
 
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
 	}
 	return res
+}
+
+func removeEntryHaving(items []string, having string) []string {
+	newList := make([]string, 0, len(items))
+	for _, item := range items {
+		if strings.Contains(item, having) {
+			continue
+		}
+		newList = append(newList, item)
+	}
+	return newList
 }
 
 func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {

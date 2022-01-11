@@ -217,8 +217,10 @@ func TestFindDSNByServiceID(t *testing.T) {
 		expectedFiles := map[string]string{
 			"caFilePlaceholder":             "content-of-tls-ca",
 			"certificateKeyFilePlaceholder": "content-of-tls-certificate-key",
+			"webConfigPlaceholder":          "tls config content",
 		}
-		assert.Equal(t, expectedFiles, agent.Files())
+		files := agentFiles(agent)
+		assert.Equal(t, expectedFiles, files)
 	})
 
 	t.Run("FindDSNByServiceIDandPMMAgentIDWithTwoAgentsOfSameType", func(t *testing.T) {

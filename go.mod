@@ -46,6 +46,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.7.0
 	go.starlark.net v0.0.0-20201210151846-e81fc95f7bd5
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
@@ -125,7 +126,6 @@ require (
 	github.com/shurcooL/vfsgen v0.0.0-20200824052919-0d455de96546 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	go.mongodb.org/mongo-driver v1.7.1 // indirect
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/text v0.3.6 // indirect

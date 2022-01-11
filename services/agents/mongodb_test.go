@@ -17,6 +17,7 @@
 package agents
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -374,4 +375,52 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
 		assert.Equal(t, "MONGODB_URI=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000&serverSelectionTimeoutMS=1000", actual.Env[0])
 	})
+}
+
+func TestMongodbExporterConfig227(t *testing.T) {
+	pmmAgentVersion := version.MustParse("2.27.0")
+
+	mongodb := &models.Service{
+		Address: pointer.ToString("1.2.3.4"),
+		Port:    pointer.ToUint16(27017),
+	}
+	exporter := &models.Agent{
+		AgentID:       "agent-id",
+		AgentType:     models.MongoDBExporterType,
+		Username:      pointer.ToString("username"),
+		Password:      pointer.ToString("s3cur3 p@$$w0r4."),
+		AgentPassword: pointer.ToString("agent-password"),
+	}
+	actual := mongodbExporterConfig(mongodb, exporter, redactSecrets, pmmAgentVersion)
+	// Since password is encrypted and result of encryption is never the same, fix it for testing.
+	if _, ok := actual.TextFiles["webConfigPlaceholder"]; ok {
+		re := regexp.MustCompile(`pmm:.*`)
+		actual.TextFiles["webConfigPlaceholder"] = re.ReplaceAllString(actual.TextFiles["webConfigPlaceholder"], "pmm:pass")
+	}
+
+	expected := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
+		TemplateLeftDelim:  "{{",
+		TemplateRightDelim: "}}",
+		Args: []string{
+			"--collector.diagnosticdata",
+			"--collector.replicasetstatus",
+			"--compatible-mode",
+			"--discovering-mode",
+			"--mongodb.global-conn-pool",
+			"--web.config={{ .TextFiles.webConfigPlaceholder }}",
+			"--web.listen-address=:{{ .listen_port }}",
+		},
+		TextFiles: map[string]string{
+			"webConfigPlaceholder": "basic_auth_users:\n    pmm:pass\n",
+		},
+		Env: []string{
+			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000&serverSelectionTimeoutMS=1000",
+		},
+		RedactWords: []string{"s3cur3 p@$$w0r4.", "agent-password"},
+	}
+	requireNoDuplicateFlags(t, actual.Args)
+	require.Equal(t, expected.Args, actual.Args)
+	require.Equal(t, expected.Env, actual.Env)
+	require.Equal(t, expected, actual)
 }
