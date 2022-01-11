@@ -30,10 +30,10 @@ import (
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
-	pmmapitests "github.com/percona/pmm-managed/api-tests"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
 )
@@ -221,6 +221,7 @@ func TestSatisfiesFilters(t *testing.T) {
 }
 
 func TestListAlerts(t *testing.T) {
+	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
@@ -265,11 +266,11 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
-	mockAlert.On("GetAlerts", pmmapitests.Context).Return(mockedAlerts, nil)
+	mockAlert.On("GetAlerts", ctx).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
 	require.NoError(t, err)
-	tmplSvc.Collect(pmmapitests.Context)
+	tmplSvc.Collect(ctx)
 	svc := NewAlertsService(db, mockAlert, tmplSvc)
 
 	findAlerts := func(alerts []*iav1beta1.Alert, alertIDs ...string) bool {
@@ -302,7 +303,7 @@ func TestListAlerts(t *testing.T) {
 	}
 
 	t.Run("without pagination", func(t *testing.T) {
-		res, err := svc.ListAlerts(pmmapitests.Context, &iav1beta1.ListAlertsRequest{})
+		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{})
 		assert.NoError(t, err)
 		var expect []string
 		for _, m := range mockedAlerts {
@@ -313,7 +314,7 @@ func TestListAlerts(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		res, err := svc.ListAlerts(pmmapitests.Context, &iav1beta1.ListAlertsRequest{
+		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
 			PageParams: &iav1beta1.PageParams{
 				PageSize: 1,
 			},
@@ -324,7 +325,7 @@ func TestListAlerts(t *testing.T) {
 		assert.EqualValues(t, res.Totals.TotalItems, alertsCount)
 		assert.EqualValues(t, res.Totals.TotalPages, alertsCount)
 
-		res, err = svc.ListAlerts(pmmapitests.Context, &iav1beta1.ListAlertsRequest{
+		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
 			PageParams: &iav1beta1.PageParams{
 				PageSize: 10,
 				Index:    2,
@@ -343,7 +344,7 @@ func TestListAlerts(t *testing.T) {
 		for _, m := range mockedAlerts {
 			expect = append(expect, *m.Fingerprint)
 		}
-		res, err := svc.ListAlerts(pmmapitests.Context, &iav1beta1.ListAlertsRequest{
+		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
 			PageParams: &iav1beta1.PageParams{
 				PageSize: alertsCount * 2,
 			},
@@ -352,7 +353,7 @@ func TestListAlerts(t *testing.T) {
 		assert.True(t, findAlerts(res.Alerts, expect...), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 
-		res, err = svc.ListAlerts(pmmapitests.Context, &iav1beta1.ListAlertsRequest{
+		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
 			PageParams: &iav1beta1.PageParams{
 				PageSize: 1,
 				Index:    alertsCount * 2,
