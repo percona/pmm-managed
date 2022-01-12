@@ -116,7 +116,24 @@ func (s *Service) Load() error {
 
 	cfg.configureSaasReqEnrichment()
 
+	err := validate(cfg, configPath)
+	if err != nil {
+		return err
+	}
+
 	s.Config = cfg
 
+	return nil
+}
+
+func validate(cfg Config, configPath string) error {
+	allIds := make(map[string]bool)
+	for _, config := range cfg.Telemetry {
+		if _, value := allIds[config.Id]; !value {
+			allIds[config.Id] = true
+		} else {
+			return errors.Errorf("Duplicated id [%s] found in the config file [%s]", config.Id, configPath)
+		}
+	}
 	return nil
 }
