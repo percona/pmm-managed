@@ -120,8 +120,8 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	for k := range files {
 		switch k {
 		case "webConfigPlaceholder":
-			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
-			args = append(args, "--web.config="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
+			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https for this file format.
+			args = append(args, "--web.tls-config-path="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
 		default:
 			continue
 		}
