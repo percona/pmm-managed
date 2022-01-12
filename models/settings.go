@@ -43,7 +43,6 @@ type SaaS struct {
 
 // IntegratedAlerting contains settings related to IntegratedAlerting.
 type IntegratedAlerting struct {
-	Enabled               bool                   `json:"enabled"`
 	EmailAlertingSettings *EmailAlertingSettings `json:"email_settings"`
 	SlackAlertingSettings *SlackAlertingSettings `json:"slack_settings"`
 }

@@ -448,7 +448,7 @@ func (s *Server) convertSettings(settings *models.Settings, connectedToPlatform 
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
-		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
+		AlertingEnabled:         true,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
 
 		ConnectedToPlatform: connectedToPlatform,
@@ -531,11 +531,6 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
-	// ignore req.EnableAlerting even if they are present since that will not change anything
-	if req.DisableAlerting && s.envSettings.EnableAlerting {
-		return status.Error(codes.FailedPrecondition, "Alerting is enabled via ENABLE_ALERTING environment variable.")
-	}
-
 	// ignore req.DisableAzurediscover even if they are present since that will not change anything
 	if req.DisableAzurediscover && s.envSettings.EnableAzurediscover {
 		return status.Error(codes.FailedPrecondition, "Azure Discover is enabled via ENABLE_AZUREDISCOVER environment variable.")
@@ -608,8 +603,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			PMMPublicAddress:       req.PmmPublicAddress,
 			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
 
-			EnableAlerting:              req.EnableAlerting,
-			DisableAlerting:             req.DisableAlerting,
 			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
 			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
 			EnableBackupManagement:      req.EnableBackupManagement,
@@ -676,18 +669,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 	if err := s.UpdateConfigurations(ctx); err != nil {
 		return nil, err
-	}
-
-	// When IA moved from disabled state to enabled create rules files.
-	if !oldSettings.IntegratedAlerting.Enabled && req.EnableAlerting {
-		s.rulesService.WriteVMAlertRulesFiles()
-	}
-
-	// When IA moved from enabled state to disables cleanup rules files.
-	if oldSettings.IntegratedAlerting.Enabled && req.DisableAlerting {
-		if err := s.rulesService.RemoveVMAlertRulesFiles(); err != nil {
-			s.l.Errorf("Failed to clean old alert rule files: %+v", err)
-		}
 	}
 
 	// If STT intervals are changed reset timers.

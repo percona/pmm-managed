@@ -87,11 +87,6 @@ type ChangeSettingsParams struct {
 	// Disable Azure Discover features.
 	DisableAzurediscover bool
 
-	// Enable Integrated Alerting features.
-	EnableAlerting bool
-	// Disable Integrated Alerting features.
-	DisableAlerting bool
-
 	// Email config for Integrated Alerting.
 	EmailAlertingSettings *EmailAlertingSettings
 	// If true removes email alerting settings.
@@ -248,14 +243,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.Azurediscover.Enabled = true
 	}
 
-	if params.DisableAlerting {
-		settings.IntegratedAlerting.Enabled = false
-	}
-
-	if params.EnableAlerting {
-		settings.IntegratedAlerting.Enabled = true
-	}
-
 	if params.RemoveEmailAlertingSettings {
 		settings.IntegratedAlerting.EmailAlertingSettings = nil
 	}
@@ -327,9 +314,6 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	}
 	if params.EnableVMCache && params.DisableVMCache {
 		return errors.New("both enable_vm_cache and disable_vm_cache are present")
-	}
-	if params.EnableAlerting && params.DisableAlerting {
-		return errors.New("both enable_alerting and disable_alerting are present")
 	}
 	if err := validateEmailAlertingSettings(params); err != nil {
 		return err

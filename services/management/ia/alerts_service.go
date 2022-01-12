@@ -57,12 +57,7 @@ func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService
 
 // Enabled returns if service is enabled and can be used.
 func (s *AlertsService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		s.l.WithError(err).Error("can't get settings")
-		return false
-	}
-	return settings.IntegratedAlerting.Enabled
+	return true
 }
 
 // ListAlerts returns list of existing alerts.

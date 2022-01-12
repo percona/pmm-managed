@@ -126,7 +126,6 @@ func TestSettings(t *testing.T) {
 				slackURL := gofakeit.URL()
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
-						EnableAlerting: true,
 						EmailAlertingSettings: &server.ChangeSettingsParamsBodyEmailAlertingSettings{
 							From:      email,
 							Smarthost: smarthost,
@@ -151,23 +150,6 @@ func TestSettings(t *testing.T) {
 				assert.Equal(t, identity, res.Payload.Settings.EmailAlertingSettings.Identity)
 				assert.Equal(t, secret, res.Payload.Settings.EmailAlertingSettings.Secret)
 				assert.Equal(t, slackURL, res.Payload.Settings.SlackAlertingSettings.URL)
-			})
-
-			t.Run("InvalidBothEnableAndDisableAlerting", func(t *testing.T) {
-				defer restoreSettingsDefaults(t)
-
-				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
-					Body: server.ChangeSettingsBody{
-						// since alerting is already enabled on managed by default using
-						// ENABLE_ALERTING env var, just passing DisableAlerting param satisfies
-						// the condition of both enable and disable alerting being true
-						DisableAlerting: true,
-					},
-					Context: pmmapitests.Context,
-				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition,
-					`Alerting is enabled via ENABLE_ALERTING environment variable.`)
-				assert.Empty(t, res)
 			})
 
 			t.Run("InvalidBothSlackAlertingSettingsAndRemoveSlackAlertingSettings", func(t *testing.T) {

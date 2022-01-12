@@ -342,19 +342,16 @@ func TestSettings(t *testing.T) {
 			}
 			slackSettings := &models.SlackAlertingSettings{URL: gofakeit.URL()}
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				EnableAlerting:        true,
 				EmailAlertingSettings: emailSettings,
 				SlackAlertingSettings: slackSettings,
 			})
 			require.NoError(t, err)
-			assert.True(t, ns.IntegratedAlerting.Enabled)
 			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
 			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
 
 			// check that we don't lose settings on empty updates
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{})
 			require.NoError(t, err)
-			assert.True(t, ns.IntegratedAlerting.Enabled)
 			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
 			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
 
@@ -411,20 +408,11 @@ func TestSettings(t *testing.T) {
 			assert.EqualError(t, err, "invalid argument: invalid url value")
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				DisableAlerting:             true,
 				RemoveEmailAlertingSettings: true,
 				RemoveSlackAlertingSettings: true,
 			})
 			require.NoError(t, err)
 			assert.Empty(t, ns.IntegratedAlerting.EmailAlertingSettings)
-			assert.False(t, ns.IntegratedAlerting.Enabled)
-
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				DisableAlerting: true,
-				EnableAlerting:  true,
-			})
-			assert.True(t, errors.As(err, &errInvalidArgument))
-			assert.EqualError(t, err, "invalid argument: both enable_alerting and disable_alerting are present")
 		})
 	})
 

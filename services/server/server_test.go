@@ -222,7 +222,6 @@ func TestServer(t *testing.T) {
 
 		server.UpdateSettingsFromEnv([]string{
 			"ENABLE_DBAAS=1",
-			"ENABLE_ALERTING=1",
 			"ENABLE_AZUREDISCOVER=1",
 		})
 
@@ -238,38 +237,8 @@ func TestServer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
-		assert.True(t, settings.Settings.AlertingEnabled)
+		assert.True(t, settings.Settings.AlertingEnabled) //nolint:staticcheck
 		assert.True(t, settings.Settings.AzurediscoverEnabled)
-	})
-
-	t.Run("ChangeSettings IA", func(t *testing.T) {
-		server := newServer(t)
-		rs := new(mockRulesService)
-		server.rulesService = rs
-		server.UpdateSettingsFromEnv([]string{})
-
-		ctx := context.TODO()
-		rs.On("RemoveVMAlertRulesFiles").Return(nil)
-		defer rs.AssertExpectations(t)
-		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			DisableAlerting: true,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, s)
-
-		rs.On("WriteVMAlertRulesFiles")
-		s, err = server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			EnableAlerting: true,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, s)
-
-		rs.On("RemoveVMAlertRulesFiles").Return(nil)
-		s, err = server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			DisableAlerting: true,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, s)
 	})
 }
 
