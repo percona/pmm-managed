@@ -650,7 +650,7 @@ func (s *Agent) buildWebConfigFile(password string) string {
 	}
 
 	content := "basic_auth_users:" + "\n" +
-		"    pmm:" + string(buf) + "\n"
+		"    pmm: " + string(buf) + "\n"
 
 	return content
 }
