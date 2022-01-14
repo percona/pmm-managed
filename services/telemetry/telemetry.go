@@ -257,17 +257,21 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
+//TODO this is stub for collecting Server Metrics
 func (s *Service) makeV2ServiceMetric(serverUUID string) (*reporter.ReportRequest, error) {
+	serverID, err := hex.DecodeString(serverUUID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
+	}
 
-	id := uuid.New().NodeID()
-	now := timestamppb.Now()
 	var metrics []*reporter.ServerMetric
 	var metrics2 []*reporter.ServerMetric_Metric
+	id := uuid.New()
 	metrics = append(metrics, &reporter.ServerMetric{
-		Id:                   id,
-		Time:                 now,
-		PmmServerTelemetryId: nil,
-		PmmServerVersion:     "",
+		Id:                   id[:],
+		Time:                 timestamppb.Now(),
+		PmmServerTelemetryId: serverID,
+		PmmServerVersion:     "2",
 		UpDuration:           nil,
 		DistributionMethod:   0,
 		Metrics: append(metrics2, &reporter.ServerMetric_Metric{
