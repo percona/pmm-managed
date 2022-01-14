@@ -1,5 +1,5 @@
-https://jira.percona.com/browse/PMM-XXXX
+PMM-0
 
-Build: https://github.com/Percona-Lab/pmm-submodules/pull/0
+SUBMODULES-0
 
 - [ ] Links to other linked pull requests (optional).
