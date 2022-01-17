@@ -213,10 +213,11 @@ type disconnectPMMParams struct {
 }
 
 type ssoDetails struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Scope        string `json:"scope"`
-	IssuerURL    string `json:"issuer_url"`
+	ClientID             string `json:"client_id"`
+	ClientSecret         string `json:"client_secret"`
+	Scope                string `json:"scope"`
+	IssuerURL            string `json:"issuer_url"`
+	PortalOrganizationID string `json:"portal_organization_id"`
 }
 
 type connectPMMResponse struct {
@@ -322,9 +323,16 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
 		return nil, internalServerError
 	}
+
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		s.l.Errorf("failed to get SSO details: %s", err)
+		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+	}
+
 	// Since PMM doesn't store the orgID we leave it empty and let Portal figure it out
 	// using the perconaPortal.orgID claim in the access token.
-	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, "")
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.PortalOrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
