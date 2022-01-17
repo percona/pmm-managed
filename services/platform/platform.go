@@ -113,10 +113,11 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-		ClientID:     ssoParams.ClientID,
-		ClientSecret: ssoParams.ClientSecret,
-		IssuerURL:    ssoParams.IssuerURL,
-		Scope:        ssoParams.Scope,
+		ClientID:             ssoParams.ClientID,
+		ClientSecret:         ssoParams.ClientSecret,
+		IssuerURL:            ssoParams.IssuerURL,
+		Scope:                ssoParams.Scope,
+		PortalOrganizationID: ssoParams.PortalOrganizationID,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
@@ -217,7 +218,7 @@ type ssoDetails struct {
 	ClientSecret         string `json:"client_secret"`
 	Scope                string `json:"scope"`
 	IssuerURL            string `json:"issuer_url"`
-	PortalOrganizationID string `json:"portal_organization_id"`
+	PortalOrganizationID string `json:"organization_id"`
 }
 
 type connectPMMResponse struct {
