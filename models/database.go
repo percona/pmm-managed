@@ -683,6 +683,10 @@ var databaseSchema = [][]string{
 		`ALTER TABLE ia_templates
 			DROP COLUMN tiers`,
 	},
+	57: {
+		`ALTER TABLE percona_sso_details
+			ADD COLUMN portal_organization_id VARCHAR NOT NULL`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

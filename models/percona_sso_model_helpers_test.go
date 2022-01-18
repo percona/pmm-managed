@@ -104,10 +104,11 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		InsertSSODetails := &models.PerconaSSODetailsInsert{
-			IssuerURL:    issuerURL,
-			ClientID:     "wrongClientID",
-			ClientSecret: "wrongClientSecret",
-			Scope:        "percona",
+			IssuerURL:            issuerURL,
+			ClientID:             "wrongClientID",
+			ClientSecret:         "wrongClientSecret",
+			Scope:                "percona",
+			PortalOrganizationID: "org-id",
 		}
 		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
 		require.NoError(t, err)
