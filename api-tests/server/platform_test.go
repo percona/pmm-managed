@@ -37,10 +37,10 @@ func TestPlatform(t *testing.T) {
 	serverClient := serverClient.Default.Server
 
 	const serverName string = "my PMM"
-	email, password := os.Getenv("PERCONA_TEST_PORTAL_USERNAME"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
+	username, password := os.Getenv("PERCONA_TEST_PORTAL_USERNAME"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
 	t.Run("connect and disconnect", func(t *testing.T) {
-		if email == "" || password == "" {
-			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		if username == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_USERNAME, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
 		t.Run("PMM server does not have address set", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
@@ -79,7 +79,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("wrong password", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					Password:   "WrongPassword12345",
 					ServerName: serverName,
 				},
@@ -103,7 +103,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("empty password", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					ServerName: serverName,
 					Password:   "",
 				},
@@ -115,7 +115,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("empty server name", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					Password:   password,
 					ServerName: "",
 				},
@@ -128,7 +128,7 @@ func TestPlatform(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
 					ServerName: serverName,
-					Email:      email,
+					Email:      username,
 					Password:   password,
 				},
 				Context: pmmapitests.Context,
@@ -155,15 +155,15 @@ func TestPlatform(t *testing.T) {
 	})
 
 	t.Run("search_tickets", func(t *testing.T) {
-		if email == "" || password == "" {
-			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		if username == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_USERNAME, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
 
 		t.Run("success", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
 					ServerName: serverName,
-					Email:      email,
+					Email:      username,
 					Password:   password,
 				},
 				Context: pmmapitests.Context,

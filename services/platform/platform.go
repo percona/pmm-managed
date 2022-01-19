@@ -100,7 +100,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 
-	ssoParams, err := s.connect(ctx, &connectPMMParams{
+	connectResp, err := s.connect(ctx, &connectPMMParams{
 		serverName:                req.ServerName,
 		email:                     req.Email,
 		password:                  req.Password,
@@ -113,11 +113,11 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-		ClientID:             ssoParams.ClientID,
-		ClientSecret:         ssoParams.ClientSecret,
-		IssuerURL:            ssoParams.IssuerURL,
-		Scope:                ssoParams.Scope,
-		PortalOrganizationID: ssoParams.PortalOrganizationID,
+		ClientID:             connectResp.SSODetails.ClientID,
+		ClientSecret:         connectResp.SSODetails.ClientSecret,
+		IssuerURL:            connectResp.SSODetails.IssuerURL,
+		Scope:                connectResp.SSODetails.Scope,
+		PortalOrganizationID: connectResp.PortalOrganizationID,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
@@ -214,15 +214,15 @@ type disconnectPMMParams struct {
 }
 
 type ssoDetails struct {
-	ClientID             string `json:"client_id"`
-	ClientSecret         string `json:"client_secret"`
-	Scope                string `json:"scope"`
-	IssuerURL            string `json:"issuer_url"`
-	PortalOrganizationID string `json:"organization_id"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Scope        string `json:"scope"`
+	IssuerURL    string `json:"issuer_url"`
 }
 
 type connectPMMResponse struct {
-	SSODetails *ssoDetails `json:"sso_details"`
+	SSODetails           *ssoDetails `json:"sso_details"`
+	PortalOrganizationID string      `json:"org_id"`
 }
 
 type grpcGatewayError struct {
@@ -230,7 +230,7 @@ type grpcGatewayError struct {
 	Code    uint32 `json:"code"`
 }
 
-func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDetails, error) {
+func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*connectPMMResponse, error) {
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory", s.host)
 	marshaled, err := json.Marshal(connectPMMRequest{
 		PMMServerID:               params.pmmServerID,
@@ -266,12 +266,12 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*ssoDe
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
-	var response connectPMMResponse
-	if err := decoder.Decode(&response); err != nil {
+	response := &connectPMMResponse{}
+	if err := decoder.Decode(response); err != nil {
 		s.l.Errorf("Failed to decode response into SSO details: %s", err)
 		return nil, internalServerError
 	}
-	return response.SSODetails, nil
+	return response, nil
 }
 
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
