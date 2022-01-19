@@ -150,12 +150,17 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 	return &dbaasv1beta1.ListKubernetesClustersResponse{KubernetesClusters: clusters}, nil
 }
 
+type envVar struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
 type kubectlUserExec struct {
-	APIVersion         string              `yaml:"apiVersion,omitempty"`
-	Args               []string            `yaml:"args,omitempty"`
-	Command            string              `yaml:"command,omitempty"`
-	Env                []map[string]string `yaml:"env,omitempty"`
-	ProvideClusterInfo bool                `yaml:"provideClusterInfo"`
+	APIVersion         string   `yaml:"apiVersion,omitempty"`
+	Args               []string `yaml:"args,omitempty"`
+	Command            string   `yaml:"command,omitempty"`
+	Env                []envVar `yaml:"env,omitempty"`
+	ProvideClusterInfo bool     `yaml:"provideClusterInfo"`
 }
 
 type kubectlUser struct {
@@ -186,10 +191,10 @@ func getFlagValue(args []string, flagName string) string {
 	return ""
 }
 
-func getKubeconfigUserExecEnvValue(envs []map[string]string, variableName string) string {
+func getKubeconfigUserExecEnvValue(envs []envVar, variableName string) string {
 	for _, env := range envs {
-		if name := env["name"]; name == variableName {
-			return env["value"]
+		if name := env.Name; name == variableName {
+			return env.Value
 		}
 	}
 	return ""
@@ -222,9 +227,9 @@ func replaceAWSAuthIfPresent(kubeconfig string, keyID, key string) (string, erro
 		}
 
 		// check and set authentication environment variables
-		for variable, newValue := range map[string]string{"AWS_ACCESS_KEY_ID": keyID, "AWS_SECRET_ACCESS_KEY": key} {
-			if value := getKubeconfigUserExecEnvValue(user.User.Exec.Env, variable); value == "" && newValue != "" {
-				user.User.Exec.Env = append(user.User.Exec.Env, map[string]string{"name": variable, "value": newValue})
+		for _, envVar := range []envVar{{"AWS_ACCESS_KEY_ID", keyID}, {"AWS_SECRET_ACCESS_KEY", key}} {
+			if value := getKubeconfigUserExecEnvValue(user.User.Exec.Env, envVar.Name); value == "" && envVar.Value != "" {
+				user.User.Exec.Env = append(user.User.Exec.Env, envVar)
 				changed = true
 			}
 		}
