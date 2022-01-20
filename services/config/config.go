@@ -54,9 +54,8 @@ type Config struct {
 		Management      struct {
 			IntegratedAlerting ia.Config `yaml:"ia"`
 		} `yaml:"management"`
-		Telemetry   telemetry.Config `yaml:"telemetry"`
-		TelemetryV2 struct {
-		} `yaml:"telemetry_v2"`
+		Telemetry   telemetry.Config           `yaml:"telemetry"`
+		TelemetryV2 telemetry_v2.ServiceConfig `yaml:"telemetry_v2"`
 	} `yaml:"services"`
 	Telemetry    []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
 	ExtraHeaders struct {
@@ -111,6 +110,9 @@ func (s *Service) Load() error {
 	cfg.Services.Supervisord.Init()
 	cfg.Services.Management.IntegratedAlerting.Init()
 	if err := cfg.Services.Telemetry.Init(); err != nil {
+		return err
+	}
+	if err := cfg.Services.TelemetryV2.Init(cfg.Telemetry); err != nil {
 		return err
 	}
 
