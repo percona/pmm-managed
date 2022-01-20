@@ -19,75 +19,28 @@ package telemetry_v2
 
 import (
 	"context"
-	"os"
-	"strconv"
 	"time"
 
 	//nolint:staticcheck
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
-
-	"github.com/percona/pmm-managed/utils/envvars"
-)
-
-const (
-	ENV_DISABLED        = "PERCONA_TEST_TELEMETRY_DISABLE_SEND"
-	ENV_CONFIG          = "PERCONA_TEST_TELEMETRY_FILE"
-	ENV_REPORT_INTERVAL = "PERCONA_TEST_TELEMETRY_INTERVAL"
-	ENV_REPORT_NO_DELAY = "PERCONA_TEST_TELEMETRY_DISABLE_START_DELAY"
-
-	defaultReportInterval     = 24 * time.Hour
-	defaultReportRetryBackoff = time.Minute
-	defaultReportRetryTimes   = 30
 )
 
 // Service reports telemetry.
 type Service struct {
-	disableSend        bool
-	db                 *reform.DB
-	l                  *logrus.Entry
-	initializedAt      time.Time
-	host               string
-	reportInterval     time.Duration
-	reportNoDelay      bool
-	reportRetryBackoff time.Duration
-	reportRetryTimes   int
+	db     *reform.DB
+	l      *logrus.Entry
+	config ServiceConfig
 }
 
 // NewService creates a new service.
-func NewService(db *reform.DB) (*Service, error) {
+func NewService(db *reform.DB, config ServiceConfig) (*Service, error) {
 	l := logrus.WithField("component", "telemetry_v2")
 
-	host, err := envvars.GetSAASHost()
-	if err != nil {
-		return nil, err
-	}
-
 	s := &Service{
-		db:                 db,
-		initializedAt:      time.Now(),
-		l:                  l,
-		host:               host,
-		disableSend:        false,
-		reportNoDelay:      false,
-		reportInterval:     defaultReportInterval,
-		reportRetryBackoff: defaultReportRetryBackoff,
-		reportRetryTimes:   defaultReportRetryTimes,
-	}
-
-	if v, err := strconv.ParseBool(os.Getenv(ENV_DISABLED)); err == nil {
-		l.Warnf("[%s] env overrides 'disable send' with [%t].", ENV_DISABLED, v)
-		s.disableSend = v
-	}
-
-	if v, err := time.ParseDuration(os.Getenv(ENV_REPORT_INTERVAL)); err == nil && v > 0 {
-		l.Warnf("[%s] env variable overrides reporting interval with [%s].", ENV_REPORT_INTERVAL, v)
-		s.reportInterval = v
-	}
-
-	if v, err := strconv.ParseBool(os.Getenv(ENV_REPORT_NO_DELAY)); err == nil {
-		l.Warnf("[%s] env variable overrides 'report with no delay' [%t].", ENV_REPORT_NO_DELAY, v)
-		s.reportNoDelay = v
+		db:     db,
+		l:      l,
+		config: config,
 	}
 
 	return s, nil
@@ -95,24 +48,25 @@ func NewService(db *reform.DB) (*Service, error) {
 
 // Run start sending telemetry to SaaS.
 func (s *Service) Run(ctx context.Context) {
-	ticker := time.NewTicker(s.reportInterval)
+	if !s.config.Enabled {
+		s.l.Warn("service is disabled, skip Run")
+		return
+	}
+
+	ticker := time.NewTicker(s.config.Reporting.Interval)
 	defer ticker.Stop()
 
 	doSend := func() {
-		if s.disableSend {
-			s.l.Debug("Send is disabled")
-			return
-		}
-
 		err := s.send(ctx)
 		if err == nil {
 			s.l.Debug("Telemetry info sent.")
 		} else {
-			s.l.Debugf("Telemetry info not sent: %s.", err)
+			s.l.Debugf("Telemetry info not sent, due to error: %s.", err)
 		}
 	}
 
-	if s.reportNoDelay {
+	if s.config.Reporting.SendOnStart {
+		s.l.Debug("Telemetry on start is enabled, sending...")
 		doSend()
 	}
 

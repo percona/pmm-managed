@@ -711,7 +711,7 @@ func main() {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}
 
-	telemetryV2, err := telemetry_v2.NewService(db)
+	telemetryV2, err := telemetry_v2.NewService(db, cfg.Config.Services.TelemetryV2)
 	if err != nil {
 		l.Fatalf("Could not create telemetry_v2 service: %s", err)
 	}
