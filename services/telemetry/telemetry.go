@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -208,15 +207,6 @@ func (s *Service) sendOneEvent(ctx context.Context) error {
 		return s.sendV2RequestWithRetries(ctx, req)
 	})
 
-	wg.Go(func() error {
-		req, err := s.makeV2ServiceMetric(settings.Telemetry.UUID)
-		if err != nil {
-			return err
-		}
-
-		return s.sendV2RequestWithRetries(ctx, req)
-	})
-
 	return wg.Wait()
 }
 
@@ -257,37 +247,6 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-//TODO this is stub for collecting Server Metrics
-func (s *Service) makeV2ServiceMetric(serverUUID string) (*reporter.ReportRequest, error) {
-	serverID, err := hex.DecodeString(serverUUID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
-	}
-
-	var metrics []*reporter.ServerMetric
-	var metrics2 []*reporter.ServerMetric_Metric
-	id := uuid.New()
-	metrics = append(metrics, &reporter.ServerMetric{
-		Id:                   id[:],
-		Time:                 timestamppb.Now(),
-		PmmServerTelemetryId: serverID,
-		PmmServerVersion:     "2",
-		UpDuration:           nil,
-		DistributionMethod:   0,
-		Metrics: append(metrics2, &reporter.ServerMetric_Metric{
-			Key:   "key1",
-			Value: "val1",
-		}),
-	})
-
-	req := &reporter.ReportRequest{
-		Metrics: metrics,
-	}
-	s.l.Debugf("Request: %+v", req)
-
-	return req, nil
-}
-
 func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*reporter.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
@@ -303,11 +262,6 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 		IaEnabled:          wrapperspb.Bool(settings.IntegratedAlerting.Enabled),
 	}
 
-	// FIXME: Investigate why Validate() is missing in new generated code
-	//if err = event.Validate(); err != nil {
-	//	// log and ignore
-	//	s.l.Debugf("Failed to validate event: %s.", err)
-	//}
 	eventB, err := proto.Marshal(event)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal event %+v", event)
@@ -329,11 +283,6 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 		}},
 	}
 	s.l.Debugf("Request: %+v", req)
-	// FIXME: Investigate why Validate() is missing in new generated code
-	//if err = req.Validate(); err != nil {
-	//	// log and ignore
-	//	s.l.Debugf("Failed to validate request: %s.", err)
-	//}
 
 	return req, nil
 }
