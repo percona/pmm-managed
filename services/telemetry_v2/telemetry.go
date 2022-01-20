@@ -277,3 +277,34 @@ func (s *Service) send(ctx context.Context) error {
 //
 //	return nil
 //}
+
+////TODO this is stub for collecting Server Metrics
+//func (s *Service) makeV2ServiceMetric(serverUUID string) (*reporter.ReportRequest, error) {
+//	serverID, err := hex.DecodeString(serverUUID)
+//	if err != nil {
+//		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
+//	}
+//
+//	var metrics []*reporter.ServerMetric
+//	var metrics2 []*reporter.ServerMetric_Metric
+//	id := uuid.New()
+//	metrics = append(metrics, &reporter.ServerMetric{
+//		Id:                   id[:],
+//		Time:                 timestamppb.Now(),
+//		PmmServerTelemetryId: serverID,
+//		PmmServerVersion:     "2",
+//		UpDuration:           nil,
+//		DistributionMethod:   0,
+//		Metrics: append(metrics2, &reporter.ServerMetric_Metric{
+//			Key:   "key1",
+//			Value: "val1",
+//		}),
+//	})
+//
+//	req := &reporter.ReportRequest{
+//		Metrics: metrics,
+//	}
+//	s.l.Debugf("Request: %+v", req)
+//
+//	return req, nil
+//}
