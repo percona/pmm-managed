@@ -82,11 +82,9 @@ func TestMakeV2Payload(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assert.NoError(t, r.Validate())
 	require.Len(t, r.Events, 1)
 
 	ev := r.Events[0]
-	assert.NoError(t, ev.Validate())
 
 	var uEv pmmv1.ServerUptimeEvent
 	err = proto.Unmarshal(ev.Event.Binary, &uEv)
