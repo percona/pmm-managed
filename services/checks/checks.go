@@ -56,9 +56,9 @@ const (
 	envResendInterval    = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 	envDisableStartDelay = "PERCONA_TEST_CHECKS_DISABLE_START_DELAY"
 
-	checkExecutionTimeout  = 5 * time.Minute
-	platformRequestTimeout = 2 * time.Minute
-	resultAwaitTimeout     = 20 * time.Second // should greater than agents.defaultQueryActionTimeout
+	checkExecutionTimeout  = 5 * time.Minute  // limits execution time for every single check
+	platformRequestTimeout = 2 * time.Minute  // time limit to get checks list from the platform
+	resultAwaitTimeout     = 20 * time.Second // should be greater than agents.defaultQueryActionTimeout
 	scriptExecutionTimeout = 5 * time.Second  // time limit for running pmm-managed-starlark
 	resultCheckInterval    = time.Second
 

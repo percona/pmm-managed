@@ -36,7 +36,7 @@ func TestStartChecks(t *testing.T) {
 	t.Run("with enabled STT", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
 
-		enableSTT(t, true)
+		toggleSTT(t, true)
 
 		resp, err := managementClient.Default.SecurityChecks.StartSecurityChecks(nil)
 		require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestStartChecks(t *testing.T) {
 
 	t.Run("with disabled STT", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
-		enableSTT(t, false)
+		toggleSTT(t, false)
 
 		resp, err := managementClient.Default.SecurityChecks.StartSecurityChecks(nil)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `STT is disabled.`)
@@ -60,7 +60,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 	t.Run("with disabled STT", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
-		enableSTT(t, false)
+		toggleSTT(t, false)
 
 		results, err := managementClient.Default.SecurityChecks.GetSecurityCheckResults(nil)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `STT is disabled.`)
@@ -69,7 +69,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 	t.Run("with enabled STT", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
-		enableSTT(t, true)
+		toggleSTT(t, true)
 
 		resp, err := managementClient.Default.SecurityChecks.StartSecurityChecks(nil)
 		require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 func TestListSecurityChecks(t *testing.T) {
 	defer restoreSettingsDefaults(t)
-	enableSTT(t, true)
+	toggleSTT(t, true)
 
 	resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestListSecurityChecks(t *testing.T) {
 func TestChangeSecurityChecks(t *testing.T) {
 
 	t.Run("enable disable", func(t *testing.T) {
-		enableSTT(t, true)
+		toggleSTT(t, true)
 
 		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
 		require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestChangeSecurityChecks(t *testing.T) {
 
 	t.Run("change interval error", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
-		enableSTT(t, true)
+		toggleSTT(t, true)
 
 		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
 		require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestChangeSecurityChecks(t *testing.T) {
 	t.Run("change interval normal", func(t *testing.T) {
 		defer restoreSettingsDefaults(t)
 		defer restoreCheckIntervalDefaults(t)
-		enableSTT(t, true)
+		toggleSTT(t, true)
 
 		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
 		require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestChangeSecurityChecks(t *testing.T) {
 		}
 
 		t.Run("intervals should be preserved on restart", func(t *testing.T) {
-			enableSTT(t, true)
+			toggleSTT(t, true)
 
 			_, err = managementClient.Default.SecurityChecks.StartSecurityChecks(nil)
 			require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestChangeSecurityChecks(t *testing.T) {
 	})
 }
 
-func enableSTT(t *testing.T, enable bool) {
+func toggleSTT(t *testing.T, enable bool) {
 	t.Helper()
 
 	res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
