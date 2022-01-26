@@ -113,11 +113,11 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-		ClientID:             connectResp.SSODetails.ClientID,
-		ClientSecret:         connectResp.SSODetails.ClientSecret,
-		IssuerURL:            connectResp.SSODetails.IssuerURL,
-		Scope:                connectResp.SSODetails.Scope,
-		PortalOrganizationID: connectResp.PortalOrganizationID,
+		ClientID:       connectResp.SSODetails.ClientID,
+		ClientSecret:   connectResp.SSODetails.ClientSecret,
+		IssuerURL:      connectResp.SSODetails.IssuerURL,
+		Scope:          connectResp.SSODetails.Scope,
+		OrganizationID: connectResp.OrganizationID,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
@@ -221,8 +221,8 @@ type ssoDetails struct {
 }
 
 type connectPMMResponse struct {
-	SSODetails           *ssoDetails `json:"sso_details"`
-	PortalOrganizationID string      `json:"org_id"`
+	SSODetails     *ssoDetails `json:"sso_details"`
+	OrganizationID string      `json:"org_id"`
 }
 
 type grpcGatewayError struct {
@@ -333,7 +333,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 
 	// Since PMM doesn't store the orgID we leave it empty and let Portal figure it out
 	// using the perconaPortal.orgID claim in the access token.
-	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.PortalOrganizationID)
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
