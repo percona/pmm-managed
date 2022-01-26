@@ -683,6 +683,10 @@ var databaseSchema = [][]string{
 		`ALTER TABLE ia_templates
 			DROP COLUMN tiers`,
 	},
+	57: {
+		`ALTER TABLE agents
+		ADD COLUMN process_exec_path VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
