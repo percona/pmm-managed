@@ -170,6 +170,25 @@ func TestVictoriaMetrics(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			},
 
+			&models.Service{
+				ServiceID:    "/service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4",
+				ServiceType:  models.MongoDBServiceType,
+				ServiceName:  "test-mongodb",
+				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+				Address:      pointer.ToString("5.6.7.8"),
+				Port:         pointer.ToUint16(27017),
+				CustomLabels: []byte(`{"_service_label": "bam"}`),
+			},
+
+			&models.Agent{
+				AgentID:      "/agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb",
+				AgentType:    models.MongoDBExporterType,
+				PMMAgentID:   pointer.ToString("/agent_id/217907dc-d34d-4e2e-aa84-a1b765d49853"),
+				ServiceID:    pointer.ToString("/service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4"),
+				CustomLabels: []byte(`{"_agent_label": "mongodb-baz"}`),
+				ListenPort:   pointer.ToUint16(12346),
+			},
+
 			// disabled
 			&models.Agent{
 				AgentID:    "/agent_id/4226ddb5-8197-443c-9891-7772b38324a7",
@@ -499,6 +518,64 @@ scrape_configs:
         username: pmm
         password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
       stream_parse: true
+    - job_name: mongodb_exporter_agent_id_ecd8995a-d479-4b4d-bfb7-865bac4ac2fb_hr-5s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - diagnosticdata
+			- replicasetstatus
+			- topmetrics
+      scrape_interval: 5s
+      scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12345
+          labels:
+            _agent_label: mongodb-baz
+            _node_label: foo
+            _service_label: bam
+            agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            agent_type: mongodb_exporter
+            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4
+            service_name: test-mongodb
+            service_type: mongodb
+      basic_auth:
+        username: pmm
+        password: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+    - job_name: mongodb_exporter_agent_id_ecd8995a-d479-4b4d-bfb7-865bac4ac2fb_lr-1m0s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - dbstats
+			- indexstats
+			- collstats
+      scrape_interval: 1m
+      scrape_timeout: 54s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12345
+          labels:
+            _agent_label: mongodb-baz
+            _node_label: foo
+            _service_label: bam
+            agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            agent_type: mongodb_exporter
+            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4
+            service_name: test-mongodb
+            service_type: mongodb
+      basic_auth:
+        username: pmm
+        password: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
 `) + "\n"
 		actual, err := ioutil.ReadFile(configPath)
 		check.NoError(err)
