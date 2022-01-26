@@ -33,7 +33,7 @@ func (v *perconaSSODetailsTableType) Columns() []string {
 		"issuer_url",
 		"scope",
 		"access_token",
-		"portal_organization_id",
+		"organization_id",
 		"created_at",
 	}
 }
@@ -64,7 +64,7 @@ var PerconaSSODetailsTable = &perconaSSODetailsTableType{
 			{Name: "IssuerURL", Type: "string", Column: "issuer_url"},
 			{Name: "Scope", Type: "string", Column: "scope"},
 			{Name: "AccessToken", Type: "*PerconaSSOAccessToken", Column: "access_token"},
-			{Name: "PortalOrganizationID", Type: "string", Column: "portal_organization_id"},
+			{Name: "PortalOrganizationID", Type: "string", Column: "organization_id"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 		},
 		PKFieldIndex: 0,

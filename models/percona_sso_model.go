@@ -34,7 +34,7 @@ type PerconaSSODetails struct {
 	IssuerURL            string                 `reform:"issuer_url"`
 	Scope                string                 `reform:"scope"`
 	AccessToken          *PerconaSSOAccessToken `reform:"access_token"`
-	PortalOrganizationID string                 `reform:"portal_organization_id"`
+	PortalOrganizationID string                 `reform:"organization_id"`
 
 	CreatedAt time.Time `reform:"created_at"`
 }

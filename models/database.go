@@ -685,7 +685,7 @@ var databaseSchema = [][]string{
 	},
 	57: {
 		`ALTER TABLE percona_sso_details
-			ADD COLUMN portal_organization_id VARCHAR NOT NULL`,
+			ADD COLUMN organization_id VARCHAR`,
 	},
 }
 
