@@ -56,18 +56,18 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		expectedSSODetails := &models.PerconaSSODetails{
-			IssuerURL:            issuerURL,
-			ClientID:             clientID,
-			ClientSecret:         clientSecret,
-			Scope:                "percona",
-			PortalOrganizationID: orgID,
+			IssuerURL:      issuerURL,
+			ClientID:       clientID,
+			ClientSecret:   clientSecret,
+			Scope:          "percona",
+			OrganizationID: orgID,
 		}
 		insertSSODetails := &models.PerconaSSODetailsInsert{
-			IssuerURL:            expectedSSODetails.IssuerURL,
-			ClientID:             expectedSSODetails.ClientID,
-			ClientSecret:         expectedSSODetails.ClientSecret,
-			Scope:                expectedSSODetails.Scope,
-			PortalOrganizationID: expectedSSODetails.PortalOrganizationID,
+			IssuerURL:      expectedSSODetails.IssuerURL,
+			ClientID:       expectedSSODetails.ClientID,
+			ClientSecret:   expectedSSODetails.ClientSecret,
+			Scope:          expectedSSODetails.Scope,
+			OrganizationID: expectedSSODetails.OrganizationID,
 		}
 		err := models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
 		require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestPerconaSSODetails(t *testing.T) {
 		assert.Equal(t, expectedSSODetails.ClientSecret, ssoDetails.ClientSecret)
 		assert.Equal(t, expectedSSODetails.IssuerURL, ssoDetails.IssuerURL)
 		assert.Equal(t, expectedSSODetails.Scope, ssoDetails.Scope)
-		assert.Equal(t, expectedSSODetails.PortalOrganizationID, ssoDetails.PortalOrganizationID)
+		assert.Equal(t, expectedSSODetails.OrganizationID, ssoDetails.OrganizationID)
 
 		assert.NotNil(t, ssoDetails.AccessToken)
 		assert.NotNil(t, ssoDetails.AccessToken.AccessToken)
@@ -104,11 +104,11 @@ func TestPerconaSSODetails(t *testing.T) {
 		defer cleanup()
 
 		InsertSSODetails := &models.PerconaSSODetailsInsert{
-			IssuerURL:            issuerURL,
-			ClientID:             "wrongClientID",
-			ClientSecret:         "wrongClientSecret",
-			Scope:                "percona",
-			PortalOrganizationID: "org-id",
+			IssuerURL:      issuerURL,
+			ClientID:       "wrongClientID",
+			ClientSecret:   "wrongClientSecret",
+			Scope:          "percona",
+			OrganizationID: "org-id",
 		}
 		err := models.InsertPerconaSSODetails(db.Querier, InsertSSODetails)
 		require.NoError(t, err)
