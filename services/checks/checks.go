@@ -424,8 +424,6 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		if !ok {
 			return errors.Errorf("check: %s not found", name)
 		}
-		oldInterval := c.Interval
-		c.Interval = interval
 
 		// since we re-run checks at regular intervals using a call
 		// to s.runChecksGroup which in turn calls s.CollectChecks
@@ -433,25 +431,25 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
 		errTx := s.db.InTransaction(func(tx *reform.TX) error {
-			cs, err := models.FindCheckSettingsByName(tx.Querier, c.Name)
+			cs, err := models.FindCheckSettingsByName(tx.Querier, name)
 			if err != nil && !errors.Is(err, reform.ErrNoRows) {
 				return err
 			}
 
 			if cs == nil {
 				// record interval change for the first time.
-				cs, err = models.CreateCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
+				cs, err = models.CreateCheckSettings(tx.Querier, name, models.Interval(interval))
 				if err != nil {
 					return err
 				}
-				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
+				s.l.Debugf("Saved interval change for check: %s in DB", name)
 			} else {
 				// update existing interval change.
-				cs, err = models.ChangeCheckSettings(tx.Querier, c.Name, models.Interval(c.Interval))
+				cs, err = models.ChangeCheckSettings(tx.Querier, name, models.Interval(interval))
 				if err != nil {
 					return err
 				}
-				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+				s.l.Debugf("Updated interval change for check: %s in DB", name)
 			}
 
 			return nil
@@ -460,7 +458,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 			return errTx
 		}
 
-		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", c.Name, oldInterval, interval)
+		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", name, c.Interval, interval)
 	}
 
 	return nil

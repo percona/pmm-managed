@@ -143,7 +143,7 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, checks, 3)
 
-		checkNames := make([]string, 0, 3)
+		checkNames := make([]string, 0, len(checks))
 		for _, c := range checks {
 			checkNames = append(checkNames, c.Name)
 		}
