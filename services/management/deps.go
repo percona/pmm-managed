@@ -59,7 +59,7 @@ type prometheusService interface {
 // checksService is a subset of methods of checks.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type checksService interface {
-	StartChecks(ctx context.Context, group check.Interval, checkNames []string) error
+	StartChecks(checkNames []string) error
 	GetSecurityCheckResults() ([]services.STTCheckResult, error)
 	GetChecks() (map[string]check.Check, error)
 	GetDisabledChecks() ([]string, error)

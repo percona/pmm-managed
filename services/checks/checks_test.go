@@ -68,15 +68,39 @@ func TestDownloadChecks(t *testing.T) {
 	s.host = devChecksHost
 	s.publicKeys = []string{devChecksPublicKey}
 
-	checks, err := s.GetChecks()
-	require.NoError(t, err)
-	assert.Empty(t, checks)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	t.Run("normal", func(t *testing.T) {
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Empty(t, checks)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-	dChecks, err := s.downloadChecks(ctx)
-	require.NoError(t, err)
-	assert.NotEmpty(t, dChecks)
+		dChecks, err := s.downloadChecks(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, dChecks)
+
+		checks, err = s.GetChecks()
+		require.NoError(t, err)
+		assert.NotEmpty(t, checks)
+	})
+
+	t.Run("disabled telemetry", func(t *testing.T) {
+		_, err := models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
+			DisableTelemetry: true,
+		})
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		dChecks, err := s.downloadChecks(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, dChecks)
+
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Empty(t, checks)
+	})
 }
 
 func TestLoadLocalChecks(t *testing.T) {
@@ -113,7 +137,7 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
@@ -133,7 +157,7 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 		assert.NotEmpty(t, s.checks)
 	})
 }
@@ -146,7 +170,7 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
@@ -171,7 +195,7 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
@@ -199,7 +223,7 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		err = s.DisableChecks([]string{"unknown_check"})
 		require.Error(t, err)
@@ -218,7 +242,7 @@ func TestEnableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
@@ -246,7 +270,7 @@ func TestChangeInterval(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
@@ -274,7 +298,7 @@ func TestChangeInterval(t *testing.T) {
 			err = models.SaveSettings(db, settings)
 			require.NoError(t, err)
 
-			err = s.StartChecks(context.Background(), "", nil)
+			err = s.runChecksGroup(context.Background(), "")
 			require.NoError(t, err)
 
 			checks, err := s.GetChecks()
@@ -348,7 +372,7 @@ func TestStartChecks(t *testing.T) {
 	t.Run("stt disabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		err = s.StartChecks(context.Background(), "", nil)
+		err = s.runChecksGroup(context.Background(), "")
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 
@@ -362,7 +386,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background(), check.Interval("unknown"), nil)
+		err = s.runChecksGroup(context.Background(), check.Interval("unknown"))
 		assert.EqualError(t, err, "unknown check interval: unknown")
 	})
 
@@ -379,7 +403,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background(), "", nil)
+		err = s.runChecksGroup(context.Background(), "")
 		require.NoError(t, err)
 	})
 }
