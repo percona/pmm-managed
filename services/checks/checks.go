@@ -459,7 +459,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		c.Interval = interval
 
 		// since we re-run checks at regular intervals using a call
-		// to s.StartChecks which in turn calls s.CollectChecks
+		// to s.runChecksGroup which in turn calls s.CollectChecks
 		// to load/download checks, we must persist any changes
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
