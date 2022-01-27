@@ -331,8 +331,6 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
-	// Since PMM doesn't store the orgID we leave it empty and let Portal figure it out
-	// using the perconaPortal.orgID claim in the access token.
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
