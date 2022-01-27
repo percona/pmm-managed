@@ -523,21 +523,21 @@ scrape_configs:
       params:
         collect[]:
             - diagnosticdata
-			- replicasetstatus
-			- topmetrics
+            - replicasetstatus
+            - topmetrics
       scrape_interval: 5s
       scrape_timeout: 4s
       metrics_path: /metrics
       static_configs:
         - targets:
-            - 1.2.3.4:12345
+            - 1.2.3.4:12346
           labels:
             _agent_label: mongodb-baz
             _node_label: foo
             _service_label: bam
             agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
             agent_type: mongodb_exporter
-            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            instance: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
             node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
             node_name: test-generic-node
             node_type: generic
@@ -551,22 +551,22 @@ scrape_configs:
       honor_timestamps: false
       params:
         collect[]:
+            - collstats
             - dbstats
-			- indexstats
-			- collstats
+            - indexstats
       scrape_interval: 1m
       scrape_timeout: 54s
       metrics_path: /metrics
       static_configs:
         - targets:
-            - 1.2.3.4:12345
+            - 1.2.3.4:12346
           labels:
             _agent_label: mongodb-baz
             _node_label: foo
             _service_label: bam
             agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
             agent_type: mongodb_exporter
-            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            instance: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
             node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
             node_name: test-generic-node
             node_type: generic
