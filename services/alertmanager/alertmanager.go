@@ -748,12 +748,13 @@ func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammode
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")
 	}
 
-	m := make(map[string]struct{}, len(ids))
+	l := len(ids)
+	m := make(map[string]struct{}, l)
 	for _, id := range ids {
 		m[id] = struct{}{}
 	}
 
-	res := make([]*ammodels.GettableAlert, 0, len(ids))
+	res := make([]*ammodels.GettableAlert, 0, l)
 	for _, a := range alerts {
 		if _, ok := m[*a.Fingerprint]; ok {
 			res = append(res, a)
