@@ -17,6 +17,7 @@
 package victoriametrics
 
 import (
+	"github.com/percona/pmm/version"
 	"net/url"
 	"testing"
 	"time"
@@ -774,10 +775,11 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			actual, err := scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
-				host:    "4.5.6.7",
-				node:    node,
-				service: service,
-				agent:   agent,
+				host:            "4.5.6.7",
+				node:            node,
+				service:         service,
+				agent:           agent,
+				pmmAgentVersion: version.MustParse("2.26.0"),
 			})
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
@@ -795,10 +797,11 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			_, err := scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
-				host:    "4.5.6.7",
-				node:    node,
-				service: service,
-				agent:   agent,
+				host:            "4.5.6.7",
+				node:            node,
+				service:         service,
+				agent:           agent,
+				pmmAgentVersion: version.MustParse("2.26.0"),
 			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
@@ -1193,10 +1196,11 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			_, err := scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
-				host:    "4.5.6.7",
-				node:    node,
-				service: service,
-				agent:   agent,
+				host:            "4.5.6.7",
+				node:            node,
+				service:         service,
+				agent:           agent,
+				pmmAgentVersion: version.MustParse("2.26.0"),
 			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
