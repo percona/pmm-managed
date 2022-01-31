@@ -705,10 +705,11 @@ func TestScrapeConfig(t *testing.T) {
 				CustomLabels: []byte(`{"_some_service_label": "bar"}`),
 			}
 			agent := &models.Agent{
-				AgentID:      "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
-				AgentType:    models.MongoDBExporterType,
-				CustomLabels: []byte(`{"_some_agent_label": "baz"}`),
-				ListenPort:   pointer.ToUint16(12345),
+				AgentID:        "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+				AgentType:      models.MongoDBExporterType,
+				CustomLabels:   []byte(`{"_some_agent_label": "baz"}`),
+				ListenPort:     pointer.ToUint16(12345),
+				MongoDBOptions: &models.MongoDBOptions{EnableAllCollectors: true},
 			}
 
 			expected := []*config.ScrapeConfig{{
