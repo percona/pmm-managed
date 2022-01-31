@@ -41,6 +41,7 @@ func hashPassword(password string) string {
 
 func TestWebConfig(t *testing.T) {
 	t.Run("v2.26.1", func(t *testing.T) {
+		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
@@ -64,6 +65,7 @@ func TestWebConfig(t *testing.T) {
 	})
 
 	t.Run("v2.27.0", func(t *testing.T) {
+		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
@@ -114,6 +116,7 @@ type WebConfig struct {
 
 func TestNodeExporterConfig(t *testing.T) {
 	t.Run("Linux", func(t *testing.T) {
+		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
@@ -203,6 +206,7 @@ func TestNodeExporterConfig(t *testing.T) {
 	})
 
 	t.Run("LinuxDisabledCollectors", func(t *testing.T) {
+		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:            "agent-id",
@@ -283,6 +287,7 @@ func TestNodeExporterConfig(t *testing.T) {
 	})
 
 	t.Run("MacOS", func(t *testing.T) {
+		t.Parallel()
 		node := &models.Node{
 			Distro: "darwin",
 		}
