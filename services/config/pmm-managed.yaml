@@ -44,6 +44,15 @@ services:
       report: https://%s/v1/telemetry/Report
   telemetry_v2:
     enabled: true
+    datasources:
+      VM:
+      QANDB_SELECT:
+      PMMDB_SELECT:
+        timeout: 10s
+        use_separate_credentials: false
+        separate_credentials:
+          username: pmm
+          password: pmm
     reporting:
       send_on_start: false
       interval: 24h
