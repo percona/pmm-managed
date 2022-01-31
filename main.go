@@ -25,11 +25,13 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/percona/pmm-managed/services/config"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof" // register /debug/pprof
+	"net/url"
 	"os"
 	"os/signal"
 	"sort"
@@ -650,19 +652,39 @@ func main() {
 	if err := cfg.Load(); err != nil {
 		l.Panicf("Failed to load config: %+v", err)
 	}
+	if err := cfg.Update(func(s *config.Service) error {
+		pmmdb := s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT
+		timeout, err := time.ParseDuration(s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT.Timeout)
+		}
+		pmmdb.Timeout = timeout
+		pmmdb.Credentials.Username = *postgresDBUsernameF
+		pmmdb.Credentials.Password = *postgresDBPasswordF
+		pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+		pmmdb.DSN.Host = *postgresAddrF
+		pmmdb.DSN.DB = *postgresDBNameF
+		q := make(url.Values)
+		q.Set("sslmode", "disable")
+		pmmdb.DSN.Params = q.Encode()
 
-	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
+		return nil
+	}); err != nil {
+		l.Panicf("Failed to update config: %+v", err)
+	}
+
+	pmmDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close() //nolint:errcheck
+	defer pmmDB.Close() //nolint:errcheck
 
-	migrateDB(ctx, sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
+	migrateDB(ctx, pmmDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
 
-	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
+	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, pmmDB))
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
+	db := reform.NewDB(pmmDB, postgresql.Dialect, reformL)
 
 	// Generate unique PMM Server ID if it's not already set.
 	err = models.SetPMMServerID(db)
@@ -689,7 +711,7 @@ func main() {
 
 	minioService := minio.New()
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	qanClient := getQANClient(ctx, pmmDB, *postgresDBNameF, *qanAPIAddrF)
 
 	agentsRegistry := agents.NewRegistry(db)
 	backupRemovalService := backup.NewRemovalService(db, minioService)
@@ -713,7 +735,7 @@ func main() {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}
 
-	telemetryV2, err := telemetry_v2.NewService(db, cfg.Config.Services.TelemetryV2)
+	telemetryV2, err := telemetry_v2.NewService(db, version.Version, cfg.Config.Services.TelemetryV2)
 	if err != nil {
 		l.Fatalf("Could not create telemetry_v2 service: %s", err)
 	}
@@ -807,7 +829,7 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:        sqlDB,
+		sqlDB:        pmmDB,
 		supervisord:  supervisord,
 		vmdb:         vmdb,
 		vmalert:      vmalert,
@@ -842,7 +864,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(sqlDB)
+	settings, err := models.GetSettings(pmmDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}

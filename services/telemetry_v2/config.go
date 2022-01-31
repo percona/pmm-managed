@@ -1,6 +1,7 @@
 package telemetry_v2
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -13,9 +14,45 @@ const (
 )
 
 type ServiceConfig struct {
-	Enabled   bool `yaml:"enabled"`
-	telemetry []TelemetryConfig
+	Enabled     bool              `yaml:"enabled"`
+	telemetry   []TelemetryConfig `yaml:"-"`
+	Endpoints    EndpointsConfig `yaml:"endpoints"`
+	SaasHostname string          `yaml:"saas_hostname"`
+	DataSources struct {
+		VM           struct{}       `yaml:"VM"`
+		QANDB_SELECT struct{}       `yaml:"QANDB_SELECT"`
+		PMMDB_SELECT *DSConfigPMMDB `yaml:"PMMDB_SELECT"`
+	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
+}
+
+type EndpointsConfig struct {
+	Report string `yaml:"report"`
+}
+
+func (c *ServiceConfig) ReportEndpointURL() string {
+	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
+}
+
+type DSConfigPMMDB struct {
+	Timeout                time.Duration `yaml:"-"`
+	TimeoutStr             string        `yaml:"timeout"`
+	UseSeparateCredentials bool          `yaml:"use_separate_credentials"`
+	// Credentials used by PMM
+	DSN struct {
+		Scheme string
+		Host   string
+		DB     string
+		Params string
+	} `yaml:"-"`
+	Credentials struct {
+		Username string
+		Password string
+	} `yaml:"-"`
+	SeparateCredentials struct {
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	} `yaml:"separate_credentials"`
 }
 
 type TelemetryConfig struct {
@@ -23,12 +60,22 @@ type TelemetryConfig struct {
 	Source  string `yaml:"source"`
 	Query   string `yaml:"query"`
 	Summary string `yaml:"summary"`
-	Data    []struct {
-		Name   string `yaml:"metric_name"`
-		Label  string `yaml:"label"`
-		Value  string `yaml:"value"`
-		Column string `yaml:"column"`
+	Data    []TelemetryConfigData
+}
+
+type TelemetryConfigData struct {
+	Name   string `yaml:"metric_name"`
+	Label  string `yaml:"label"`
+	Value  string `yaml:"value"`
+	Column string `yaml:"column"`
+}
+
+func (c *TelemetryConfig) MapByColumn() map[string]TelemetryConfigData {
+	result := make(map[string]TelemetryConfigData, len(c.Data))
+	for _, each := range c.Data {
+		result[each.Column] = each
 	}
+	return result
 }
 
 type ReportingConfig struct {

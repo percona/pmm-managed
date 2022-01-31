@@ -128,6 +128,10 @@ func (s *Service) Load() error {
 	return nil
 }
 
+func (s *Service) Update(updater func(s *Service) error) error {
+	return updater(s)
+}
+
 func validate(cfg Config, configPath string) error {
 	allIds := make(map[string]bool)
 	for _, config := range cfg.Telemetry {
