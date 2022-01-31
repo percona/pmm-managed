@@ -438,14 +438,14 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 
 			if cs == nil {
 				// record interval change for the first time.
-				cs, err = models.CreateCheckSettings(tx.Querier, name, models.Interval(interval))
+				_, err = models.CreateCheckSettings(tx.Querier, name, models.Interval(interval))
 				if err != nil {
 					return err
 				}
 				s.l.Debugf("Saved interval change for check: %s in DB", name)
 			} else {
 				// update existing interval change.
-				cs, err = models.ChangeCheckSettings(tx.Querier, name, models.Interval(interval))
+				_, err = models.ChangeCheckSettings(tx.Querier, name, models.Interval(interval))
 				if err != nil {
 					return err
 				}
