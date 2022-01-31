@@ -17,12 +17,12 @@
 package victoriametrics
 
 import (
-	"github.com/percona/pmm/version"
 	"net/url"
 	"testing"
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/version"
 	config "github.com/percona/promconfig"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/stretchr/testify/assert"
