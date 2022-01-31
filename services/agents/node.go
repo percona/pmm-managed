@@ -29,9 +29,7 @@ import (
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
-var (
-	v2_26_99 = version.MustParse("2.26.99")
-)
+var v2_26_99 = version.MustParse("2.26.99")
 
 func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
 	files := exporter.Files()
@@ -161,6 +159,16 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 
 	env := getExporterEnv(exporter, agentVersion, &tdp)
 	files := getExporterFiles(exporter, agentVersion)
+
+	for k := range files {
+		switch k {
+		case "webConfigPlaceholder":
+			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
+			args = append(args, "--web.config="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
+		default:
+			continue
+		}
+	}
 
 	return &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_NODE_EXPORTER,
