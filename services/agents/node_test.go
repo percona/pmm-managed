@@ -105,6 +105,7 @@ func TestWebConfig(t *testing.T) {
 	})
 }
 
+// expected yaml is plain collection with usernames, so define 'pmm' user as a struct field.
 type WebConfig struct {
 	BasicAuthUsers struct {
 		Pmm string `yaml:"pmm"`
