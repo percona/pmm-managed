@@ -46,9 +46,11 @@ services:
     enabled: true
     datasources:
       VM:
+        timeout: 2s
+        address: http://localhost:9090/prometheus
       QANDB_SELECT:
         timeout: 2s
-        dsn: tcp://127.0.0.1:11000?database=pmm&block_size=10000&pool_size=2
+        dsn: tcp://localhost:9000?database=pmm&block_size=10000&pool_size=2
       PMMDB_SELECT:
         timeout: 10s
         use_separate_credentials: false
@@ -87,6 +89,10 @@ telemetry:
     data:
       - metric_name: "node_load1"
         value: 1
+      - metric_name: "node_load1_job"
+        label: 'job'
+      - metric_name: "node_load1_instance"
+        label: 'instance'
   - id: PMMAgentVersion
     source: PMMDB_SELECT
     query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
