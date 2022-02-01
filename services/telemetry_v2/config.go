@@ -14,13 +14,13 @@ const (
 )
 
 type ServiceConfig struct {
-	Enabled     bool              `yaml:"enabled"`
-	telemetry   []TelemetryConfig `yaml:"-"`
-	Endpoints    EndpointsConfig `yaml:"endpoints"`
-	SaasHostname string          `yaml:"saas_hostname"`
-	DataSources struct {
+	Enabled      bool              `yaml:"enabled"`
+	telemetry    []TelemetryConfig `yaml:"-"`
+	Endpoints    EndpointsConfig   `yaml:"endpoints"`
+	SaasHostname string            `yaml:"saas_hostname"`
+	DataSources  struct {
 		VM           struct{}       `yaml:"VM"`
-		QANDB_SELECT struct{}       `yaml:"QANDB_SELECT"`
+		QANDB_SELECT *DSConfigQAN   `yaml:"QANDB_SELECT"`
 		PMMDB_SELECT *DSConfigPMMDB `yaml:"PMMDB_SELECT"`
 	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
@@ -32,6 +32,12 @@ type EndpointsConfig struct {
 
 func (c *ServiceConfig) ReportEndpointURL() string {
 	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
+}
+
+type DSConfigQAN struct {
+	Timeout    time.Duration `yaml:"-"`
+	TimeoutStr string        `yaml:"timeout"`
+	DSN        string        `yaml:"dsn"`
 }
 
 type DSConfigPMMDB struct {

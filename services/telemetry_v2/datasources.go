@@ -25,16 +25,22 @@ type telemetryDataSourceRegistry struct {
 }
 
 func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (TelemetryDataSourceLocator, error) {
-	dbSelect, err := NewDsPmmDbSelect(*config.DataSources.PMMDB_SELECT, l)
+	pmmDB, err := NewDsPmmDbSelect(*config.DataSources.PMMDB_SELECT, l)
 	if err != nil {
 		return nil, err
 	}
+
+	qanDB, err := NewDsQanDbSelect(*config.DataSources.QANDB_SELECT, l)
+	if err != nil {
+		return nil, err
+	}
+
 	return &telemetryDataSourceRegistry{
 		l: l,
 		dataSources: map[TelemetryDataSourceName]TelemetryDataSource{
 			DS_VM:           NewDsVm(l),
-			DS_PMMDB_SELECT: dbSelect,
-			DS_QANDB_SELECT: NewDsQanDbSelect(l),
+			DS_PMMDB_SELECT: pmmDB,
+			DS_QANDB_SELECT: qanDB,
 		},
 	}, nil
 }
