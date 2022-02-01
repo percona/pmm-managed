@@ -22,7 +22,7 @@ var (
 )
 
 func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSource, error) {
-	db, err := openDB(config)
+	db, err := openPMMDBConnection(config)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSourc
 	}, nil
 }
 
-func openDB(config DSConfigPMMDB) (*sql.DB, error) {
+func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
 	var user *url.Userinfo
 	if config.UseSeparateCredentials {
 		user = url.UserPassword(config.SeparateCredentials.Username, config.SeparateCredentials.Password)
@@ -67,46 +67,5 @@ func openDB(config DSConfigPMMDB) (*sql.DB, error) {
 }
 
 func (d *dsPmmDbSelect) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*reporter.ServerMetric_Metric, error) {
-	localCtx, _ := context.WithTimeout(ctx, d.config.Timeout)
-	tx, err := d.db.BeginTx(localCtx, &sql.TxOptions{})
-	if err != nil {
-		return nil, err
-	}
-	// to minimize risk of modifying DB
-	defer tx.Rollback()
-
-	rows, err := d.db.Query("SELECT " + config.Query)
-	if err != nil {
-		return nil, err
-	}
-
-	var metrics []*reporter.ServerMetric_Metric
-
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	strs := make([]*string, len(columns))
-	values := make([]interface{}, len(columns))
-	for i := range values {
-		values[i] = &strs[i]
-	}
-	cfgColumns := config.MapByColumn()
-	for rows.Next() {
-		if err := rows.Scan(values...); err != nil {
-			d.l.Error(err)
-			continue
-		}
-
-		for idx, column := range columns {
-			if _, ok := cfgColumns[column]; ok {
-				metrics = append(metrics, &reporter.ServerMetric_Metric{
-					Key:   column,
-					Value: *strs[idx],
-				})
-			}
-		}
-	}
-
-	return metrics, nil
+	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
 }

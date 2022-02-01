@@ -47,6 +47,8 @@ services:
     datasources:
       VM:
       QANDB_SELECT:
+        timeout: 2s
+        dsn: tcp://127.0.0.1:11000?database=pmm&block_size=10000&pool_size=2
       PMMDB_SELECT:
         timeout: 10s
         use_separate_credentials: false
@@ -87,7 +89,6 @@ telemetry:
         value: 1
   - id: PMMAgentVersion
     source: PMMDB_SELECT
-    # only SELECT statements are supported
     query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
     summary: “Select PMM Agents version”
     data:
@@ -95,10 +96,13 @@ telemetry:
         column: "version"
   - id: PMMServerQAN
     source: QANDB_SELECT
-    # only SELECT statements are supported
     query: |
-      <colunm 1>, <colunm 2> from metrics where ...
-    summary: “Select QAN ...”
+      m_query_time_sum, m_query_time_cnt, num_queries from metrics
+    summary: “Select QAN”
     data:
-      - metric_name: "<metric name>"
-        column: "<column 1>"
+      - metric_name: "m_query_time_sum"
+        column: "m_query_time_sum"
+      - metric_name: "m_query_tune_cnt"
+        column: "m_query_tune_cnt"
+      - metric_name: "num_queries"
+        column: "num_queries"
