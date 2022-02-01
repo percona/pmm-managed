@@ -19,7 +19,7 @@ type ServiceConfig struct {
 	Endpoints    EndpointsConfig   `yaml:"endpoints"`
 	SaasHostname string            `yaml:"saas_hostname"`
 	DataSources  struct {
-		VM           struct{}       `yaml:"VM"`
+		VM           *DSVM          `yaml:"VM"`
 		QANDB_SELECT *DSConfigQAN   `yaml:"QANDB_SELECT"`
 		PMMDB_SELECT *DSConfigPMMDB `yaml:"PMMDB_SELECT"`
 	} `yaml:"datasources"`
@@ -38,6 +38,12 @@ type DSConfigQAN struct {
 	Timeout    time.Duration `yaml:"-"`
 	TimeoutStr string        `yaml:"timeout"`
 	DSN        string        `yaml:"dsn"`
+}
+
+type DSVM struct {
+	Timeout    time.Duration `yaml:"-"`
+	TimeoutStr string        `yaml:"timeout"`
+	Address    string        `yaml:"address"`
 }
 
 type DSConfigPMMDB struct {
@@ -70,10 +76,10 @@ type TelemetryConfig struct {
 }
 
 type TelemetryConfigData struct {
-	Name   string `yaml:"metric_name"`
-	Label  string `yaml:"label"`
-	Value  string `yaml:"value"`
-	Column string `yaml:"column"`
+	MetricName string `yaml:"metric_name"`
+	Label      string `yaml:"label"`
+	Value      string `yaml:"value"`
+	Column     string `yaml:"column"`
 }
 
 func (c *TelemetryConfig) MapByColumn() map[string]TelemetryConfigData {

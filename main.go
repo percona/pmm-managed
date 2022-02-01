@@ -657,8 +657,15 @@ func main() {
 	if err := cfg.Update(func(s *config.Service) error {
 		ds := s.Config.Services.TelemetryV2.DataSources
 
+		vmdb := ds.VM
+		timeout, err := time.ParseDuration(ds.VM.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
+		}
+		vmdb.Timeout = timeout
+
 		qandb := ds.QANDB_SELECT
-		timeout, err := time.ParseDuration(ds.QANDB_SELECT.TimeoutStr)
+		timeout, err = time.ParseDuration(ds.QANDB_SELECT.TimeoutStr)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
 		}
