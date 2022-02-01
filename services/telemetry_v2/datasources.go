@@ -35,10 +35,15 @@ func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (TelemetryData
 		return nil, err
 	}
 
+	vmDB, err := NewDsVm(*config.DataSources.VM, l)
+	if err != nil {
+		return nil, err
+	}
+
 	return &telemetryDataSourceRegistry{
 		l: l,
 		dataSources: map[TelemetryDataSourceName]TelemetryDataSource{
-			DS_VM:           NewDsVm(l),
+			DS_VM:           vmDB,
 			DS_PMMDB_SELECT: pmmDB,
 			DS_QANDB_SELECT: qanDB,
 		},
