@@ -651,10 +651,19 @@ func main() {
 		l.Panicf("Failed to load config: %+v", err)
 	}
 	if err := cfg.Update(func(s *config.Service) error {
-		pmmdb := s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT
-		timeout, err := time.ParseDuration(s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT.TimeoutStr)
+		ds := s.Config.Services.TelemetryV2.DataSources
+
+		qandb := ds.QANDB_SELECT
+		timeout, err := time.ParseDuration(ds.QANDB_SELECT.TimeoutStr)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse duration [%s]", s.Config.Services.TelemetryV2.DataSources.PMMDB_SELECT.Timeout)
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
+		}
+		qandb.Timeout = timeout
+
+		pmmdb := ds.PMMDB_SELECT
+		timeout, err = time.ParseDuration(ds.PMMDB_SELECT.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
 		}
 		pmmdb.Timeout = timeout
 		pmmdb.Credentials.Username = *postgresDBUsernameF
