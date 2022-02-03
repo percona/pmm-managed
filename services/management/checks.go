@@ -44,7 +44,7 @@ func NewChecksAPIService(checksService checksService) *ChecksAPIService {
 }
 
 // GetSecurityCheckResults returns Security Thread Tool's latest checks results.
-func (s *ChecksAPIService) GetSecurityCheckResults(ctx context.Context, request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
+func (s *ChecksAPIService) GetSecurityCheckResults(ctx context.Context, req *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
 		if err == services.ErrSTTDisabled {
@@ -70,11 +70,11 @@ func (s *ChecksAPIService) GetSecurityCheckResults(ctx context.Context, request 
 }
 
 // StartSecurityChecks executes Security Thread Tool checks and returns when all checks are executed.
-func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, request *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
+func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, req *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
 	// Start only specified checks from any group.
-	err := s.checksService.StartChecks(ctx, "", request.Names)
+	err := s.checksService.StartChecks(req.Names)
 	if err != nil {
-		if err == services.ErrSTTDisabled {
+		if errors.Is(err, services.ErrSTTDisabled) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 
@@ -96,7 +96,11 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 		m[c] = struct{}{}
 	}
 
-	checks := s.checksService.GetAllChecks()
+	checks, err := s.checksService.GetChecks()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get available checks list")
+	}
+
 	res := make([]*managementpb.SecurityCheck, 0, len(checks))
 	for _, c := range checks {
 		_, disabled := m[c.Name]
