@@ -594,6 +594,7 @@ command =
 		--retentionPeriod={{ .DataRetentionDays }}d
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:9090
+		--downsampling.period=1h:10s,6h:30s,1d:5m
 		--search.disableCache={{ .VMDBCacheDisable }}
 		--search.maxQueryLen=1MB
 		--search.latencyOffset=5s
