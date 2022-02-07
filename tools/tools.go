@@ -25,6 +25,7 @@ import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
+	_ "github.com/quasilyte/go-consistent"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/perf/cmd/benchstat"
 	_ "golang.org/x/tools/cmd/goimports"
@@ -45,3 +46,4 @@ import (
 //go:generate go build -o ../bin/mockery github.com/vektra/mockery/cmd/mockery
 //go:generate go build -o ../bin/reform gopkg.in/reform.v1/reform
 //go:generate go build -o ../bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
+//go:generate go build -o ../bin/go-consistent github.com/quasilyte/go-consistent
