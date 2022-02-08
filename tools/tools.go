@@ -25,7 +25,6 @@ import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
-	_ "github.com/quasilyte/go-consistent"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/perf/cmd/benchstat"
 	_ "golang.org/x/tools/cmd/goimports"
