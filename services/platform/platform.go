@@ -23,11 +23,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm/api/platformpb"
@@ -63,7 +65,7 @@ type grafanaClient interface {
 
 // New returns platform Service.
 func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient) (*Service, error) {
-	l := logrus.WithField("component", "auth")
+	l := logrus.WithField("component", "platform")
 
 	host, err := envvars.GetSAASHost()
 	if err != nil {
@@ -314,6 +316,22 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	return nil
 }
 
+type searchOrganizationTicketsResponse struct {
+	Tickets []*ticketResponse `json:"tickets"`
+}
+
+type ticketResponse struct {
+	Number           string `json:"number"`
+	ShortDescription string `json:"short_description"` //nolint:tagliatelle
+	Priority         string `json:"priority"`
+	State            string `json:"state"`
+	CreateTime       string `json:"create_time"`
+	Department       string `json:"department"`
+	Requester        string `json:"requestor"`
+	TaskType         string `json:"task_type"` //nolint:tagliatelle
+	URL              string `json:"url"`
+}
+
 // SearchOrganizationTickets fetches the list of ticket associated with the Portal organization this PMM server is registered with.
 func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb.SearchOrganizationTicketsRequest) (*platformpb.SearchOrganizationTicketsResponse, error) {
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
@@ -359,10 +377,43 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
-	response := &platformpb.SearchOrganizationTicketsResponse{}
-	if err := decoder.Decode(response); err != nil {
+	// the response from portal contains the timestamp as a string
+	// so we first unmarshal the response to an internal type with a string
+	// timestamp field and then convert it to the type used by the public API.
+	platformResponse := &searchOrganizationTicketsResponse{}
+	if err := decoder.Decode(platformResponse); err != nil {
 		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
 		return nil, internalServerError
 	}
+
+	response := &platformpb.SearchOrganizationTicketsResponse{}
+	for _, t := range platformResponse.Tickets {
+		ticket, err := convertTicket(t)
+		if err != nil {
+			s.l.Errorf("Failed to convert OrganizationTickets: %s", err)
+			return nil, internalServerError
+		}
+		response.Tickets = append(response.Tickets, ticket)
+	}
+
 	return response, nil
+}
+
+func convertTicket(t *ticketResponse) (*platformpb.OrganizationTicket, error) {
+	create_time, err := time.Parse(time.RFC3339, t.CreateTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return &platformpb.OrganizationTicket{
+		Number:           t.Number,
+		ShortDescription: t.ShortDescription,
+		Priority:         t.Priority,
+		State:            t.State,
+		CreateTime:       timestamppb.New(create_time),
+		Department:       t.Department,
+		Requester:        t.Requester,
+		TaskType:         t.TaskType,
+		Url:              t.URL,
+	}, nil
 }
