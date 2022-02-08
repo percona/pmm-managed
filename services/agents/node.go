@@ -52,7 +52,7 @@ func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed, tdp
 
 	// basic auth via env for older exporters
 	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
-		env = append(env, fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID))
+		env = append(env, fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()))
 	}
 
 	return env
