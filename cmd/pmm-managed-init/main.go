@@ -53,4 +53,5 @@ func main() {
 		os.Exit(1)
 	}
 	os.MkdirAll("/srv/logs/", 0775)
+	os.MkdirAll("/srv/grafana/plugins/", 0775)
 }
