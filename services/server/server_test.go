@@ -40,38 +40,38 @@ func TestServer(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 
 	newServer := func(t *testing.T) *Server {
-		r := new(mockSupervisordService)
+		r := &mockSupervisordService{}
 		r.Test(t)
 		r.On("UpdateConfiguration", mock.Anything, mock.Anything).Return(nil)
 
-		mvmdb := new(mockPrometheusService)
+		mvmdb := &mockPrometheusService{}
 		mvmdb.Test(t)
 		mvmdb.On("RequestConfigurationUpdate").Return(nil)
-		mState := new(mockAgentsStateUpdater)
+		mState := &mockAgentsStateUpdater{}
 		mState.Test(t)
 		mState.On("UpdateAgentsState", context.TODO()).Return(nil)
 
-		mvmalert := new(mockPrometheusService)
+		mvmalert := &mockPrometheusService{}
 		mvmalert.Test(t)
 		mvmalert.On("RequestConfigurationUpdate").Return(nil)
 
-		malertmanager := new(mockAlertmanagerService)
+		malertmanager := &mockAlertmanagerService{}
 		malertmanager.Test(t)
 		malertmanager.On("RequestConfigurationUpdate").Return(nil)
 
-		mtemplatesService := new(mockTemplatesService)
+		mtemplatesService := &mockTemplatesService{}
 		mtemplatesService.Test(t)
 		mtemplatesService.On("CollectTemplates", context.TODO()).Return(nil)
 
-		mchecksService := new(mockChecksService)
+		mchecksService := &mockChecksService{}
 		mchecksService.Test(t)
 		mchecksService.On("CollectChecks", context.TODO()).Return(nil)
 
-		par := new(mockVmAlertExternalRules)
+		par := &mockVmAlertExternalRules{}
 		par.Test(t)
 		par.On("ReadRules").Return("", nil)
 
-		ts := new(mockTelemetryService)
+		ts := &mockTelemetryService{}
 		ts.Test(t)
 
 		s, err := NewServer(&Params{
@@ -244,7 +244,7 @@ func TestServer(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
-		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+		settings, err := server.GetSettings(ctx, &serverpb.GetSettingsRequest{})
 
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
@@ -254,7 +254,7 @@ func TestServer(t *testing.T) {
 
 	t.Run("ChangeSettings IA", func(t *testing.T) {
 		server := newServer(t)
-		rs := new(mockRulesService)
+		rs := &mockRulesService{}
 		server.rulesService = rs
 		server.UpdateSettingsFromEnv([]string{})
 
@@ -288,7 +288,7 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 
 	server := &Server{}
 
-	e := new(mockEmailer)
+	e := &mockEmailer{}
 	server.emailer = e
 
 	ctx := context.TODO()

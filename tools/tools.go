@@ -24,6 +24,7 @@ import (
 	_ "github.com/go-delve/delve/cmd/dlv"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
+	_ "github.com/quasilyte/go-consistent"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/perf/cmd/benchstat"

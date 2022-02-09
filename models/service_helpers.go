@@ -144,7 +144,7 @@ func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 // FindServicesByIDs finds Services by IDs.
 func FindServicesByIDs(q *reform.Querier, ids []string) (map[string]*Service, error) {
 	if len(ids) == 0 {
-		return map[string]*Service{}, nil
+		return make(map[string]*Service), nil
 	}
 
 	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
@@ -174,7 +174,7 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service Name.")
 	}
 
-	service := new(Service)
+	service := &Service{}
 	err := q.FindOneTo(service, "service_name", name)
 	switch err {
 	case nil:

@@ -53,9 +53,9 @@ func TestCreateAlertRule(t *testing.T) {
 	err = models.SaveSettings(db, settings)
 	require.NoError(t, err)
 
-	alertManager := new(mockAlertManager)
+	alertManager := &mockAlertManager{}
 	alertManager.On("RequestConfigurationUpdate").Return()
-	vmAlert := new(mockVmAlert)
+	vmAlert := &mockVmAlert{}
 	vmAlert.On("RequestConfigurationUpdate").Return()
 
 	// Create channel
@@ -366,7 +366,7 @@ groups:
 			require.NoError(t, err)
 		})
 
-		vmAlert := new(mockVmAlert)
+		vmAlert := &mockVmAlert{}
 		vmAlert.On("RequestConfigurationUpdate").Return()
 
 		// Create test rule

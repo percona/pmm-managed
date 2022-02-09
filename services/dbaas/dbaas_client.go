@@ -50,7 +50,7 @@ type Client struct {
 func NewClient(dbaasControllerAPIAddress string) *Client {
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
-		connM:                     new(sync.RWMutex),
+		connM:                     &sync.RWMutex{},
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
 	}
 	return c
