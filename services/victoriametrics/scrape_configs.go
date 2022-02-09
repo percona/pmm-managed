@@ -146,7 +146,7 @@ func jobNameMapping(r rune) rune {
 	}
 }
 
-func jobName(agent *models.Agent, intervalName string) string {
+func jobName(agent *models.Agent, intervalName string, interval time.Duration) string {
 	return fmt.Sprintf("%s%s_%s", agent.AgentType, strings.Map(jobNameMapping, agent.AgentID), intervalName)
 }
 
