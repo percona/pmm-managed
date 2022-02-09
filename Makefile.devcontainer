@@ -65,11 +65,11 @@ fuzz-grafana:                   ## Run fuzzer for services/grafana package.
 check:                          ## Run required checkers and linters.
 	go run .github/check-license.go
 	go-sumtype ./...
-	golangci-lint run -c=.golangci-required.yml
-	go-consistent -pedantic ./...
 
 check-all: check                ## Run all linters for new code.
 	golangci-lint run -c=.golangci.yml --new-from-rev=main
+	golangci-lint run -c=.golangci-required.yml
+	go-consistent -pedantic ./...
 
 FILES = $(shell find . -type f -name '*.go')
 
