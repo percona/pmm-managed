@@ -52,4 +52,5 @@ func main() {
 		logrus.Errorf("Configuration error: %s.", err)
 		os.Exit(1)
 	}
+	os.MkdirAll("/srv/logs/", 0775)
 }
