@@ -17,7 +17,6 @@
 package agents
 
 import (
-	"log"
 	"testing"
 
 	"github.com/percona/pmm/api/agentpb"
@@ -30,18 +29,12 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func hashPassword(password string) string {
-	buf, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	if err != nil {
-		log.Fatal(err, "cannot encrypt basic auth password")
-	}
-
-	return string(buf)
-}
-
 func TestWebConfig(t *testing.T) {
+	t.Parallel()
+
 	t.Run("v2.26.1", func(t *testing.T) {
 		t.Parallel()
+
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
@@ -117,6 +110,7 @@ type WebConfig struct {
 func TestNodeExporterConfig(t *testing.T) {
 	t.Run("Linux", func(t *testing.T) {
 		t.Parallel()
+
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",

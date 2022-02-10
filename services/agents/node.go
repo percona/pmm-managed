@@ -47,7 +47,7 @@ func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) m
 	return files
 }
 
-func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed, tdp *models.DelimiterPair) []string {
+func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed) []string {
 	env := []string{}
 
 	// basic auth via env for older exporters
@@ -157,7 +157,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 
 	sort.Strings(args)
 
-	env := getExporterEnv(exporter, agentVersion, &tdp)
+	env := getExporterEnv(exporter, agentVersion)
 	files := getExporterFiles(exporter, agentVersion)
 
 	for k := range files {
