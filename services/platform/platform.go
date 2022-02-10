@@ -337,7 +337,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrFailedToGetToken) {
-			return nil, status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
+			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
 		return nil, internalServerError
