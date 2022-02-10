@@ -66,7 +66,7 @@ const (
 )
 
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
-const PMMServerAgentID string = string("pmm-server") // no /agent_id/ prefix
+const PMMServerAgentID = string("pmm-server") // no /agent_id/ prefix
 
 // MySQLOptions represents structure for special MySQL options.
 type MySQLOptions struct {

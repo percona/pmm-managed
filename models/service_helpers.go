@@ -174,11 +174,11 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service Name.")
 	}
 
-	service := &Service{}
-	err := q.FindOneTo(service, "service_name", name)
+	var service Service
+	err := q.FindOneTo(&service, "service_name", name)
 	switch err {
 	case nil:
-		return service, nil
+		return &service, nil
 	case reform.ErrNoRows:
 		return nil, status.Errorf(codes.NotFound, "Service with name %q not found.", name)
 	default:
