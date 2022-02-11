@@ -759,8 +759,8 @@ func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, e
 	return resp.Payload, nil
 }
 
-// FindAlertByID searches alert by ID in alertmanager.
-func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.GettableAlert, error) {
+// FindAlertsByID searches alerts by IDs in alertmanager.
+func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammodels.GettableAlert, error) {
 	if !svc.Config.Enabled {
 		svc.l.Warn("service is disabled, skip FindAlertByID")
 		return nil, nil
@@ -787,22 +787,8 @@ func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.Get
 	return res, nil
 }
 
-// Silence mutes alerts with specified ids.
-func (svc *Service) Silence(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	alerts, err := svc.FindAlertsByID(ctx, ids)
-	if err != nil {
-		return err
-	}
-
-	return silenceAlerts(ctx, alerts)
-}
-
-// Silence mutes alert with specified id.
-func (svc *Service) Silence(ctx context.Context, id string) error {
+// SilenceAll mutes all available alerts.
+func (svc *Service) SilenceAll(ctx context.Context) error {
 	if !svc.Config.Enabled {
 		svc.l.Warn("service is disabled, skip Silence")
 		return nil
@@ -856,22 +842,8 @@ func silenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error 
 	return nil
 }
 
-// Unsilence unmutes alerts with specified ids.
-func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	alerts, err := svc.FindAlertsByID(ctx, ids)
-	if err != nil {
-		return err
-	}
-
-	return svc.unsilenceAlerts(ctx, alerts)
-}
-
 // Unsilence unmutes alert with specified id.
-func (svc *Service) Unsilence(ctx context.Context, id string) error {
+func (svc *Service) Unsilence(ctx context.Context) error {
 	if !svc.Config.Enabled {
 		svc.l.Warn("service is disabled, skip Unsilence")
 		return nil
