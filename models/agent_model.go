@@ -641,13 +641,10 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 func (s *Agent) buildWebConfigFile(password string) string {
 	buf, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
-		log.Fatal(err, "cannot encrypt basic auth password")
+		log.Fatal(err, "cannot calculate hash for password")
 	}
 
-	content := "basic_auth_users:" + "\n" +
-		"    pmm: " + string(buf) + "\n"
-
-	return content
+	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", string(buf))
 }
 
 // check interfaces.

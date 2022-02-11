@@ -48,14 +48,12 @@ func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) m
 }
 
 func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed) []string {
-	env := []string{}
-
 	// basic auth via env for older exporters
 	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
-		env = append(env, fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()))
+		return []string{fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword())}
 	}
 
-	return env
+	return []string{}
 }
 
 func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
@@ -161,12 +159,9 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 	files := getExporterFiles(exporter, agentVersion)
 
 	for k := range files {
-		switch k {
-		case "webConfigPlaceholder":
+		if k == "webConfigPlaceholder" {
 			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
 			args = append(args, "--web.config="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
-		default:
-			continue
 		}
 	}
 
