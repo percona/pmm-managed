@@ -781,7 +781,7 @@ func main() {
 	if cfg.Config.Services.Management.IntegratedAlerting.Enabled {
 		templatesService.CollectTemplates(ctx)
 	}
-	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager)
+	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager, cfg.Config.Services.Management.IntegratedAlerting)
 	alertsService := ia.NewAlertsService(db, alertManager, templatesService)
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
