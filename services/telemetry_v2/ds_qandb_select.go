@@ -3,7 +3,7 @@ package telemetry_v2
 import (
 	"context"
 	"database/sql"
-	_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

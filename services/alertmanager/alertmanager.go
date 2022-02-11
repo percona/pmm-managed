@@ -132,13 +132,13 @@ receivers:
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
-	// If you change this and related methods,
-	// please do similar changes in victoriametrics and vmalert packages.
-
 	if !svc.Config.Enabled {
 		svc.l.Warn("service is disabled, skip Run")
 		return
 	}
+
+	// If you change this and related methods,
+	// please do similar changes in victoriametrics and vmalert packages.
 
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
@@ -787,13 +787,26 @@ func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammode
 	return res, nil
 }
 
-// SilenceAll mutes all available alerts.
-func (svc *Service) SilenceAll(ctx context.Context) error {
+// Silence mutes alerts with specified ids.
+func (svc *Service) Silence(ctx context.Context, ids []string) error {
 	if !svc.Config.Enabled {
-		svc.l.Warn("service is disabled, skip Silence")
+		return errors.Errorf("service is disabled")
+	}
+
+	if len(ids) == 0 {
 		return nil
 	}
 
+	alerts, err := svc.FindAlertsByID(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	return silenceAlerts(ctx, alerts)
+}
+
+// SilenceAll mutes all available alerts.
+func (svc *Service) SilenceAll(ctx context.Context) error {
 	alerts, err := svc.GetAlerts(ctx)
 	if err != nil {
 		return err
@@ -842,13 +855,23 @@ func silenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error 
 	return nil
 }
 
-// Unsilence unmutes alert with specified id.
-func (svc *Service) Unsilence(ctx context.Context) error {
+// Unsilence unmutes alerts with specified ids.
+func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
 	if !svc.Config.Enabled {
 		svc.l.Warn("service is disabled, skip Unsilence")
 		return nil
 	}
 
+	alerts, err := svc.FindAlertsByID(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	return svc.unsilenceAlerts(ctx, alerts)
+}
+
+// UnsilenceAll unmutes all available alerts.
+func (svc *Service) UnsilenceAll(ctx context.Context) error {
 	alerts, err := svc.GetAlerts(ctx)
 	if err != nil {
 		return err
