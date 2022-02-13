@@ -325,7 +325,7 @@ type ticketResponse struct {
 	ShortDescription string `json:"short_description"` //nolint:tagliatelle
 	Priority         string `json:"priority"`
 	State            string `json:"state"`
-	CreateTime       string `json:"create_time"`
+	CreateTime       string `json:"create_time"` //nolint:tagliatelle
 	Department       string `json:"department"`
 	Requester        string `json:"requestor"`
 	TaskType         string `json:"task_type"` //nolint:tagliatelle
@@ -400,7 +400,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 }
 
 func convertTicket(t *ticketResponse) (*platformpb.OrganizationTicket, error) {
-	create_time, err := time.Parse(time.RFC3339, t.CreateTime)
+	createTime, err := time.Parse(time.RFC3339, t.CreateTime)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +410,7 @@ func convertTicket(t *ticketResponse) (*platformpb.OrganizationTicket, error) {
 		ShortDescription: t.ShortDescription,
 		Priority:         t.Priority,
 		State:            t.State,
-		CreateTime:       timestamppb.New(create_time),
+		CreateTime:       timestamppb.New(createTime),
 		Department:       t.Department,
 		Requester:        t.Requester,
 		TaskType:         t.TaskType,
