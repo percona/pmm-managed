@@ -35,7 +35,7 @@ import (
 	"github.com/percona/pmm/api/platformpb"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -279,7 +279,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*conne
 func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) error {
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
-		if errors.Is(err, services.ErrFailedToGetToken) {
+		if errors.Is(err, grafana.ErrFailedToGetToken) {
 			return status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
@@ -336,7 +336,7 @@ type ticketResponse struct {
 func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb.SearchOrganizationTicketsRequest) (*platformpb.SearchOrganizationTicketsResponse, error) {
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
-		if errors.Is(err, services.ErrFailedToGetToken) {
+		if errors.Is(err, grafana.ErrFailedToGetToken) {
 			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
