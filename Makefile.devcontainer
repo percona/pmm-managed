@@ -62,7 +62,7 @@ fuzz-grafana:                   ## Run fuzzer for services/grafana package.
 	cd services/grafana && go-fuzz-build
 	cd services/grafana && go-fuzz -workdir=fuzzdata
 
-check:                          ## Run required checkers and linters.
+check:                          ## Run required checkers.
 	go run .github/check-license.go
 	go-sumtype ./...
 

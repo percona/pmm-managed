@@ -590,8 +590,7 @@ func TestAgents(t *testing.T) {
 		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
-			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).
-			Return(nil)
+			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
 
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
