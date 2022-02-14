@@ -71,6 +71,9 @@ const (
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
 
+// bcrypt hashing cost
+const passwordHashCost = 14
+
 // MySQLOptions represents structure for special MySQL options.
 type MySQLOptions struct {
 	TLSCa   string `json:"tls_ca"`
@@ -639,7 +642,7 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 }
 
 func (s *Agent) buildWebConfigFile(password string) string {
-	buf, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	buf, err := bcrypt.GenerateFromPassword([]byte(password), passwordHashCost)
 	if err != nil {
 		log.Fatal(err, "cannot calculate hash for password")
 	}
