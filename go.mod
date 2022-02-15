@@ -3,9 +3,9 @@ module github.com/percona/pmm-managed
 go 1.17
 
 // Use for local development, but do not commit:
-// replace github.com/percona/pmm => ../pmm
-// replace github.com/percona-platform/saas => ../saas
-// replace github.com/percona-platform/dbaas-api => ../dbaas-api
+ replace github.com/percona/pmm => ../pmm
+ replace github.com/percona-platform/saas => ../../percona-platform/saas
+//replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
 // Update depedencies with:
 // go get -v github.com/percona/pmm@main

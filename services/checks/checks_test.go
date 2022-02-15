@@ -419,6 +419,8 @@ func TestFilterChecks(t *testing.T) {
 		{Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
 		{Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
 		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
+		{Name: "MongoDBReplSetGetStatus", Version: 1, Type: check.MongoDBReplSetGetStatus},
+		{Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
 	}
 
 	invalid := []check.Check{
@@ -439,15 +441,17 @@ func TestGroupChecksByDB(t *testing.T) {
 	t.Parallel()
 
 	checks := map[string]check.Check{
-		"MySQLShow":             {Name: "MySQLShow", Version: 1, Type: check.MySQLShow},
-		"MySQLSelect":           {Name: "MySQLSelect", Version: 1, Type: check.MySQLSelect},
-		"PostgreSQLShow":        {Name: "PostgreSQLShow", Version: 1, Type: check.PostgreSQLShow},
-		"PostgreSQLSelect":      {Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
-		"MongoDBGetParameter":   {Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
-		"MongoDBBuildInfo":      {Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
-		"MongoDBGetCmdLineOpts": {Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
-		"unsupported type":      {Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
-		"missing type":          {Name: "missing type", Version: 1},
+		"MySQLShow":                {Name: "MySQLShow", Version: 1, Type: check.MySQLShow},
+		"MySQLSelect":              {Name: "MySQLSelect", Version: 1, Type: check.MySQLSelect},
+		"PostgreSQLShow":           {Name: "PostgreSQLShow", Version: 1, Type: check.PostgreSQLShow},
+		"PostgreSQLSelect":         {Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
+		"MongoDBGetParameter":      {Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
+		"MongoDBBuildInfo":         {Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
+		"MongoDBGetCmdLineOpts":    {Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
+		"MongoDBReplSetGetStatus":  {Name: "MongoDBReplSetGetStatus", Version: 1, Type: check.MongoDBReplSetGetStatus},
+		"MongoDBGetDiagnosticData": {Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
+		"unsupported type":         {Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
+		"missing type":             {Name: "missing type", Version: 1},
 	}
 
 	s, err := New(nil, nil, nil)
@@ -456,7 +460,7 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	require.Len(t, mySQLChecks, 2)
 	require.Len(t, postgreSQLChecks, 2)
-	require.Len(t, mongoDBChecks, 3)
+	require.Len(t, mongoDBChecks, 5)
 
 	assert.Equal(t, check.MySQLShow, mySQLChecks["MySQLShow"].Type)
 	assert.Equal(t, check.MySQLSelect, mySQLChecks["MySQLSelect"].Type)
@@ -467,6 +471,8 @@ func TestGroupChecksByDB(t *testing.T) {
 	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks["MongoDBGetParameter"].Type)
 	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks["MongoDBBuildInfo"].Type)
 	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks["MongoDBGetCmdLineOpts"].Type)
+	assert.Equal(t, check.MongoDBReplSetGetStatus, mongoDBChecks["MongoDBReplSetGetStatus"].Type)
+	assert.Equal(t, check.MongoDBGetDiagnosticData, mongoDBChecks["MongoDBGetDiagnosticData"].Type)
 }
 
 func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {

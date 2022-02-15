@@ -75,8 +75,9 @@ const (
 
 // pmm-agent versions with known changes in Query Actions.
 var (
-	pmmAgent260     = version.MustParse("2.6.0")
-	pmmAgent270     = version.MustParse("2.7.0")
+	pmmAgent_2_6_0  = version.MustParse("2.6.0")
+	pmmAgent_2_7_0  = version.MustParse("2.7.0")
+	pmmAgent_2_27_0 = version.MustParse("2.27.0")
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
@@ -168,6 +169,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBBuildInfo))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetCmdLineOpts))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetParameter))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBReplSetGetStatus))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetDiagnosticData))
 
 	return s, nil
 }
@@ -511,10 +514,15 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 	case check.MongoDBBuildInfo:
 		fallthrough
 	case check.MongoDBGetParameter:
-		return pmmAgent260
+		return pmmAgent_2_6_0
 
 	case check.MongoDBGetCmdLineOpts:
-		return pmmAgent270
+		return pmmAgent_2_7_0
+
+	case check.MongoDBReplSetGetStatus:
+		fallthrough
+	case check.MongoDBGetDiagnosticData:
+		return pmmAgent_2_27_0
 
 	default:
 		s.l.Warnf("minPMMAgentVersion: unhandled check type %q.", t)
@@ -714,6 +722,10 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 		err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 	case check.MongoDBGetCmdLineOpts:
 		err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+	case check.MongoDBReplSetGetStatus:
+		err = s.agentsRegistry.StartMongoDBQueryReplSetGetStatusAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+	case check.MongoDBGetDiagnosticData:
+		err = s.agentsRegistry.StartMongoDBQueryGetDiagnosticDataAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 	default:
 		return nil, errors.Errorf("unknown check type")
 	}
@@ -888,6 +900,10 @@ func (s *Service) groupChecksByDB(checks map[string]check.Check) (mySQLChecks, p
 		case check.MongoDBBuildInfo:
 			fallthrough
 		case check.MongoDBGetCmdLineOpts:
+			fallthrough
+		case check.MongoDBReplSetGetStatus:
+			fallthrough
+		case check.MongoDBGetDiagnosticData:
 			mongoDBChecks[c.Name] = c
 
 		default:
@@ -1007,6 +1023,8 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 		case check.MongoDBGetParameter:
 		case check.MongoDBBuildInfo:
 		case check.MongoDBGetCmdLineOpts:
+		case check.MongoDBReplSetGetStatus:
+		case check.MongoDBGetDiagnosticData:
 		default:
 			s.l.Warnf("Unsupported check type: %s.", c.Type)
 			continue
