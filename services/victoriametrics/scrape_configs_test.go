@@ -963,7 +963,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "rds_exporter_1_1_1_1_12345_mr",
+				JobName:        "rds_exporter_1_1_1_1_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
@@ -974,7 +974,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_1_1_1_1_12345_lr",
+				JobName:        "rds_exporter_1_1_1_1_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
@@ -985,7 +985,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_2_2_2_2_12345_mr",
+				JobName:        "rds_exporter_2_2_2_2_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
@@ -996,7 +996,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_2_2_2_2_12345_lr",
+				JobName:        "rds_exporter_2_2_2_2_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
@@ -1007,7 +1007,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_2_2_2_2_12346_mr",
+				JobName:        "rds_exporter_2_2_2_2_12346_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
@@ -1018,7 +1018,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_2_2_2_2_12346_lr",
+				JobName:        "rds_exporter_2_2_2_2_12346_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
