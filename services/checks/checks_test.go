@@ -109,9 +109,9 @@ func TestLoadLocalChecks(t *testing.T) {
 
 	checks, err := s.loadLocalChecks(testChecksFile)
 	require.NoError(t, err)
-	require.Len(t, checks, 3)
+	require.Len(t, checks, 5)
 
-	c1, c2, c3 := checks[0], checks[1], checks[2]
+	c1, c2, c3, c4, c5 := checks[0], checks[1], checks[2], checks[3], checks[4]
 
 	assert.Equal(t, check.PostgreSQLSelect, c1.Type)
 	assert.Equal(t, "good_check_pg", c1.Name)
@@ -127,6 +127,16 @@ func TestLoadLocalChecks(t *testing.T) {
 	assert.Equal(t, "good_check_mongo", c3.Name)
 	assert.Equal(t, uint32(1), c3.Version)
 	assert.Empty(t, c3.Query)
+
+	assert.Equal(t, check.MongoDBReplSetGetStatus, c4.Type)
+	assert.Equal(t, "check_mongo_replSetGetStatus", c4.Name)
+	assert.Equal(t, uint32(1), c4.Version)
+	assert.Empty(t, c4.Query)
+
+	assert.Equal(t, check.MongoDBGetDiagnosticData, c5.Type)
+	assert.Equal(t, "check_mongo_getDiagnosticData", c5.Name)
+	assert.Equal(t, uint32(1), c5.Version)
+	assert.Empty(t, c5.Query)
 }
 
 func TestCollectChecks(t *testing.T) {
@@ -141,13 +151,13 @@ func TestCollectChecks(t *testing.T) {
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
-		require.Len(t, checks, 3)
+		require.Len(t, checks, 5)
 
 		checkNames := make([]string, 0, len(checks))
 		for _, c := range checks {
 			checkNames = append(checkNames, c.Name)
 		}
-		assert.ElementsMatch(t, []string{"bad_check_mysql", "good_check_pg", "good_check_mongo"}, checkNames)
+		assert.ElementsMatch(t, []string{"bad_check_mysql", "good_check_pg", "good_check_mongo", "check_mongo_replSetGetStatus", "check_mongo_getDiagnosticData"}, checkNames)
 	})
 
 	t.Run("download checks", func(t *testing.T) {
@@ -174,7 +184,7 @@ func TestDisableChecks(t *testing.T) {
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
-		assert.Len(t, checks, 3)
+		assert.Len(t, checks, 5)
 
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
@@ -199,7 +209,7 @@ func TestDisableChecks(t *testing.T) {
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
-		assert.Len(t, checks, 3)
+		assert.Len(t, checks, 5)
 
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
@@ -246,7 +256,7 @@ func TestEnableChecks(t *testing.T) {
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
-		assert.Len(t, checks, 3)
+		assert.Len(t, checks, 5)
 
 		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name, checks["good_check_pg"].Name, checks["good_check_mongo"].Name})
 		require.NoError(t, err)
@@ -257,6 +267,9 @@ func TestEnableChecks(t *testing.T) {
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
 		assert.Equal(t, []string{checks["bad_check_mysql"].Name}, disChecks)
+
+		enabledChecksCount := len(checks) - len(disChecks)
+		assert.Equal(t, 4, enabledChecksCount)
 	})
 }
 
@@ -274,7 +287,7 @@ func TestChangeInterval(t *testing.T) {
 
 		checks, err := s.GetChecks()
 		require.NoError(t, err)
-		assert.Len(t, checks, 3)
+		assert.Len(t, checks, 5)
 
 		// change all check intervals from standard to rare
 		params := make(map[string]check.Interval)
@@ -323,7 +336,9 @@ func TestSTTMetrics(t *testing.T) {
 		    # TYPE pmm_managed_checks_alerts_generated_total counter
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_BUILDINFO",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETCMDLINEOPTS",service_type="mongodb"} 0
+			pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETDIAGNOSTICDATA",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETPARAMETER",service_type="mongodb"} 0
+			pmm_managed_checks_alerts_generated_total{check_type="MONGODB_REPLSETGETSTATUS",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SELECT",service_type="mysql"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SHOW",service_type="mysql"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="POSTGRESQL_SELECT",service_type="postgresql"} 0
