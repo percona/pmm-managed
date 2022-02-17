@@ -687,6 +687,10 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 		ADD COLUMN process_exec_path VARCHAR`,
 	},
+	58: {
+		`ALTER TABLE percona_sso_details
+			ADD COLUMN organization_id VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
