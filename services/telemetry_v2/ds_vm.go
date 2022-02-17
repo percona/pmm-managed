@@ -53,16 +53,16 @@ func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmm
 				value, ok := v.Metric[model.LabelName(configItem.Label)]
 				if ok {
 					metrics = append(metrics, &pmmv1.ServerMetric_Metric{
-						Key:   configItem.Label,
+						Key:   configItem.MetricName,
 						Value: string(value),
 					})
 				}
 			}
-			//TODO: verify if impl is correct
+
 			if configItem.Value != "" {
 				metrics = append(metrics, &pmmv1.ServerMetric_Metric{
 					Key:   configItem.MetricName,
-					Value: configItem.Value,
+					Value: v.Value.String(),
 				})
 			}
 		}
