@@ -43,10 +43,6 @@ import (
 	"github.com/percona/pmm-managed/utils/stringset"
 )
 
-const (
-	rulesDir = "/etc/ia/rules"
-)
-
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
 	db           *reform.DB
@@ -60,10 +56,10 @@ type RulesService struct {
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
-func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert, alertManager alertManager) *RulesService {
+func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert, alertManager alertManager, config Config) *RulesService {
 	l := logrus.WithField("component", "management/ia/rules")
 
-	err := dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
+	err := dir.CreateDataDir(*config.RulesDir, *config.DirOwner, *config.DirOwnerGroup, dirPerm)
 	if err != nil {
 		l.Error(err)
 	}
@@ -74,7 +70,7 @@ func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert
 		templates:    templates,
 		vmalert:      vmalert,
 		alertManager: alertManager,
-		rulesPath:    rulesDir,
+		rulesPath:    *config.RulesDir,
 	}
 	s.updateConfigurations()
 

@@ -40,6 +40,7 @@ const (
 
 // Service is responsible for interactions with victoria metrics.
 type Service struct {
+	Config        Config
 	baseURL       *url.URL
 	client        *http.Client
 	externalRules *ExternalRules
@@ -50,7 +51,7 @@ type Service struct {
 }
 
 // NewVMAlert creates new Victoria Metrics Alert service.
-func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) {
+func NewVMAlert(externalRules *ExternalRules, baseURL string, config Config) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -71,6 +72,7 @@ func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) 
 	t, irtm := irt.WithMetrics(t, "vmalert")
 
 	return &Service{
+		Config:        config,
 		externalRules: externalRules,
 		baseURL:       u,
 		client: &http.Client{
@@ -84,6 +86,11 @@ func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) 
 
 // Run runs VMAlert configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
+	if !svc.Config.Enabled {
+		svc.l.Warn("service is disabled, skip Run")
+		return
+	}
+
 	// If you change this and related methods,
 	// please do similar changes in alertmanager and victoriametrics packages.
 
@@ -133,6 +140,11 @@ func (svc *Service) RequestConfigurationUpdate() {
 // updateConfiguration reads alerts configuration from file
 // compares it with cached and replace if needed.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		svc.l.Warn("service is disabled, skip updateConfiguration")
+		return nil
+	}
+
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
@@ -150,6 +162,11 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 
 // reload asks VMAlert to reload configuration.
 func (svc *Service) reload(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		svc.l.Warn("service is disabled, skip reload")
+		return nil
+	}
+
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -176,6 +193,10 @@ func (svc *Service) reload(ctx context.Context) error {
 
 // IsReady verifies that VMAlert works.
 func (svc *Service) IsReady(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		return errors.Errorf("service is disabled")
+	}
+
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)

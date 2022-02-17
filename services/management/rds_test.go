@@ -19,6 +19,7 @@ package management
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/encoding/prototext"
 	"net/http"
 	"testing"
 	"time"
@@ -27,7 +28,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
@@ -217,7 +217,7 @@ func TestRDSService(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Equal(t, len(instances), len(tt.instances), "Should have two instances")
-				// we compare instances this way because there are too much fields that we don't need to compare.
+				// we compare instances this way because there are too many fields that we don't need to compare.
 				for i, instance := range tt.instances {
 					assert.Equal(t, instance.az, pointer.GetString(instances[i].AvailabilityZone))
 					assert.Equal(t, instance.instanceID, pointer.GetString(instances[i].DBInstanceIdentifier))
@@ -310,7 +310,7 @@ func TestRDSService(t *testing.T) {
 				Status:                inventorypb.AgentStatus_UNKNOWN,
 			},
 		}
-		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
+		assert.Equal(t, prototext.Format(expected), prototext.Format(resp)) // for better diffs
 	})
 
 	t.Run("AddRDSPostgreSQL", func(t *testing.T) {
@@ -396,6 +396,6 @@ func TestRDSService(t *testing.T) {
 				Status:     inventorypb.AgentStatus_UNKNOWN,
 			},
 		}
-		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
+		assert.Equal(t, prototext.Format(expected), prototext.Format(resp)) // for better diffs
 	})
 }

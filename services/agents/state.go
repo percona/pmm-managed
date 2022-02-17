@@ -18,16 +18,17 @@ package agents
 
 import (
 	"context"
+	"google.golang.org/protobuf/encoding/prototext"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	//nolint:staticcheck
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -265,7 +266,7 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Debugf("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
+	l.Debugf("sendSetStateRequest:\n%s", prototext.Format(state))
 	resp, err := agent.channel.SendAndWaitResponse(state)
 	if err != nil {
 		return err
