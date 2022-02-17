@@ -378,6 +378,8 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 }
 
 func TestMongodbExporterConfig227(t *testing.T) {
+	t.Parallel()
+
 	pmmAgentVersion := version.MustParse("2.27.0")
 
 	mongodb := &models.Service{
