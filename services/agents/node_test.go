@@ -23,7 +23,6 @@ import (
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
@@ -90,13 +89,7 @@ func TestWebConfig(t *testing.T) {
 		}
 
 		require.NotEmpty(t, cfg.BasicAuthUsers.Pmm, "WebConfig file should contain a secret for 'pmm' user")
-
-		buff := []byte(cfg.BasicAuthUsers.Pmm)
-
-		err = bcrypt.CompareHashAndPassword(buff, []byte(exporter.AgentID))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.Equal(t, exporter.AgentID, cfg.BasicAuthUsers.Pmm)
 	})
 }
 
