@@ -60,6 +60,7 @@ var checkFailedRE = regexp.MustCompile(`(?s)cannot unmarshal data: (.+)`)
 
 // Service is responsible for interactions with VictoriaMetrics.
 type Service struct {
+	Config           Config
 	scrapeConfigPath string
 	db               *reform.DB
 	baseURL          *url.URL
@@ -72,13 +73,14 @@ type Service struct {
 }
 
 // NewVictoriaMetrics creates new VictoriaMetrics service.
-func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams) (*Service, error) {
+func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams, config Config) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &Service{
+		Config:           config,
 		scrapeConfigPath: scrapeConfigPath,
 		db:               db,
 		baseURL:          u,
@@ -91,6 +93,11 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 
 // Run runs VictoriaMetrics configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
+	if !svc.Config.Enabled {
+		svc.l.Warn("service is disabled, skip Run")
+		return
+	}
+
 	// If you change this and related methods,
 	// please do similar changes in alertmanager and vmalert packages.
 
@@ -394,6 +401,10 @@ func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, erro
 
 // IsReady verifies that VictoriaMetrics works.
 func (svc *Service) IsReady(ctx context.Context) error {
+	if !svc.Config.Enabled {
+		return errors.Errorf("service is disabled")
+	}
+
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)

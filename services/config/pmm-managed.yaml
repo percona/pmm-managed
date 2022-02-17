@@ -1,0 +1,123 @@
+services:
+  alert_manager:
+    enabled: true
+  vmalert:
+    enabled: true
+  victoria_metrics:
+    enabled: true
+  supervisord:
+    enabled: true
+  management:
+    ia:
+      enabled: true
+      templates_dir: "/srv/ia/templates"
+      rules_dir: "/etc/ia/rules"
+      dir_owner: "pmm"
+      dir_owner_group: "pmm"
+  telemetry:
+    enabled: true
+    # priority is as follows, from the highest priority
+    #   1. this config value
+    #   2. PERCONA_TEST_SAAS_HOST env variable
+    #   3. check.percona.com
+    #saas_hostname:
+    reporting:
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `interval_env`
+      #   2. this config value
+      interval: 24h
+      interval_env: "PERCONA_TEST_TELEMETRY_INTERVAL"
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `retry_backoff_env`
+      #   2. this config value
+      retry_backoff: 1h
+      retry_backoff_env: "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
+      retry_count: 20
+      send_timeout: 5s
+    v1_url_env: "PERCONA_VERSION_CHECK_URL"
+    # priority is as follows, from the highest priority
+    #   1. value from env name provided by `v1_url_env`
+    #   2. this config value
+    v1_url: https://v.percona.com/
+    endpoints:
+      # %s is substituted with `saas_hostname`
+      report: https://%s/v1/telemetry/Report
+  telemetry_v2:
+    enabled: true
+    datasources:
+      VM:
+        timeout: 2s
+        address: http://localhost:9090/prometheus
+      QANDB_SELECT:
+        timeout: 2s
+        dsn: tcp://localhost:9000?database=pmm&block_size=10000&pool_size=2
+      PMMDB_SELECT:
+        timeout: 10s
+        use_separate_credentials: false
+        separate_credentials:
+          username: pmm
+          password: pmm
+    reporting:
+      send_on_start: false
+      interval: 24h
+      interval_env: "PERCONA_TEST_TELEMETRY_INTERVAL"
+      retry_backoff: 1h
+      retry_backoff_env: "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
+      retry_count: 20
+      send_timeout: 5s
+extra_headers:
+  enabled: false
+#  endpoints:
+#    - method: POST
+#      endpoint: http://localhost:20202/v1/telemetry/Report
+#      headers:
+#        Auth-Status: "0"
+#        Grpc-Metadata-X-Real-IP: "188.255.42.42"
+
+extra_headers:
+  enabled: false
+#  endpoints:
+#    - method: POST
+#      endpoint: http://localhost:20202/v1/telemetry/Report
+#      headers:
+#        Auth-Status: "0"
+#        Grpc-Metadata-X-Real-IP: "188.255.42.42"
+
+telemetry:
+  - id: MySQLVersion
+    source: VM
+    query: mysql_version_info{service_type=”mysql”}
+    summary: “Select version of monitored MySQL service”
+    data:
+      - metric_name: "mysql_version"
+        label: "version"
+  - id: NodeLoad1min
+    source: VM
+    query: node_load1
+    summary: “Select monitored nodes load 1 minute”
+    data:
+      - metric_name: "node_load1"
+        value: 1
+      - metric_name: "node_load1_job"
+        label: 'job'
+      - metric_name: "node_load1_instance"
+        label: 'instance'
+  - id: PMMAgentVersion
+    source: PMMDB_SELECT
+    query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
+    summary: “Select PMM Agents version”
+    data:
+      - metric_name: "pmm_server_agent_version"
+        column: "version"
+  - id: PMMServerQAN
+    source: QANDB_SELECT
+    query: |
+      m_query_time_sum, m_query_time_cnt, num_queries from metrics
+    summary: “Select QAN”
+    data:
+      - metric_name: "m_query_time_sum"
+        column: "m_query_time_sum"
+      - metric_name: "m_query_tune_cnt"
+        column: "m_query_tune_cnt"
+      - metric_name: "num_queries"
+        column: "num_queries"

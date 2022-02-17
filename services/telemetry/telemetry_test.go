@@ -23,10 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -40,13 +40,9 @@ const (
 	issuerURL        = "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
 )
 
-func TestRetryAndIntervalConstantsSync(t *testing.T) {
-	assert.True(t, defaultInterval > defaultRetryCount*defaultRetryBackoff)
-}
-
 //nolint:lll
 func TestMakeV1Payload(t *testing.T) {
-	s, err := NewService(nil, "")
+	s, err := NewService(nil, "", Config{})
 	require.NoError(t, err)
 
 	type param struct {
@@ -68,7 +64,8 @@ func TestMakeV1Payload(t *testing.T) {
 }
 
 func TestMakeV2Payload(t *testing.T) {
-	s, err := NewService(nil, "2.4.0")
+	config := Config{}
+	s, err := NewService(nil, "2.4.0", config)
 	require.NoError(t, err)
 	delay := 6 * time.Hour
 	s.start = time.Now().Add(-delay)
@@ -85,11 +82,9 @@ func TestMakeV2Payload(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assert.NoError(t, r.Validate())
 	require.Len(t, r.Events, 1)
 
 	ev := r.Events[0]
-	assert.NoError(t, ev.Validate())
 
 	var uEv pmmv1.ServerUptimeEvent
 	err = proto.Unmarshal(ev.Event.Binary, &uEv)
@@ -122,10 +117,12 @@ func TestSendV2Request(t *testing.T) {
 	err := models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
 	require.NoError(t, err)
 
+	config := Config{}
 	t.Run("Normal", func(t *testing.T) {
-		s, err := NewService(db, "2.4.0")
+		config := config
+		s, err := NewService(db, "2.4.0", config)
 		require.NoError(t, err)
-		s.v2Host = devTelemetryHost
+		s.config.SaasHostname = devTelemetryHost
 
 		u, err := generateUUID()
 		require.NoError(t, err)
@@ -139,7 +136,7 @@ func TestSendV2Request(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), config.Reporting.SendTimeout)
 		defer cancel()
 
 		err = s.sendV2RequestWithRetries(ctx, payload)
@@ -147,9 +144,9 @@ func TestSendV2Request(t *testing.T) {
 	})
 
 	t.Run("Empty host", func(t *testing.T) {
-		s, err := NewService(db, "2.4.0")
+		s, err := NewService(db, "2.4.0", config)
 		require.NoError(t, err)
-		s.v2Host = ""
+		s.config.SaasHostname = ""
 
 		u, err := generateUUID()
 		require.NoError(t, err)
@@ -163,7 +160,7 @@ func TestSendV2Request(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), config.Reporting.SendTimeout)
 		defer cancel()
 
 		err = s.sendV2RequestWithRetries(ctx, req)

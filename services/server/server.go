@@ -101,6 +101,7 @@ type Params struct {
 	VMAlertExternalRules vmAlertExternalRules
 	Supervisord          supervisordService
 	TelemetryService     telemetryService
+	TelemetryV2Service   telemetryServiceV2
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
@@ -495,7 +496,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		return nil, err
 	}
 
-	_, err = models.GetPerconaSSODetails(ctx, s.db.Querier)
+	_, err, _ = models.GetPerconaSSODetails(ctx, s.db.Querier)
 
 	return &serverpb.GetSettingsResponse{
 		Settings: s.convertSettings(settings, err == nil),
@@ -746,7 +747,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
-	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	_, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(newSettings, err == nil),
@@ -796,7 +797,7 @@ func (s *Server) UpdateConfigurations(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get settings")
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		if !errors.Is(err, reform.ErrNoRows) {
 			return errors.Wrap(err, "failed to get SSO details")

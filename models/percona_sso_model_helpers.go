@@ -36,25 +36,27 @@ var perconaSSOMtx sync.Mutex
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
 // Access token is automatically refreshed if it is expired.
 // Get, check eventually refresh done in one tx.
-func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODetails, error) {
+func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (_ *PerconaSSODetails, _ error, critical bool) {
 	perconaSSOMtx.Lock()
 	defer perconaSSOMtx.Unlock()
 
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsTable, "")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get Percona SSO Details")
+	if err == reform.ErrNoRows {
+		return nil, errors.New("No Percona SSO token found"), false
+	} else if err != nil {
+		return nil, errors.Wrap(err, "failed to get Percona SSO Details"), true
 	}
 
 	details := ssoDetails.(*PerconaSSODetails)
 	if details.isAccessTokenExpired() {
 		refreshedToken, err := details.refreshAndGetAccessToken(ctx, q)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to insert Percona SSO Details")
+			return nil, errors.Wrap(err, "failed to insert Percona SSO Details"), true
 		}
 		details.AccessToken = refreshedToken
 	}
 
-	return details, nil
+	return details, nil, false
 }
 
 func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *reform.Querier) (*PerconaSSOAccessToken, error) {

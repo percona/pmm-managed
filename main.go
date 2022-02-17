@@ -22,11 +22,15 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/percona/pmm-managed/services/config"
+	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof" // register /debug/pprof
+	"net/url"
 	"os"
 	"os/signal"
 	"sort"
@@ -470,35 +474,51 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, db.Querier)
+	ssoDetails, err, critical := models.GetPerconaSSODetails(ctx, db.Querier)
 	if err != nil {
-		deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+		if critical {
+			deps.l.Warnf("Failed to get Percona SSO Details: %+v.", err)
+		} else {
+			deps.l.Warnf("Failed to get Percona SSO Details: %v.", err)
+		}
 	}
 	if err = deps.supervisord.UpdateConfiguration(settings, ssoDetails); err != nil {
 		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
 
-	deps.l.Infof("Checking VictoriaMetrics...")
-	if err = deps.vmdb.IsReady(ctx); err != nil {
-		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
-		return false
+	if deps.vmdb.Config.Enabled {
+		deps.l.Infof("Checking VictoriaMetrics...")
+		if err = deps.vmdb.IsReady(ctx); err != nil {
+			deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
+			return false
+		}
+		deps.vmdb.RequestConfigurationUpdate()
+	} else {
+		deps.l.Warn("[victoriametrics] service is disabled")
 	}
-	deps.vmdb.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking VMAlert...")
-	if err = deps.vmalert.IsReady(ctx); err != nil {
-		deps.l.Warnf("VMAlert problem: %+v.", err)
-		return false
+	if deps.vmalert.Config.Enabled {
+		deps.l.Infof("Checking VMAlert...")
+		if err = deps.vmalert.IsReady(ctx); err != nil {
+			deps.l.Warnf("VMAlert problem: %+v.", err)
+			return false
+		}
+		deps.vmalert.RequestConfigurationUpdate()
+	} else {
+		deps.l.Warn("[vmalert] service is disabled")
 	}
-	deps.vmalert.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking Alertmanager...")
-	if err = deps.alertmanager.IsReady(ctx); err != nil {
-		deps.l.Warnf("Alertmanager problem: %+v.", err)
-		return false
+	if deps.alertmanager.Config.Enabled {
+		deps.l.Infof("Checking AlertManager...")
+		if err = deps.alertmanager.IsReady(ctx); err != nil {
+			deps.l.Warnf("Alertmanager problem: %+v.", err)
+			return false
+		}
+		deps.alertmanager.RequestConfigurationUpdate()
+	} else {
+		deps.l.Warn("[AlertManager] service is disabled")
 	}
-	deps.alertmanager.RequestConfigurationUpdate()
 
 	deps.l.Info("Setup completed.")
 	return true
@@ -557,6 +577,23 @@ func migrateDB(ctx context.Context, sqlDB *sql.DB, dbName, dbAddress, dbUsername
 }
 
 func main() {
+	if _, err := os.Stat(".env"); err == nil {
+		log.Println("Overriding ENV with .env")
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file: %s", err)
+		}
+	}
+
+	if v, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_WAIT_FOR_DEBUG_SESSION")); err == nil && v {
+		shouldWait := true // will be overridden via debug session
+		//goland:noinspection ALL
+		for shouldWait {
+			log.Println("Waiting for debugging session...")
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
 		panic("pmm-managed version is not set during build.")
@@ -610,18 +647,59 @@ func main() {
 	ctx = logger.Set(ctx, "main")
 	defer l.Info("Done.")
 
-	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
+	cfg := config.NewService()
+	if err := cfg.Load(); err != nil {
+		l.Panicf("Failed to load config: %+v", err)
+	}
+	if err := cfg.Update(func(s *config.Service) error {
+		ds := s.Config.Services.TelemetryV2.DataSources
+
+		vmdb := ds.VM
+		timeout, err := time.ParseDuration(ds.VM.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
+		}
+		vmdb.Timeout = timeout
+
+		qandb := ds.QANDB_SELECT
+		timeout, err = time.ParseDuration(ds.QANDB_SELECT.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
+		}
+		qandb.Timeout = timeout
+
+		pmmdb := ds.PMMDB_SELECT
+		timeout, err = time.ParseDuration(ds.PMMDB_SELECT.TimeoutStr)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
+		}
+		pmmdb.Timeout = timeout
+		pmmdb.Credentials.Username = *postgresDBUsernameF
+		pmmdb.Credentials.Password = *postgresDBPasswordF
+		pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+		pmmdb.DSN.Host = *postgresAddrF
+		pmmdb.DSN.DB = *postgresDBNameF
+		q := make(url.Values)
+		q.Set("sslmode", "disable")
+		pmmdb.DSN.Params = q.Encode()
+
+		return nil
+	}); err != nil {
+		l.Panicf("Failed to update config: %+v", err)
+	}
+
+	pmmDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close() //nolint:errcheck
+	defer pmmDB.Close() //nolint:errcheck
 
-	migrateDB(ctx, sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
+	migrateDB(ctx, pmmDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
 
-	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
+	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, pmmDB))
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
+	db := reform.NewDB(pmmDB, postgresql.Dialect, reformL)
 
 	// Generate unique PMM Server ID if it's not already set.
 	err = models.SetPMMServerID(db)
@@ -636,11 +714,11 @@ func main() {
 	if err != nil {
 		l.Panicf("cannot load victoriametrics params problem: %+v", err)
 	}
-	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams)
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams, cfg.Config.Services.VictoriaMetrics)
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF)
+	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF, cfg.Config.Services.VMAlert)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
@@ -648,7 +726,7 @@ func main() {
 
 	minioService := minio.New()
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	qanClient := getQANClient(ctx, pmmDB, *postgresDBNameF, *qanAPIAddrF)
 
 	agentsRegistry := agents.NewRegistry(db)
 	backupRemovalService := backup.NewRemovalService(db, minioService)
@@ -657,7 +735,7 @@ func main() {
 
 	connectionCheck := agents.NewConnectionChecker(agentsRegistry)
 
-	alertManager := alertmanager.New(db)
+	alertManager := alertmanager.New(db, cfg.Config.Services.AlertManager)
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
 	// Generate configuration file before reloading with supervisord, checking status, etc.
 	alertManager.GenerateBaseConfigs()
@@ -665,11 +743,16 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams, cfg.Config.Services.Supervisord)
 
-	telemetry, err := telemetry.NewService(db, version.Version)
+	telemetry, err := telemetry.NewService(db, version.Version, cfg.Config.Services.Telemetry)
 	if err != nil {
 		l.Fatalf("Could not create telemetry service: %s", err)
+	}
+
+	telemetryV2, err := telemetry_v2.NewService(db, version.Version, cfg.Config.Services.TelemetryV2)
+	if err != nil {
+		l.Fatalf("Could not create telemetry_v2 service: %s", err)
 	}
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
@@ -690,13 +773,15 @@ func main() {
 	prom.MustRegister(checksService)
 
 	// Integrated alerts services
-	templatesService, err := ia.NewTemplatesService(db)
+	templatesService, err := ia.NewTemplatesService(db, cfg.Config.Services.Management.IntegratedAlerting)
 	if err != nil {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
 	// We should collect templates before rules service created, because it will regenerate rule files on startup.
-	templatesService.CollectTemplates(ctx)
-	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager)
+	if cfg.Config.Services.Management.IntegratedAlerting.Enabled {
+		templatesService.CollectTemplates(ctx)
+	}
+	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager, cfg.Config.Services.Management.IntegratedAlerting)
 	alertsService := ia.NewAlertsService(db, alertManager, templatesService)
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
@@ -718,6 +803,7 @@ func main() {
 		TemplatesService:     templatesService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
+		TelemetryV2Service:   telemetryV2,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -758,7 +844,7 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:        sqlDB,
+		sqlDB:        pmmDB,
 		supervisord:  supervisord,
 		vmdb:         vmdb,
 		vmalert:      vmalert,
@@ -793,7 +879,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(sqlDB)
+	settings, err := models.GetSettings(pmmDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
@@ -862,6 +948,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		telemetryV2.Run(ctx)
 	}()
 
 	wg.Add(1)
