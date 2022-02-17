@@ -14,18 +14,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package stringset
+package ia
 
 import (
-	"sort"
+	"testing"
+
+	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
+	"github.com/percona/pmm/api/managementpb/ia/json/client/alerts"
+	"github.com/stretchr/testify/require"
+
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
-// ToSlice converts a set of strings to slice of strings. The result is sorted in increasing order.
-func ToSlice(set map[string]struct{}) []string {
-	res := make([]string, 0, len(set))
-	for k := range set {
-		res = append(res, k)
-	}
-	sort.Strings(res)
-	return res
+func TestAlertsAPI(t *testing.T) {
+	client := channelsClient.Default.Alerts
+
+	t.Run("list", func(t *testing.T) {
+		_, err := client.ListAlerts(&alerts.ListAlertsParams{
+			Body:    alerts.ListAlertsBody{},
+			Context: pmmapitests.Context})
+
+		require.NoError(t, err)
+	})
 }
