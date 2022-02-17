@@ -43,6 +43,7 @@ services:
       - .dev.pmm-managed.yaml:/opt/.dev.pmm-managed.yaml
       - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf
       - .:/root/go/src/github.com/percona/pmm-managed
+#      - ../saas:/root/go/src/github.com/percona/saas
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
       - go-modules:/root/go/pkg/mod # Put modules cache into a separate volume
 volumes:
