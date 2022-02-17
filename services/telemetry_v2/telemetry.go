@@ -130,6 +130,7 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 			continue
 		}
 
+		//TODO: consider fetching metrics in parallel
 		metrics, err := ds.FetchMetrics(ctx, telemetry)
 		if err != nil {
 			s.l.Debugf("failed to extract metric from datasource for [%s]:[%s]: %v", telemetry.Source, telemetry.Id, err)
