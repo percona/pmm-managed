@@ -6,13 +6,6 @@ import (
 	"time"
 )
 
-const (
-	ENV_DISABLED        = "PERCONA_TEST_TELEMETRY_DISABLE_SEND"
-	ENV_CONFIG          = "PERCONA_TEST_TELEMETRY_FILE"
-	ENV_REPORT_INTERVAL = "PERCONA_TEST_TELEMETRY_INTERVAL"
-	ENV_REPORT_NO_DELAY = "PERCONA_TEST_TELEMETRY_DISABLE_START_DELAY"
-)
-
 type ServiceConfig struct {
 	Enabled      bool              `yaml:"enabled"`
 	telemetry    []TelemetryConfig `yaml:"-"`
