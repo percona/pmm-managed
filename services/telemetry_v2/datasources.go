@@ -2,7 +2,7 @@ package telemetry_v2
 
 import (
 	"context"
-	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -59,5 +59,5 @@ func (r *telemetryDataSourceRegistry) LocateTelemetryDataSource(name string) (Te
 }
 
 type TelemetryDataSource interface {
-	FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*reporter.ServerMetric_Metric, error)
+	FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error)
 }

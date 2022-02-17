@@ -18,16 +18,17 @@
 package channel
 
 import (
+	"google.golang.org/protobuf/encoding/prototext"
 	"sync"
 	"sync/atomic"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	protostatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto" //nolint:staticcheck
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -185,7 +186,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 	if size := proto.Size(msg); size < 100 {
 		c.l.Debugf("Sending message (%d bytes): %s.", size, msg)
 	} else {
-		c.l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+		c.l.Debugf("Sending message (%d bytes):\n%s\n", size, prototext.Format(msg))
 	}
 
 	err := c.s.Send(msg)
@@ -216,7 +217,7 @@ func (c *Channel) runReceiver() {
 		if size := proto.Size(msg); size < 100 {
 			c.l.Debugf("Received message (%d bytes): %s.", size, msg)
 		} else {
-			c.l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+			c.l.Debugf("Received message (%d bytes):\n%s\n", size, prototext.Format(msg))
 		}
 
 		switch p := msg.Payload.(type) {

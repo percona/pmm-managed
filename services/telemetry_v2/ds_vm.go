@@ -2,7 +2,7 @@ package telemetry_v2
 
 import (
 	"context"
-	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -37,7 +37,7 @@ func NewDsVm(config DSVM, l *logrus.Entry) (TelemetryDataSource, error) {
 	}, nil
 }
 
-func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*reporter.ServerMetric_Metric, error) {
+func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
 
 	localCtx, _ := context.WithTimeout(ctx, d.config.Timeout)
 	result, _, err := d.vm.Query(localCtx, config.Query, time.Now())
@@ -45,14 +45,14 @@ func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*rep
 		return nil, err
 	}
 
-	var metrics []*reporter.ServerMetric_Metric
+	var metrics []*pmmv1.ServerMetric_Metric
 
 	for _, v := range result.(model.Vector) {
 		for _, configItem := range config.Data {
 			if configItem.Label != "" {
 				value, ok := v.Metric[model.LabelName(configItem.Label)]
 				if ok {
-					metrics = append(metrics, &reporter.ServerMetric_Metric{
+					metrics = append(metrics, &pmmv1.ServerMetric_Metric{
 						Key:   configItem.Label,
 						Value: string(value),
 					})
@@ -60,7 +60,7 @@ func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*rep
 			}
 			//TODO: verify if impl is correct
 			if configItem.Value != "" {
-				metrics = append(metrics, &reporter.ServerMetric_Metric{
+				metrics = append(metrics, &pmmv1.ServerMetric_Metric{
 					Key:   configItem.MetricName,
 					Value: configItem.Value,
 				})
@@ -68,5 +68,5 @@ func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*rep
 		}
 	}
 
-		return metrics, nil
+	return metrics, nil
 }

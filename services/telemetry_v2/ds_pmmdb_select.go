@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net/url"
@@ -66,6 +66,6 @@ func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
 	return db, nil
 }
 
-func (d *dsPmmDbSelect) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*reporter.ServerMetric_Metric, error) {
+func (d *dsPmmDbSelect) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
 	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
 }

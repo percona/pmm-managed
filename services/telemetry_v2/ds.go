@@ -3,12 +3,12 @@ package telemetry_v2
 import (
 	"context"
 	"database/sql"
-	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
-func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx context.Context, config TelemetryConfig) ([]*reporter.ServerMetric_Metric, error) {
+func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
 	localCtx, _ := context.WithTimeout(ctx, timeout)
 	tx, err := db.BeginTx(localCtx, &sql.TxOptions{})
 	if err != nil {
@@ -22,7 +22,7 @@ func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx 
 		return nil, err
 	}
 
-	var metrics []*reporter.ServerMetric_Metric
+	var metrics []*pmmv1.ServerMetric_Metric
 
 	columns, err := rows.Columns()
 	if err != nil {
@@ -42,7 +42,7 @@ func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx 
 
 		for idx, column := range columns {
 			if _, ok := cfgColumns[column]; ok {
-				metrics = append(metrics, &reporter.ServerMetric_Metric{
+				metrics = append(metrics, &pmmv1.ServerMetric_Metric{
 					Key:   column,
 					Value: *strs[idx],
 				})

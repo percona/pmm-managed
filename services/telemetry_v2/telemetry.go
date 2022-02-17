@@ -2,6 +2,7 @@
 package telemetry_v2
 
 import (
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	//nolint:staticcheck
 	"github.com/percona/pmm-managed/utils/saasreq"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -139,11 +140,11 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 	}
 
 	return &reporter.ReportRequest{
-		Metrics: []*reporter.ServerMetric{current},
+		Metrics: []*pmmv1.ServerMetric{current},
 	}, nil
 }
 
-func (s *Service) makeMetric() (*reporter.ServerMetric, error) {
+func (s *Service) makeMetric() (*pmmv1.ServerMetric, error) {
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
@@ -175,7 +176,7 @@ func (s *Service) makeMetric() (*reporter.ServerMetric, error) {
 	_, distMethod, _ := getDistributionMethodAndOS(s.l)
 
 	eventId := uuid.New()
-	return &reporter.ServerMetric{
+	return &pmmv1.ServerMetric{
 		Id:                   eventId[:],
 		Time:                 timestamppb.New(time.Now()),
 		PmmServerTelemetryId: serverID,
