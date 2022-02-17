@@ -41,6 +41,9 @@ import (
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
+// ErrFailedToGetToken means it failed to get user's token. Most likely due to the fact user is not logged in using Percona Account.
+var ErrFailedToGetToken = errors.New("failed to get token")
+
 // Client represents a client for Grafana API.
 type Client struct {
 	addr string
@@ -365,10 +368,10 @@ func (c *Client) authHeadersFromContext(ctx context.Context) (http.Header, error
 	}
 
 	authHeaders := make(http.Header)
-	if len(authorizationHeaders) > 0 {
+	if len(authorizationHeaders) != 0 {
 		authHeaders.Add("Authorization", authorizationHeaders[0])
 	}
-	if len(cookieHeaders) > 0 {
+	if len(cookieHeaders) != 0 {
 		for _, header := range cookieHeaders {
 			authHeaders.Add("Cookie", header)
 		}
@@ -534,7 +537,7 @@ func (c *Client) GetCurrentUserAccessToken(ctx context.Context) (string, error) 
 	if err := c.do(ctx, http.MethodGet, "/percona-api/user/oauth-token", "", headers, nil, &user); err != nil {
 		var e *clientError
 		if errors.As(err, &e) && e.ErrorMessage == "Failed to get token" && e.Code == http.StatusInternalServerError {
-			return "", errors.New("failed to get token")
+			return "", ErrFailedToGetToken
 		}
 		return "", errors.Wrap(err, "unknown error occured during getting of user's token")
 	}

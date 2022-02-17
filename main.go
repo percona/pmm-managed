@@ -56,6 +56,7 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	channelz "google.golang.org/grpc/channelz/service"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -163,13 +164,11 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			interceptors.Unary,
 			interceptors.UnaryServiceEnabledInterceptor(),
-			grpc_validator.UnaryServerInterceptor(),
-		)),
+			grpc_validator.UnaryServerInterceptor())),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			interceptors.Stream,
 			interceptors.StreamServiceEnabledInterceptor(),
-			grpc_validator.StreamServerInterceptor(),
-		)),
+			grpc_validator.StreamServerInterceptor())),
 	)
 
 	serverpb.RegisterServerServer(gRPCServer, deps.server)
@@ -295,7 +294,10 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	proxyMux := grpc_gateway.NewServeMux(
 		grpc_gateway.WithMarshalerOption(grpc_gateway.MIMEWildcard, marshaller),
 	)
-	opts := []grpc.DialOption{grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5 * 1024 * 1024))}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5 * 1024 * 1024)),
+	}
 
 	// TODO switch from RegisterXXXHandlerFromEndpoint to RegisterXXXHandler to avoid extra dials
 	// (even if they dial to localhost)
@@ -504,7 +506,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 
 func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string) *qan.Client {
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBackoffMaxDelay(time.Second), //nolint:staticcheck
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(gRPCMessageMaxSize)),
@@ -693,7 +695,7 @@ func main() {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
 	// We should collect templates before rules service created, because it will regenerate rule files on startup.
-	templatesService.Collect(ctx)
+	templatesService.CollectTemplates(ctx)
 	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertManager)
 	alertsService := ia.NewAlertsService(db, alertManager, templatesService)
 
@@ -713,6 +715,7 @@ func main() {
 		AgentsStateUpdater:   agentsStateUpdater,
 		Alertmanager:         alertManager,
 		ChecksService:        checksService,
+		TemplatesService:     templatesService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
 		AwsInstanceChecker:   awsInstanceChecker,

@@ -44,12 +44,12 @@ var (
 	v2_26_99                   = version.MustParse("2.26.99")
 )
 
-func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
+func getMongoExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
 	files := exporter.Files()
 
 	// The mongoDB exporter prior 2.26 use exporter_shared and gets basic auth config from env.
 	// Starting with pmm 2.27, the exporter uses Prometheus Web Toolkit and needs a config file
-	// with the basic auht users.
+	// with the basic auth users.
 	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
 		delete(files, "webConfigPlaceholder")
 	}
@@ -60,7 +60,7 @@ func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) m
 	return files
 }
 
-func getExporterEnv(service *models.Service, exporter *models.Agent, pmmAgentVersion *version.Parsed, database string) []string {
+func getMongoExporterEnv(service *models.Service, exporter *models.Agent, pmmAgentVersion *version.Parsed, database string) []string {
 	tdp := exporter.TemplateDelimiters(service)
 
 	env := []string{
@@ -84,8 +84,8 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		database = exporter.MongoDBOptions.AuthenticationDatabase
 	}
 
-	env := getExporterEnv(service, exporter, pmmAgentVersion, database)
-	files := getExporterFiles(exporter, pmmAgentVersion)
+	env := getMongoExporterEnv(service, exporter, pmmAgentVersion, database)
+	files := getMongoExporterFiles(exporter, pmmAgentVersion)
 
 	var args []string
 	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
@@ -190,7 +190,7 @@ func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 		"--discovering-mode",
 	}
 
-	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) > 0 {
+	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) != 0 {
 		args = append(args, "--mongodb.collstats-colls="+strings.Join(exporter.MongoDBOptions.StatsCollections, ","))
 		args = append(args, "--mongodb.indexstats-colls="+strings.Join(exporter.MongoDBOptions.StatsCollections, ","))
 	}
@@ -249,7 +249,7 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 		"--discovering-mode",
 	}
 
-	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) > 0 {
+	if exporter.MongoDBOptions != nil && len(exporter.MongoDBOptions.StatsCollections) != 0 {
 		args = append(args, "--mongodb.collstats-colls="+strings.Join(exporter.MongoDBOptions.StatsCollections, ","))
 	}
 

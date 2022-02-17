@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/credentials/insecure"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
@@ -40,7 +41,7 @@ type Client struct {
 	logsClient                controllerv1beta1.LogsAPIClient
 	pxcOperatorClient         controllerv1beta1.PXCOperatorAPIClient
 	psmdbOperatorClient       controllerv1beta1.PSMDBOperatorAPIClient
-	connM                     *sync.RWMutex
+	connM                     sync.RWMutex
 	conn                      *grpc.ClientConn
 	dbaasControllerAPIAddress string
 }
@@ -49,7 +50,6 @@ type Client struct {
 func NewClient(dbaasControllerAPIAddress string) *Client {
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
-		connM:                     new(sync.RWMutex),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
 	}
 	return c
@@ -68,7 +68,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	backoffConfig.MaxDelay = 10 * time.Second
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), // Dial blocks, we do not connect in background.
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoffConfig, MinConnectTimeout: 10 * time.Second}),
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 	}
