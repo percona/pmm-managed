@@ -343,7 +343,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, internalServerError
 	}
 
-	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	ssoDetails, err, _ := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")

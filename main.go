@@ -25,6 +25,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/percona/pmm-managed/services/config"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"net"
