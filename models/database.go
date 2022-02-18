@@ -685,7 +685,7 @@ var databaseSchema = [][]string{
 	},
 	57: {
 		`ALTER TABLE agents
-		ADD COLUMN process_exec_path VARCHAR`,
+		ADD COLUMN process_exec_path TEXT`,
 	},
 	58: {
 		`ALTER TABLE percona_sso_details
