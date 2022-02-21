@@ -157,7 +157,13 @@ func TestCollectChecks(t *testing.T) {
 		for _, c := range checks {
 			checkNames = append(checkNames, c.Name)
 		}
-		assert.ElementsMatch(t, []string{"bad_check_mysql", "good_check_pg", "good_check_mongo", "check_mongo_replSetGetStatus", "check_mongo_getDiagnosticData"}, checkNames)
+		assert.ElementsMatch(t, []string{
+			"bad_check_mysql",
+			"good_check_pg",
+			"good_check_mongo",
+			"check_mongo_replSetGetStatus",
+			"check_mongo_getDiagnosticData",
+		}, checkNames)
 	})
 
 	t.Run("download checks", func(t *testing.T) {
