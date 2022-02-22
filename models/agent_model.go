@@ -436,8 +436,10 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			Path:     path,
 			RawQuery: q.Encode(),
 		}
+		plusPlaceholder := "__plus__" // There is a risk of error, when the password contains this string. Can change it to a more unique string.
 		switch {
 		case password != "":
+			password = strings.ReplaceAll(password, "+", plusPlaceholder)
 			u.User = url.UserPassword(username, password)
 		case username != "":
 			u.User = url.User(username)
@@ -445,6 +447,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		dsn := u.String()
 		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Left), tdp.Left)
 		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Right), tdp.Right)
+		dsn = strings.ReplaceAll(dsn, url.QueryEscape(plusPlaceholder), "%2B")
 		return dsn
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
