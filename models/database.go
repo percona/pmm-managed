@@ -684,12 +684,12 @@ var databaseSchema = [][]string{
 			DROP COLUMN tiers`,
 	},
 	57: {
-		`ALTER TABLE agents
-		ADD COLUMN process_exec_path TEXT`,
-	},
-	58: {
 		`ALTER TABLE percona_sso_details
 			ADD COLUMN organization_id VARCHAR`,
+	},
+	58: {
+		`ALTER TABLE agents
+		ADD COLUMN process_exec_path TEXT`,
 	},
 }
 
