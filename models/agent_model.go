@@ -436,7 +436,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			Path:     path,
 			RawQuery: q.Encode(),
 		}
-		plusPlaceholder := "__plus__" // There is a risk of error, when the password contains this string. Can change it to a more unique string.
+		const plusPlaceholder = "__plus__" // There is a risk of error, when the password contains this string. Can change it to a more unique string.
 		switch {
 		case password != "":
 			password = strings.ReplaceAll(password, "+", plusPlaceholder)
