@@ -38,7 +38,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
@@ -59,6 +59,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -279,16 +280,18 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
 	marshaller := &grpc_gateway.JSONPb{
-		OrigName:     true,
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "  ",
+		MarshalOptions: protojson.MarshalOptions{
+			UseEnumNumbers:  false,
+			EmitUnpopulated: false,
+			UseProtoNames:   true,
+			Indent:          "  ",
+		},
 	}
 
 	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-6722
 	if nicer, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_NICER_API")); nicer {
 		l.Warn("Enabling nicer API with default/zero values in response.")
-		marshaller.EmitDefaults = true
+		marshaller.EmitUnpopulated = true
 	}
 
 	proxyMux := grpc_gateway.NewServeMux(

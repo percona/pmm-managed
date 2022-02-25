@@ -62,6 +62,10 @@ type Service struct {
 	platformpb.UnimplementedPlatformServer
 }
 
+func (s *Service) SearchOrganizationEntitlements(ctx context.Context, request *platformpb.SearchOrganizationEntitlementsRequest) (*platformpb.SearchOrganizationEntitlementsResponse, error) {
+	panic("implement me")
+}
+
 type grafanaClient interface {
 	GetCurrentUserAccessToken(ctx context.Context) (string, error)
 }
