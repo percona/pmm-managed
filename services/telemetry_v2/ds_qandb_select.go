@@ -20,8 +20,12 @@ var (
 	_ TelemetryDataSource = (*dsQanDbSelect)(nil)
 )
 
+func (d *dsQanDbSelect) Enabled() bool {
+	return d.config.Enabled
+}
+
 func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (TelemetryDataSource, error) {
-	db, err := openQANDBConnection(config.DSN)
+	db, err := openQANDBConnection(config.DSN, config.Enabled)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +36,11 @@ func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (TelemetryDataSource,
 	}, nil
 }
 
-func openQANDBConnection(dsn string) (*sql.DB, error) {
+func openQANDBConnection(dsn string, enabled bool) (*sql.DB, error) {
+	if !enabled {
+		return nil, nil
+	}
+
 	db, err := sql.Open("clickhouse", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to open connection to QAN DB")

@@ -21,6 +21,10 @@ var (
 	_ TelemetryDataSource = (*dsVm)(nil)
 )
 
+func (d *dsVm) Enabled() bool {
+	return d.config.Enabled
+}
+
 func NewDsVm(config DSVM, l *logrus.Entry) (TelemetryDataSource, error) {
 	client, err := api.NewClient(api.Config{
 		Address: config.Address,
@@ -28,6 +32,14 @@ func NewDsVm(config DSVM, l *logrus.Entry) (TelemetryDataSource, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if !config.Enabled {
+		return &dsVm{
+			l:      l,
+			config: config,
+			vm:     nil,
+		}, nil
 	}
 
 	return &dsVm{

@@ -328,7 +328,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		return err
 	}
 
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte), &saasreq.SaasRequestOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

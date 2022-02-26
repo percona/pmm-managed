@@ -25,7 +25,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/percona/pmm-managed/services/config"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
-	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"net"
@@ -654,27 +653,8 @@ func main() {
 	}
 	if err := cfg.Update(func(s *config.Service) error {
 		ds := s.Config.Services.TelemetryV2.DataSources
-
-		vmdb := ds.VM
-		timeout, err := time.ParseDuration(ds.VM.TimeoutStr)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
-		}
-		vmdb.Timeout = timeout
-
-		qandb := ds.QANDB_SELECT
-		timeout, err = time.ParseDuration(ds.QANDB_SELECT.TimeoutStr)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
-		}
-		qandb.Timeout = timeout
-
 		pmmdb := ds.PMMDB_SELECT
-		timeout, err = time.ParseDuration(ds.PMMDB_SELECT.TimeoutStr)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
-		}
-		pmmdb.Timeout = timeout
+
 		pmmdb.Credentials.Username = *postgresDBUsernameF
 		pmmdb.Credentials.Password = *postgresDBPasswordF
 		pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable

@@ -17,6 +17,7 @@ services:
 
     extra_hosts:
       - host.docker.internal:host-gateway
+      - portal.localhost:${PORTAL_HOST:-host-gateway}
 
     # for delve
     cap_add:
@@ -39,9 +40,10 @@ services:
       - ${PMM_PORT_CH_TCP:-11000}:9000
       - ${PMM_PORT_CH_HTTP:-11123}:8123
     volumes:
-      - .env:/opt/.env
-      - .dev.pmm-managed.yaml:/opt/.dev.pmm-managed.yaml
-      - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf
+      - .env.devcontainer:/opt/.env:ro
+      - .env.devcontainer:/root/go/src/github.com/percona/pmm-managed/.env:ro
+      - .dev.pmm-managed.yaml:/opt/.dev.pmm-managed.yaml:ro
+      - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
       - .:/root/go/src/github.com/percona/pmm-managed
 #      - ../saas:/root/go/src/github.com/percona/saas
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro

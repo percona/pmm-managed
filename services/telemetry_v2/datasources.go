@@ -60,4 +60,5 @@ func (r *telemetryDataSourceRegistry) LocateTelemetryDataSource(name string) (Te
 
 type TelemetryDataSource interface {
 	FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error)
+	Enabled() bool
 }

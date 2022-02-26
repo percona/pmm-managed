@@ -21,6 +21,10 @@ var (
 	_ TelemetryDataSource = (*dsPmmDbSelect)(nil)
 )
 
+func (d *dsPmmDbSelect) Enabled() bool {
+	return d.config.Enabled
+}
+
 func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSource, error) {
 	db, err := openPMMDBConnection(config)
 	if err != nil {
@@ -35,6 +39,10 @@ func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSourc
 }
 
 func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
+	if !config.Enabled {
+		return nil, nil
+	}
+
 	var user *url.Userinfo
 	if config.UseSeparateCredentials {
 		user = url.UserPassword(config.SeparateCredentials.Username, config.SeparateCredentials.Password)

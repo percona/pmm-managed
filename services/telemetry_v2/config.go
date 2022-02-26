@@ -28,18 +28,21 @@ func (c *ServiceConfig) ReportEndpointURL() string {
 }
 
 type DSConfigQAN struct {
+	Enabled    bool          `yaml:"enabled"`
 	Timeout    time.Duration `yaml:"-"`
 	TimeoutStr string        `yaml:"timeout"`
 	DSN        string        `yaml:"dsn"`
 }
 
 type DSVM struct {
+	Enabled    bool          `yaml:"enabled"`
 	Timeout    time.Duration `yaml:"-"`
 	TimeoutStr string        `yaml:"timeout"`
 	Address    string        `yaml:"address"`
 }
 
 type DSConfigPMMDB struct {
+	Enabled                bool          `yaml:"enabled"`
 	Timeout                time.Duration `yaml:"-"`
 	TimeoutStr             string        `yaml:"timeout"`
 	UseSeparateCredentials bool          `yaml:"use_separate_credentials"`
@@ -84,16 +87,17 @@ func (c *TelemetryConfig) MapByColumn() map[string]TelemetryConfigData {
 }
 
 type ReportingConfig struct {
-	SendOnStart     bool          `yaml:"send_on_start"`
-	IntervalStr     string        `yaml:"interval"`
-	IntervalEnv     string        `yaml:"interval_env"`
-	Interval        time.Duration `yaml:"-"`
-	RetryBackoffStr string        `yaml:"retry_backoff"`
-	RetryBackoffEnv string        `yaml:"retry_backoff_env"`
-	RetryBackoff    time.Duration `yaml:"-"`
-	SendTimeoutStr  string        `yaml:"send_timeout"`
-	SendTimeout     time.Duration `yaml:"-"`
-	RetryCount      int           `yaml:"retry_count"`
+	SkipTlsVerification bool          `yaml:"skip_tls_verification"`
+	SendOnStart         bool          `yaml:"send_on_start"`
+	IntervalStr         string        `yaml:"interval"`
+	IntervalEnv         string        `yaml:"interval_env"`
+	Interval            time.Duration `yaml:"-"`
+	RetryBackoffStr     string        `yaml:"retry_backoff"`
+	RetryBackoffEnv     string        `yaml:"retry_backoff_env"`
+	RetryBackoff        time.Duration `yaml:"-"`
+	SendTimeoutStr      string        `yaml:"send_timeout"`
+	SendTimeout         time.Duration `yaml:"-"`
+	RetryCount          int           `yaml:"retry_count"`
 }
 
 func (c *ServiceConfig) Init(telemetry []TelemetryConfig) error {
@@ -116,6 +120,41 @@ func (c *ServiceConfig) Init(telemetry []TelemetryConfig) error {
 		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.SendTimeoutStr)
 	}
 	c.Reporting.SendTimeout = sendTimeout
+
+	ds := c.DataSources
+
+	vmdb := ds.VM
+	if vmdb.Enabled {
+		if vmdb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(vmdb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
+			}
+			vmdb.Timeout = timeout
+		}
+	}
+
+	qandb := ds.QANDB_SELECT
+	if qandb.Enabled {
+		if qandb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(qandb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
+			}
+			qandb.Timeout = timeout
+		}
+	}
+
+	pmmdb := ds.PMMDB_SELECT
+	if pmmdb.Enabled {
+		if pmmdb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(pmmdb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
+			}
+			pmmdb.Timeout = timeout
+		}
+	}
 
 	return nil
 }

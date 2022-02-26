@@ -129,6 +129,9 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 			s.l.Debugf("failed to lookup telemetry datasource for [%s]:[%s]", telemetry.Source, telemetry.Id)
 			continue
 		}
+		if !ds.Enabled() {
+			continue
+		}
 
 		//TODO: consider fetching metrics in parallel
 		metrics, err := ds.FetchMetrics(ctx, telemetry)
@@ -292,7 +295,9 @@ func (s *Service) sendRequest(ctx context.Context, req *reporter.ReportRequest) 
 		return err
 	}
 
-	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte))
+	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte), &saasreq.SaasRequestOptions{
+		SkipTlsVerification: s.config.Reporting.SkipTlsVerification,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
