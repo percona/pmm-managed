@@ -59,7 +59,7 @@ func TestClient(t *testing.T) {
 			clientError, _ := errors.Cause(err).(*clientError)
 			require.NotNil(t, clientError, "got role %s", role)
 			assert.Equal(t, 401, clientError.Code)
-			assert.Equal(t, `{"message":"Unauthorized"}`, clientError.Body)
+			assert.Equal(t, `{\n  \"message\": \"Unauthorized\"\n}\n`, clientError.Body)
 			assert.Equal(t, `Unauthorized`, clientError.ErrorMessage)
 			assert.Equal(t, none, role)
 			assert.Equal(t, "None", role.String())
