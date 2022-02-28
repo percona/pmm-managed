@@ -4,6 +4,8 @@
 // iatemplates/mongodb_high_memory_usage.yml (723B)
 // iatemplates/mongodb_restarted.yml (586B)
 // iatemplates/mysql_down.yml (344B)
+// iatemplates/mysql_replication_io_running.yml (570B)
+// iatemplates/mysql_replication_sql_running.yml (591B)
 // iatemplates/mysql_restarted.yml (573B)
 // iatemplates/mysql_too_many_connections.yml (740B)
 // iatemplates/node_high_cpu_load.yml (599B)
@@ -158,6 +160,46 @@ func iatemplatesMysql_downYml() (*asset, error) {
 
 	info := bindataFileInfo{name: "iatemplates/mysql_down.yml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x37, 0xb6, 0xea, 0x41, 0xdb, 0xb3, 0xf1, 0x78, 0x1f, 0x78, 0x5f, 0xb6, 0xfb, 0x3e, 0x1a, 0x95, 0x6, 0xc3, 0xa0, 0xd8, 0xa9, 0x75, 0x67, 0xf0, 0x44, 0xcf, 0xff, 0x87, 0xd5, 0xee, 0x84, 0x9}}
+	return a, nil
+}
+
+var _iatemplatesMysql_replication_io_runningYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x51\x4f\x4b\xfb\x40\x14\xbc\xe7\x53\xcc\xe1\x77\xf8\x15\x8c\xd4\xeb\x42\x85\x0a\x3d\x08\xb1\xc5\x16\xbd\x88\x84\xd7\xe4\x59\x16\xf6\x4f\x7c\xbb\x09\x86\xda\xef\x2e\x6e\x34\x55\xa9\x1e\x27\x33\x93\x37\x33\x9b\xe7\x79\x16\xd9\x36\x86\x22\x07\x95\x01\x39\x1c\x59\x56\xb0\x7d\x78\x36\xa5\x70\x63\x74\x45\x51\x7b\x57\x6a\x5f\x4a\xeb\x9c\x76\xbb\x0c\x00\x3a\x96\xa0\xbd\x53\xb8\x48\x30\xb4\xd6\x92\xf4\x0a\x37\xfd\xe6\xb6\xc0\xfa\x68\xc4\x7a\x70\xe1\x7a\x95\x94\x51\xb3\x04\x85\x07\x72\xde\xf5\xd6\xb7\xe1\x0c\xc2\x3b\x1d\x22\x0b\xd7\x8f\x49\xc2\x2f\x8d\x28\xbc\xe6\x09\xe0\x23\x4b\x30\xd4\x71\x19\x22\xc5\x36\x94\x96\xde\xf5\x65\x60\xe9\x58\x4a\x5d\xe3\x12\x53\x90\xab\xb1\x5a\xe2\xbf\x76\x21\x92\xab\x78\x72\xca\x39\x80\x63\x19\xcc\x66\x98\xa6\x43\x4f\x5e\x14\xa6\x76\xa8\xc3\x1d\x8b\x8e\xbd\x42\x25\x3a\xea\x8a\x4c\xfa\x6c\x68\xcb\x26\xed\x34\x18\xbc\xc2\x96\x24\x41\x72\xce\xc7\x54\x78\xe4\x6b\x0e\x95\xe8\x26\xa6\x99\xc6\x36\x38\x31\xd1\xd2\xc7\x71\x26\xef\xb0\xdf\xe3\xdf\x70\xea\xfc\xb3\x0b\x0e\x87\xd1\x7f\x3f\x2f\xee\x16\x98\x25\x59\x47\xa6\xfd\x46\x16\xf3\xab\x45\xb1\x51\x5f\xfe\x71\x64\xff\x78\xa4\x1f\x09\xc6\x0d\x7f\xc9\x32\xc9\xde\x02\x00\x00\xff\xff\xe4\x73\xe5\xac\x3a\x02\x00\x00")
+
+func iatemplatesMysql_replication_io_runningYmlBytes() ([]byte, error) {
+	return bindataRead(
+		_iatemplatesMysql_replication_io_runningYml,
+		"iatemplates/mysql_replication_io_running.yml",
+	)
+}
+
+func iatemplatesMysql_replication_io_runningYml() (*asset, error) {
+	bytes, err := iatemplatesMysql_replication_io_runningYmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "iatemplates/mysql_replication_io_running.yml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf2, 0x94, 0x49, 0x7e, 0xc6, 0xfd, 0x4a, 0xc7, 0xfc, 0x59, 0x99, 0x7, 0x71, 0x25, 0xd8, 0x2b, 0xc, 0x63, 0x62, 0x8b, 0xc3, 0x4c, 0x6c, 0x6e, 0x5, 0xfd, 0x76, 0x3a, 0xea, 0x90, 0x94, 0x89}}
+	return a, nil
+}
+
+var _iatemplatesMysql_replication_sql_runningYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x51\x4d\x6b\x22\x41\x14\xbc\x0b\xfe\x87\x3a\xec\x61\x85\x9d\xc5\xbd\x36\xb8\x60\xc0\xdb\xc4\xa0\x92\x5c\x42\x18\x9e\x33\x2f\xd2\xd0\x1f\x93\xd7\x3d\x43\x06\xe3\x7f\x0f\x4e\x1b\xc7\x04\x93\x63\xf5\xab\x7a\xaf\xaa\x3a\xcb\xb2\xf1\x28\xb2\xad\x0d\x45\x0e\x6a\x3c\x02\x32\x38\xb2\xac\x60\xbb\xf0\x62\x0a\xe1\xda\xe8\x92\xa2\xf6\xae\xe8\x71\xe3\x9c\x76\xbb\x23\x11\x68\x59\x82\xf6\x4e\xe1\x5f\xc2\xa1\xb1\x96\xa4\x53\xb8\xed\x36\xab\x1c\xeb\x41\x8b\x75\xd2\x61\xb3\xca\x13\x37\x6a\x96\xa0\xf0\x48\xce\xbb\xce\xfa\x26\xfc\x81\xf0\x4e\x87\xc8\xc2\xd5\x53\xe2\xf0\x6b\x2d\x0a\x6f\x59\x42\x38\x59\x0a\x86\x5a\x2e\x42\xa4\xd8\x84\xc2\xd2\x51\x51\x04\x96\x96\xa5\xd0\x15\xfe\x63\x0a\x72\x15\xee\x96\xf8\xad\x5d\x88\xe4\x4a\x9e\x5c\x53\x9e\xc0\x90\x09\xb3\x19\xa6\xe9\xd4\xb3\x17\x85\xa9\x3d\xa5\xe2\x96\x45\xc7\x4e\xa1\x14\x1d\x75\x49\x26\xbd\x1b\xda\xb2\x49\x9d\x25\x8d\x57\xd8\x92\x24\x4c\xce\xf9\xd8\x47\x1f\x18\x15\x87\x52\x74\x1d\xfb\xca\x86\x54\xb8\x52\xd7\xd2\xc7\x73\x65\xde\x61\xbf\xc7\xaf\x74\xee\xef\x47\x26\x1c\x0e\xc3\x82\x87\x79\x7e\xbf\xc0\xac\xe7\xb5\x64\x9a\xcf\xd3\x7c\x7e\xb3\xc8\x37\xea\x62\xcb\xc5\xf8\x87\x3f\xfb\x62\xe2\x5c\xe7\x37\x76\x26\xe3\xd1\x7b\x00\x00\x00\xff\xff\x3f\xa0\x3f\xa9\x4f\x02\x00\x00")
+
+func iatemplatesMysql_replication_sql_runningYmlBytes() ([]byte, error) {
+	return bindataRead(
+		_iatemplatesMysql_replication_sql_runningYml,
+		"iatemplates/mysql_replication_sql_running.yml",
+	)
+}
+
+func iatemplatesMysql_replication_sql_runningYml() (*asset, error) {
+	bytes, err := iatemplatesMysql_replication_sql_runningYmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "iatemplates/mysql_replication_sql_running.yml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf8, 0x9b, 0xfd, 0xf1, 0xc3, 0xa5, 0xef, 0x9c, 0x3a, 0x7, 0x33, 0xb2, 0x5, 0x2b, 0x8e, 0xd7, 0xcd, 0x7c, 0x6b, 0x77, 0x56, 0x6c, 0xe5, 0xe8, 0x1e, 0xa2, 0xf3, 0x7f, 0x27, 0x22, 0xe, 0x77}}
 	return a, nil
 }
 
@@ -436,6 +478,8 @@ var _bindata = map[string]func() (*asset, error){
 	"iatemplates/mongodb_high_memory_usage.yml":        iatemplatesMongodb_high_memory_usageYml,
 	"iatemplates/mongodb_restarted.yml":                iatemplatesMongodb_restartedYml,
 	"iatemplates/mysql_down.yml":                       iatemplatesMysql_downYml,
+	"iatemplates/mysql_replication_io_running.yml":     iatemplatesMysql_replication_io_runningYml,
+	"iatemplates/mysql_replication_sql_running.yml":    iatemplatesMysql_replication_sql_runningYml,
 	"iatemplates/mysql_restarted.yml":                  iatemplatesMysql_restartedYml,
 	"iatemplates/mysql_too_many_connections.yml":       iatemplatesMysql_too_many_connectionsYml,
 	"iatemplates/node_high_cpu_load.yml":               iatemplatesNode_high_cpu_loadYml,
@@ -496,6 +540,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"mongodb_high_memory_usage.yml":        {iatemplatesMongodb_high_memory_usageYml, map[string]*bintree{}},
 		"mongodb_restarted.yml":                {iatemplatesMongodb_restartedYml, map[string]*bintree{}},
 		"mysql_down.yml":                       {iatemplatesMysql_downYml, map[string]*bintree{}},
+		"mysql_replication_io_running.yml":     {iatemplatesMysql_replication_io_runningYml, map[string]*bintree{}},
+		"mysql_replication_sql_running.yml":    {iatemplatesMysql_replication_sql_runningYml, map[string]*bintree{}},
 		"mysql_restarted.yml":                  {iatemplatesMysql_restartedYml, map[string]*bintree{}},
 		"mysql_too_many_connections.yml":       {iatemplatesMysql_too_many_connectionsYml, map[string]*bintree{}},
 		"node_high_cpu_load.yml":               {iatemplatesNode_high_cpu_loadYml, map[string]*bintree{}},
