@@ -1,0 +1,18 @@
+---
+templates:
+  - name: mysql_replication_io_running
+    version: 1
+    summary: MySQL Replication Running IO
+    tiers: [anonymous, registered]
+    expr: |-
+      mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_io_running == 0
+    for: 0m
+    severity: critical
+    labels:
+      foo: bar
+    annotations:
+      description: |-
+        MySQL Replication Not Running on {{ $labels.instance }}
+        VALUE = {{ $value }}
+        LABELS: {{ $labels }}
+      summary: MySQL Replication Not Running on (instance {{ $labels.instance }})
