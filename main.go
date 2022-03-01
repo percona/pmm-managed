@@ -286,6 +286,9 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 			UseProtoNames:   true,
 			Indent:          "  ",
 		},
+		UnmarshalOptions: protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		},
 	}
 
 	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-6722
