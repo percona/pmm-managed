@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mysql_replication_io_running
+  - name: pmm_mysql_replication_io_running
     version: 1
     summary: MySQL Replication Running IO
     tiers: [anonymous, registered]
