@@ -37,6 +37,14 @@ type ChecksAPIService struct {
 	managementpb.UnimplementedSecurityChecksServer
 }
 
+func (s *ChecksAPIService) ListFailedServices(ctx context.Context, request *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
+	panic("implement me")
+}
+
+func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, request *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
+	panic("implement me")
+}
+
 // NewChecksAPIService creates new Checks API Service.
 func NewChecksAPIService(checksService checksService) *ChecksAPIService {
 	return &ChecksAPIService{

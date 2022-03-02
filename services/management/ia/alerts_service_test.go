@@ -28,6 +28,7 @@ import (
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -315,7 +316,7 @@ func TestListAlerts(t *testing.T) {
 
 	t.Run("pagination", func(t *testing.T) {
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 1,
 			},
 		})
@@ -326,7 +327,7 @@ func TestListAlerts(t *testing.T) {
 		assert.EqualValues(t, res.Totals.TotalPages, alertsCount)
 
 		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 10,
 				Index:    2,
 			},
@@ -345,7 +346,7 @@ func TestListAlerts(t *testing.T) {
 			expect = append(expect, *m.Fingerprint)
 		}
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: alertsCount * 2,
 			},
 		})
@@ -354,7 +355,7 @@ func TestListAlerts(t *testing.T) {
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 
 		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 1,
 				Index:    alertsCount * 2,
 			},

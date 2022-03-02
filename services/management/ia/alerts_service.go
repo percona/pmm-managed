@@ -153,7 +153,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 		})
 	}
 
-	pageTotals := &iav1beta1.PageTotals{
+	pageTotals := &managementpb.PageTotals{
 		TotalPages: 1,
 	}
 
