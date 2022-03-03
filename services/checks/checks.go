@@ -727,12 +727,12 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 	nCtx, cancel := context.WithTimeout(ctx, checkExecutionTimeout)
 	defer cancel()
 
-	var resIDs []string
 	queries := c.Queries
 	if c.Version == 1 {
 		queries = []check.Query{{Type: c.Type, Query: c.Query}}
 	}
 
+	resIDs := make([]string, len(queries))
 	for _, query := range queries {
 		r, err := models.CreateActionResult(s.db.Querier, target.AgentID)
 		if err != nil {
