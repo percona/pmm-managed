@@ -70,7 +70,7 @@ const (
 	prometheusSubsystem = "checks"
 
 	alertsPrefix        = "/stt/"
-	maxSupportedVersion = 1
+	maxSupportedVersion = 2
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -130,7 +130,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		l:               l,
 		host:            host,
 		startDelay:      defaultStartDelay,
-		resendInterval:  defaultResendInterval,
+		resendInterval:  resendInterval,
 		localChecksFile: os.Getenv(envCheckFile),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
@@ -464,41 +464,73 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 	return nil
 }
 
-// waitForResult periodically checks result state and returns it when complete.
-func (s *Service) waitForResult(ctx context.Context, resultID string) ([]byte, error) {
+// waitForResult periodically checks results state and returns when everything is complete.
+func (s *Service) waitForResult(ctx context.Context, resultIDs []string) ([][]byte, error) {
+	nCtx, cancel := context.WithTimeout(ctx, resultAwaitTimeout)
+	defer cancel()
+
+	results := make([][]byte, 0, len(resultIDs))
+	m := make(map[string]struct{}, len(resultIDs))
+	for _, resultID := range resultIDs {
+		m[resultID] = struct{}{}
+	}
+
 	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:
-		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+		case <-nCtx.Done():
+			return nil, errors.WithStack(nCtx.Err())
 		}
 
-		res, err := models.FindActionResultByID(s.db.Querier, resultID)
-		if err != nil {
-			return nil, err
+		for resultID := range m {
+			res, err := models.FindActionResultByID(s.db.Querier, resultID)
+			if err != nil {
+				return nil, err
+			}
+
+			if !res.Done {
+				continue
+			}
+
+			if err = s.db.Delete(res); err != nil {
+				s.l.Warnf("Failed to delete action result %s: %s.", resultID, err)
+			}
+
+			if res.Error != "" {
+				return nil, errors.Errorf("action %s failed: %s", resultID, res.Error)
+			}
+
+			results = append(results, []byte(res.Output))
+			delete(m, resultID)
 		}
 
-		if !res.Done {
-			continue
+		return results, nil
+	}
+}
+
+func (s *Service) minPMMAgentVersion(c check.Check) *version.Parsed {
+	switch c.Version {
+	case 1:
+		return s.minPMMAgentVersionForType(c.Type)
+	case 2:
+		res := pmmAgent260 // minimum version that can be used with advisors
+		for _, query := range c.Queries {
+			v := s.minPMMAgentVersionForType(query.Type)
+			if res.Less(v) {
+				res = v
+			}
 		}
 
-		if err = s.db.Delete(res); err != nil {
-			s.l.Warnf("Failed to delete action result %s: %s.", resultID, err)
-		}
-
-		if res.Error != "" {
-			return nil, errors.Errorf("action %s failed: %s", resultID, res.Error)
-		}
-
-		return []byte(res.Output), nil
+		return res
+	default:
+		return pmmAgentInvalid
 	}
 }
 
 // minPMMAgentVersion returns the minimal version of pmm-agent that can handle the given check type.
-func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
+func (s *Service) minPMMAgentVersionForType(t check.Type) *version.Parsed {
 	switch t {
 	case check.MySQLSelect:
 		fallthrough
@@ -608,7 +640,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]chec
 	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
-		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+
+		pmmAgentVersion := s.minPMMAgentVersion(c)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
@@ -637,7 +670,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string
 	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
-		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+		pmmAgentVersion := s.minPMMAgentVersion(c)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
@@ -666,7 +699,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]ch
 	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
-		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+		pmmAgentVersion := s.minPMMAgentVersion(c)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
@@ -694,34 +727,48 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 	nCtx, cancel := context.WithTimeout(ctx, checkExecutionTimeout)
 	defer cancel()
 
-	r, err := models.CreateActionResult(s.db.Querier, target.AgentID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare result")
+	var resIDs []string
+	queries := c.Queries
+	if c.Version == 1 {
+		queries = []check.Query{{Type: c.Type, Query: c.Query}}
 	}
 
-	switch c.Type {
-	case check.MySQLShow:
-		err = s.agentsRegistry.StartMySQLQueryShowAction(nCtx, r.ID, target.AgentID, target.DSN, c.Query, target.Files, target.TDP, target.TLSSkipVerify)
-	case check.MySQLSelect:
-		err = s.agentsRegistry.StartMySQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, c.Query, target.Files, target.TDP, target.TLSSkipVerify)
-	case check.PostgreSQLShow:
-		err = s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN)
-	case check.PostgreSQLSelect:
-		err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, c.Query)
-	case check.MongoDBGetParameter:
-		err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
-	case check.MongoDBBuildInfo:
-		err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
-	case check.MongoDBGetCmdLineOpts:
-		err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
-	default:
-		return nil, errors.Errorf("unknown check type")
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start query")
+	for _, query := range queries {
+		r, err := models.CreateActionResult(s.db.Querier, target.AgentID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to prepare result")
+		}
+		resIDs = append(resIDs, r.ID)
+
+		switch query.Type {
+		case check.MySQLShow:
+			err = s.agentsRegistry.StartMySQLQueryShowAction(nCtx, r.ID, target.AgentID, target.DSN, query.Query, target.Files, target.TDP, target.TLSSkipVerify)
+		case check.MySQLSelect:
+			err = s.agentsRegistry.StartMySQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, query.Query, target.Files, target.TDP, target.TLSSkipVerify)
+		case check.PostgreSQLShow:
+			err = s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN)
+		case check.PostgreSQLSelect:
+			err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, query.Query)
+		case check.MongoDBGetParameter:
+			err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		case check.MongoDBBuildInfo:
+			err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		case check.MongoDBGetCmdLineOpts:
+			err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		default:
+			return nil, errors.Errorf("unknown check type")
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start query")
+		}
 	}
 
-	res, err := s.processResults(nCtx, c, target, r.ID)
+	resData, err := s.waitForResult(nCtx, resIDs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get action result")
+	}
+
+	res, err := s.processResults(nCtx, c, target, resData)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process action result")
 	}
@@ -731,31 +778,23 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 
 // StarlarkScriptData represents the data we need to pass to the binary to run starlark scripts.
 type StarlarkScriptData struct {
-	Version     uint32 `json:"version"`
-	Name        string `json:"name"`
-	Script      string `json:"script"`
-	QueryResult []byte `json:"query_result"`
+	Version        uint32   `json:"version"`
+	Name           string   `json:"name"`
+	Script         string   `json:"script"`
+	QueriesResults [][]byte `json:"queries_results"`
 }
 
-func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.STTCheckResult, error) {
-	nCtx, cancel := context.WithTimeout(ctx, resultAwaitTimeout)
-	r, err := s.waitForResult(nCtx, resID)
-	cancel()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get action result")
-	}
-
+func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, queryResults [][]byte) ([]services.STTCheckResult, error) {
 	l := s.l.WithFields(logrus.Fields{
 		"name":       sttCheck.Name,
-		"id":         resID,
 		"service_id": target.ServiceID,
 	})
 
 	input := &StarlarkScriptData{
-		Version:     sttCheck.Version,
-		Name:        sttCheck.Name,
-		Script:      sttCheck.Script,
-		QueryResult: r,
+		Version:        sttCheck.Version,
+		Name:           sttCheck.Name,
+		Script:         sttCheck.Script,
+		QueriesResults: queryResults,
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptExecutionTimeout)
@@ -769,7 +808,7 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	cmd.Stderr = &stderr
 
 	encoder := json.NewEncoder(&stdin)
-	err = encoder.Encode(input)
+	err := encoder.Encode(input)
 	if err != nil {
 		return nil, errors.Wrap(err, "error encoding data to STDIN")
 	}
@@ -872,27 +911,42 @@ func (s *Service) groupChecksByDB(checks map[string]check.Check) (mySQLChecks, p
 	postgreSQLChecks = make(map[string]check.Check)
 	mongoDBChecks = make(map[string]check.Check)
 	for _, c := range checks {
-		switch c.Type {
-		case check.MySQLSelect:
-			fallthrough
-		case check.MySQLShow:
-			mySQLChecks[c.Name] = c
+		switch c.Version {
+		case 1:
+			switch c.Type {
+			case check.MySQLSelect:
+				fallthrough
+			case check.MySQLShow:
+				mySQLChecks[c.Name] = c
 
-		case check.PostgreSQLSelect:
-			fallthrough
-		case check.PostgreSQLShow:
-			postgreSQLChecks[c.Name] = c
+			case check.PostgreSQLSelect:
+				fallthrough
+			case check.PostgreSQLShow:
+				postgreSQLChecks[c.Name] = c
 
-		case check.MongoDBGetParameter:
-			fallthrough
-		case check.MongoDBBuildInfo:
-			fallthrough
-		case check.MongoDBGetCmdLineOpts:
-			mongoDBChecks[c.Name] = c
+			case check.MongoDBGetParameter:
+				fallthrough
+			case check.MongoDBBuildInfo:
+				fallthrough
+			case check.MongoDBGetCmdLineOpts:
+				mongoDBChecks[c.Name] = c
 
-		default:
-			s.l.Warnf("Unknown check type %s, skip it.", c.Type)
+			default:
+				s.l.Warnf("Unknown check type %s, skip it.", c.Type)
+			}
+		case 2:
+			switch c.Family {
+			case check.MySQL:
+				mySQLChecks[c.Name] = c
+			case check.PostgreSQL:
+				postgreSQLChecks[c.Name] = c
+			case check.MongoDB:
+				mongoDBChecks[c.Name] = c
+			default:
+				s.l.Warnf("Unknown check family %s, skip it.", c.Family)
+			}
 		}
+
 	}
 
 	return
@@ -993,29 +1047,49 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 // filterSupportedChecks returns supported checks and prints warning log messages about unsupported.
 func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 	res := make([]check.Check, 0, len(checks))
+
+checksLoop:
 	for _, c := range checks {
 		if c.Version > maxSupportedVersion {
 			s.l.Warnf("Unsupported checks version: %d, max supported version: %d.", c.Version, maxSupportedVersion)
 			continue
 		}
 
-		switch c.Type {
-		case check.MySQLShow:
-		case check.MySQLSelect:
-		case check.PostgreSQLShow:
-		case check.PostgreSQLSelect:
-		case check.MongoDBGetParameter:
-		case check.MongoDBBuildInfo:
-		case check.MongoDBGetCmdLineOpts:
-		default:
-			s.l.Warnf("Unsupported check type: %s.", c.Type)
-			continue
+		switch c.Version {
+		case 1:
+			if ok := isQueryTypeSupported(c.Type); !ok {
+				s.l.Warnf("Unsupported check type: %s.", c.Type)
+				continue
+			}
+		case 2:
+			for _, query := range c.Queries {
+				if ok := isQueryTypeSupported(query.Type); !ok {
+					s.l.Warnf("Unsupported query type: %s.", query.Type)
+					continue checksLoop
+				}
+			}
 		}
 
 		res = append(res, c)
 	}
 
 	return res
+}
+
+func isQueryTypeSupported(typ check.Type) bool {
+	switch typ {
+	case check.MySQLShow:
+	case check.MySQLSelect:
+	case check.PostgreSQLShow:
+	case check.PostgreSQLSelect:
+	case check.MongoDBGetParameter:
+	case check.MongoDBBuildInfo:
+	case check.MongoDBGetCmdLineOpts:
+	default:
+		return false
+	}
+
+	return true
 }
 
 // updateChecks update service checks filed value under mutex.
