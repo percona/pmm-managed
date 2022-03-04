@@ -41,8 +41,58 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, request *mana
 	panic("implement me")
 }
 
-func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, request *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
-	panic("implement me")
+func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
+	results, err := s.checksService.GetFailedChecks(req.ServiceName)
+	if err != nil {
+		if err == services.ErrSTTDisabled {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		}
+
+		return nil, errors.Wrapf(err, "failed to get check results for service '%s'", req.ServiceName)
+	}
+
+	failedChecks := make([]*managementpb.CheckResult, 0, len(results))
+	for _, result := range results {
+		if result.Target.ServiceName == req.ServiceName {
+			failedChecks = append(failedChecks, &managementpb.CheckResult{
+				Summary:     result.Result.Summary,
+				CheckName:   result.CheckName,
+				Description: result.Result.Description,
+				ReadMoreUrl: result.Result.ReadMoreURL,
+				Severity:    managementpb.Severity(result.Result.Severity),
+				Labels:      result.Result.Labels,
+				ServiceName: result.Target.ServiceName,
+			})
+		}
+	}
+
+	pageTotals := &managementpb.PageTotals{
+		TotalPages: 1,
+		TotalItems: int32(len(failedChecks)),
+	}
+	var pageIndex int
+	var pageSize int
+	if req.PageParams != nil {
+		pageIndex = int(req.PageParams.Index)
+		pageSize = int(req.PageParams.PageSize)
+	}
+
+	from, to := pageIndex*pageSize, (pageIndex+1)*pageSize
+	if from > len(failedChecks) {
+		from = len(failedChecks)
+	}
+	if to > len(failedChecks) || to == 0 {
+		to = len(failedChecks)
+	}
+
+	if pageSize > 0 {
+		pageTotals.TotalPages = int32(len(failedChecks) / pageSize)
+		if len(failedChecks)%pageSize > 0 {
+			pageTotals.TotalPages++
+		}
+	}
+
+	return &managementpb.GetFailedChecksResponse{Results: failedChecks[from:to], PageTotals: pageTotals}, nil
 }
 
 // NewChecksAPIService creates new Checks API Service.
