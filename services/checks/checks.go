@@ -733,12 +733,12 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 	}
 
 	resIDs := make([]string, len(queries))
-	for _, query := range queries {
+	for i, query := range queries {
 		r, err := models.CreateActionResult(s.db.Querier, target.AgentID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to prepare result")
 		}
-		resIDs = append(resIDs, r.ID)
+		resIDs[i] = r.ID
 
 		switch query.Type {
 		case check.MySQLShow:
@@ -746,15 +746,15 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 		case check.MySQLSelect:
 			err = s.agentsRegistry.StartMySQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, query.Query, target.Files, target.TDP, target.TLSSkipVerify)
 		case check.PostgreSQLShow:
-			err = s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN)
+			err = s.agentsRegistry.StartPostgreSQLQueryShowAction(nCtx, r.ID, target.AgentID, target.DSN)
 		case check.PostgreSQLSelect:
-			err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, query.Query)
+			err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, query.Query)
 		case check.MongoDBGetParameter:
-			err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+			err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 		case check.MongoDBBuildInfo:
-			err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+			err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 		case check.MongoDBGetCmdLineOpts:
-			err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+			err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 		default:
 			return nil, errors.Errorf("unknown check type")
 		}
