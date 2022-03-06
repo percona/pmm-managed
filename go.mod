@@ -13,6 +13,7 @@ go 1.17
 // go get -v github.com/percona-platform/dbaas-api@latest
 
 require (
+	aead.dev/minisign v0.2.0
 	github.com/AlekSi/pointer v1.2.0
 	github.com/Azure/azure-sdk-for-go v62.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.24

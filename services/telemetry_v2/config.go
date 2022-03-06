@@ -1,13 +1,24 @@
 package telemetry_v2
 
 import (
+	"aead.dev/minisign"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"path/filepath"
 	"time"
 )
 
 type ServiceConfig struct {
-	Enabled      bool              `yaml:"enabled"`
+	l              *logrus.Entry
+	Enabled        bool   `yaml:"enabled"`
+	ConfigLocation string `yaml:"config_location"`
+	Signing        struct {
+		TrustedPublicKeys       []string             `yaml:"trusted_public_keys"`
+		trustedPublicKeysParsed []minisign.PublicKey `yaml:"-"`
+	} `yaml:"signing"`
 	telemetry    []TelemetryConfig `yaml:"-"`
 	Endpoints    EndpointsConfig   `yaml:"endpoints"`
 	SaasHostname string            `yaml:"saas_hostname"`
@@ -17,6 +28,10 @@ type ServiceConfig struct {
 		PMMDB_SELECT *DSConfigPMMDB `yaml:"PMMDB_SELECT"`
 	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
+}
+
+type FileConfig struct {
+	Telemetry []TelemetryConfig `yaml:"telemetry"`
 }
 
 type EndpointsConfig struct {
@@ -100,7 +115,21 @@ type ReportingConfig struct {
 	RetryCount          int           `yaml:"retry_count"`
 }
 
-func (c *ServiceConfig) Init(telemetry []TelemetryConfig) error {
+func (c *ServiceConfig) Init(l *logrus.Entry) error {
+	c.l = l
+
+	for _, keyText := range c.Signing.TrustedPublicKeys {
+		key := minisign.PublicKey{}
+		if err := key.UnmarshalText([]byte(keyText)); err != nil {
+			return errors.Wrap(err, "cannot parse public key")
+		}
+		c.Signing.trustedPublicKeysParsed = append(c.Signing.trustedPublicKeysParsed, key)
+	}
+
+	telemetry, err := c.loadConfig(c.ConfigLocation)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load telemetry config from [%s]", c.ConfigLocation)
+	}
 	c.telemetry = telemetry
 
 	reportingInterval, err := time.ParseDuration(c.Reporting.IntervalStr)
@@ -156,5 +185,74 @@ func (c *ServiceConfig) Init(telemetry []TelemetryConfig) error {
 		}
 	}
 
+	return nil
+}
+
+func (c *ServiceConfig) loadConfig(location string) ([]TelemetryConfig, error) {
+	matches, err := filepath.Glob(location)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	fileCfgs := make([]FileConfig, len(matches))
+	for _, match := range matches {
+		var fileCfg FileConfig
+		buf, err := ioutil.ReadFile(match)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
+		}
+		bufSign, err := ioutil.ReadFile(match + ".minisig")
+		if err != nil {
+			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
+		}
+		valid := false
+		for _, publicKey := range c.Signing.trustedPublicKeysParsed {
+			if ok := minisign.Verify(publicKey, buf, bufSign); ok {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, errors.Errorf("signature verification failed for [%s]", match)
+		}
+		if err := yaml.Unmarshal(buf, &fileCfg); err != nil {
+			return nil, errors.Wrapf(err, "cannot unmashal config [%s]", match)
+		}
+		fileCfgs = append(fileCfgs, fileCfg)
+	}
+
+	if err := c.validateConfig(fileCfgs); err != nil {
+		c.l.Errorf(err.Error())
+	}
+
+	return c.merge(fileCfgs), nil
+}
+
+func (c *ServiceConfig) merge(cfgs []FileConfig) []TelemetryConfig {
+	var result []TelemetryConfig
+	ids := make(map[string]bool)
+	for _, cfg := range cfgs {
+		for _, each := range cfg.Telemetry {
+			_, exist := ids[each.Id]
+			if !exist {
+				ids[each.Id] = true
+				result = append(result, each)
+			}
+		}
+	}
+	return result
+}
+
+func (c *ServiceConfig) validateConfig(cfgs []FileConfig) error {
+	ids := make(map[string]bool)
+	for _, cfg := range cfgs {
+		for _, each := range cfg.Telemetry {
+			_, exist := ids[each.Id]
+			if exist {
+				return errors.Errorf("telemetry config ID duplication: %s", each.Id)
+			}
+			ids[each.Id] = true
+		}
+	}
 	return nil
 }

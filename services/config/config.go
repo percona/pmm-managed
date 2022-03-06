@@ -57,7 +57,6 @@ type Config struct {
 		Telemetry   telemetry.Config           `yaml:"telemetry"`
 		TelemetryV2 telemetry_v2.ServiceConfig `yaml:"telemetry_v2"`
 	} `yaml:"services"`
-	Telemetry    []telemetry_v2.TelemetryConfig `yaml:"telemetry"`
 	ExtraHeaders struct {
 		Enabled   bool `yaml:"enabled"`
 		Endpoints []struct {
@@ -112,16 +111,11 @@ func (s *Service) Load() error {
 	if err := cfg.Services.Telemetry.Init(); err != nil {
 		return err
 	}
-	if err := cfg.Services.TelemetryV2.Init(cfg.Telemetry); err != nil {
+	if err := cfg.Services.TelemetryV2.Init(s.l); err != nil {
 		return err
 	}
 
 	cfg.configureSaasReqEnrichment()
-
-	err := validate(cfg, configPath)
-	if err != nil {
-		return err
-	}
 
 	s.Config = cfg
 
@@ -130,16 +124,4 @@ func (s *Service) Load() error {
 
 func (s *Service) Update(updater func(s *Service) error) error {
 	return updater(s)
-}
-
-func validate(cfg Config, configPath string) error {
-	allIds := make(map[string]bool)
-	for _, config := range cfg.Telemetry {
-		if _, value := allIds[config.Id]; !value {
-			allIds[config.Id] = true
-		} else {
-			return errors.Errorf("Duplicated id [%s] found in the config file [%s]", config.Id, configPath)
-		}
-	}
-	return nil
 }

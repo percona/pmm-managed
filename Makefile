@@ -4,6 +4,12 @@ include Makefile.include
 
 env-up: env-compose-up env-devcontainer     ## Start devcontainer.
 
+cfg-gen-dev-keys:
+	minisign -Gf -p ./.cfg.dev-sign.pub -s ./.cfg.dev-sign.key
+
+cfg-sign-dev:
+	go run ./cmd/pmm-sign-config/main.go
+
 env-compose-up:
 	docker-compose pull
 	docker-compose up --detach --renew-anon-volumes --remove-orphans

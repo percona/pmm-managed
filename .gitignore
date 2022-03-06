@@ -13,3 +13,4 @@ pmm-api-tests-junit-report.xml
 .env.*
 .dev.*
 local/
+config/telemetry/dev

@@ -45,6 +45,7 @@ services:
       - .dev.pmm-managed.yaml:/opt/.dev.pmm-managed.yaml:ro
       - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
       - .:/root/go/src/github.com/percona/pmm-managed
+      - ./config/telemetry/dev/:/etc/percona/telemetry/:ro
 #      - ../saas:/root/go/src/github.com/percona/saas
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
       - go-modules:/root/go/pkg/mod # Put modules cache into a separate volume

@@ -44,6 +44,10 @@ services:
       report: https://%s/v1/telemetry/Report
   telemetry_v2:
     enabled: true
+    config_location: /etc/percona/telemetry/*.yml
+    signing:
+      trusted_public_keys:
+        - RWToO+zBnSKDsXC2k64DZ23kwgRW52+BtHfYtFM1NC8MoNL7LxxgoyKn # TODO: must be removed after config is signed with legit key
     datasources:
       VM:
         enabled: true
@@ -77,42 +81,3 @@ extra_headers:
 #      headers:
 #        Auth-Status: "0"
 #        Grpc-Metadata-X-Real-IP: "188.255.42.42"
-
-telemetry:
-  - id: MySQLVersion
-    source: VM
-    query: mysql_version_info{service_type=”mysql”}
-    summary: “Select version of monitored MySQL service”
-    data:
-      - metric_name: "mysql_version"
-        label: "version"
-  - id: NodeLoad1min
-    source: VM
-    query: node_load1
-    summary: “Select monitored nodes load 1 minute”
-    data:
-      - metric_name: "node_load1"
-        value: 1
-      - metric_name: "node_load1_job"
-        label: 'job'
-      - metric_name: "node_load1_instance"
-        label: 'instance'
-  - id: PMMAgentVersion
-    source: PMMDB_SELECT
-    query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
-    summary: “Select PMM Agents version”
-    data:
-      - metric_name: "pmm_server_agent_version"
-        column: "version"
-  - id: PMMServerQAN
-    source: QANDB_SELECT
-    query: |
-      m_query_time_sum, m_query_time_cnt, num_queries from metrics
-    summary: “Select QAN”
-    data:
-      - metric_name: "m_query_time_sum"
-        column: "m_query_time_sum"
-      - metric_name: "m_query_tune_cnt"
-        column: "m_query_tune_cnt"
-      - metric_name: "num_queries"
-        column: "num_queries"
