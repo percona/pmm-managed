@@ -114,6 +114,7 @@ jobs:
       - name: Cache
         run: |
           docker exec pmm-managed-server go clean -testcache
+          docker exec pmm-managed-server find . -type d -name fuzzdata -delete
           rm -fr ~/.cache/go-build
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
 
