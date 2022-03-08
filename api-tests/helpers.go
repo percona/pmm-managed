@@ -70,8 +70,8 @@ func AssertAPIErrorf(t TestingT, actual error, httpStatus int, grpcCode codes.Co
 	require.True(t, codeField.IsValid(), "Wrong response structure. There is no field Code in Payload.")
 	assert.Equal(t, int64(grpcCode), codeField.Int(), "gRPC status codes are not equal")
 
-	errorField := payload.Elem().FieldByName("Error")
-	require.True(t, errorField.IsValid(), "Wrong response structure. There is no field Error in Payload.")
+	errorField := payload.Elem().FieldByName("Message")
+	require.True(t, errorField.IsValid(), "Wrong response structure. There is no field Message in Payload.")
 	if len(a) != 0 {
 		format = fmt.Sprintf(format, a...)
 	}
