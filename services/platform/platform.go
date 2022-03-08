@@ -544,11 +544,12 @@ type contactInformation struct {
 		CustomerSuccess struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`
-		} `json:"customer_succes"`
-		NewTicketURL string `json:"new_ticket_url"`
+		} `json:"customer_succes"` //nolint:tagliatelle
+		NewTicketURL string `json:"new_ticket_url"` //nolint:tagliatelle
 	} `json:"contact"`
 }
 
+// GetContactInformation fetches contact information of the Customer Success employee assigned to the Percona customer from Percona Portal.
 func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.GetContactInformationRequest) (*platformpb.GetContactInformationResponse, error) {
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
