@@ -74,10 +74,11 @@ const (
 )
 
 // pmm-agent versions with known changes in Query Actions.
+// To match all pre-release versions add '-0' suffix to specified version.
 var (
 	pmmAgent2_6_0   = version.MustParse("2.6.0")
 	pmmAgent2_7_0   = version.MustParse("2.7.0")
-	pmmAgent2_27_0  = version.MustParse("2.27.0")
+	pmmAgent2_27_0  = version.MustParse("2.27.0-0")
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
