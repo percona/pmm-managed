@@ -332,25 +332,14 @@ func TestListFailedServices(t *testing.T) {
 			},
 			{
 				Result: check.Result{
-					Summary:     "Check summary 2",
+					Summary:     "Check summary",
 					Description: "Check Description",
 					ReadMoreURL: "https://www.example.com",
-					Severity:    common.Warning,
+					Severity:    common.Critical,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc2", ServiceID: "test_svc2"},
-				CheckName: "test_check2",
-			},
-			{
-				Result: check.Result{
-					Summary:     "Check summary 3",
-					Description: "Check Description",
-					ReadMoreURL: "https://www.example.com",
-					Severity:    common.Notice,
-					Labels:      map[string]string{"label_key": "label_value"},
-				},
-				Target:    services.Target{ServiceName: "svc3", ServiceID: "test_svc3"},
-				CheckName: "test_check3",
+				Target:    services.Target{ServiceName: "svc1", ServiceID: "test_svc1"},
+				CheckName: "test_check",
 			},
 		}
 		response := &managementpb.ListFailedServicesResponse{
@@ -358,21 +347,9 @@ func TestListFailedServices(t *testing.T) {
 				{
 					ServiceName:   "svc1",
 					ServiceId:     "test_svc1",
-					CriticalCount: 1,
+					CriticalCount: 2,
 					MajorCount:    0,
 					TrivialCount:  0,
-				}, {
-					ServiceName:   "svc2",
-					ServiceId:     "test_svc2",
-					CriticalCount: 0,
-					MajorCount:    1,
-					TrivialCount:  0,
-				}, {
-					ServiceName:   "svc3",
-					ServiceId:     "test_svc3",
-					CriticalCount: 0,
-					MajorCount:    0,
-					TrivialCount:  1,
 				},
 			},
 		}
