@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -37,8 +38,49 @@ type ChecksAPIService struct {
 	managementpb.UnimplementedSecurityChecksServer
 }
 
-func (s *ChecksAPIService) ListFailedServices(ctx context.Context, request *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
-	panic("implement me")
+func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
+	results, err := s.checksService.ListFailedServices()
+	if err != nil {
+		if err == services.ErrSTTDisabled {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		}
+
+		return nil, errors.Wrap(err, "failed to get check results")
+	}
+
+	summaries := make(map[string]services.CheckSummary)
+
+	for _, result := range results {
+		var svcSummary services.CheckSummary
+		var exists bool
+		if svcSummary, exists = summaries[result.Target.ServiceName]; !exists {
+			svcSummary.ServiceID = result.Target.ServiceID
+			svcSummary.ServiceName = result.Target.ServiceName
+		}
+		switch result.Result.Severity {
+		case common.Emergency, common.Alert, common.Critical:
+			svcSummary.CriticalCount++
+		case common.Error, common.Warning:
+			svcSummary.MajorCount++
+		case common.Notice:
+			svcSummary.TrivialCount++
+		}
+
+		summaries[result.Target.ServiceName] = svcSummary
+	}
+
+	failedServices := make([]*managementpb.CheckResultSummary, 0, len(summaries))
+	for _, result := range summaries {
+		failedServices = append(failedServices, &managementpb.CheckResultSummary{
+			ServiceId:     result.ServiceID,
+			ServiceName:   result.ServiceName,
+			CriticalCount: result.CriticalCount,
+			MajorCount:    result.MajorCount,
+			TrivialCount:  result.TrivialCount,
+		})
+	}
+
+	return &managementpb.ListFailedServicesResponse{Result: failedServices}, nil
 }
 
 func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
@@ -78,11 +120,11 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 	}
 
 	from, to := pageIndex*pageSize, (pageIndex+1)*pageSize
-	if from > len(failedChecks) {
-		from = len(failedChecks)
-	}
 	if to > len(failedChecks) || to == 0 {
 		to = len(failedChecks)
+	}
+	if from > len(failedChecks) {
+		from = len(failedChecks)
 	}
 
 	if pageSize > 0 {

@@ -282,6 +282,32 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	return s.alertsRegistry.getCheckResults(), nil
 }
 
+func (s *Service) ListFailedServices() ([]services.STTCheckResult, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.SaaS.STTEnabled {
+		return nil, services.ErrSTTDisabled
+	}
+
+	return s.alertsRegistry.getCheckResults(), nil
+}
+
+func (s *Service) GetFailedChecks(serviceName string) ([]services.STTCheckResult, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.SaaS.STTEnabled {
+		return nil, services.ErrSTTDisabled
+	}
+
+	return s.alertsRegistry.getCheckResults(), nil
+}
+
 // runChecksGroup downloads and executes STT checks in synchronous way.
 // If intervalGroup is empty.
 func (s *Service) runChecksGroup(ctx context.Context, intervalGroup check.Interval) error {

@@ -148,6 +148,29 @@ func (_m *mockChecksService) GetSecurityCheckResults() ([]services.STTCheckResul
 	return r0, r1
 }
 
+// ListFailedServices provides a mock function with given fields:
+func (_m *mockChecksService) ListFailedServices() ([]services.STTCheckResult, error) {
+	ret := _m.Called()
+
+	var r0 []services.STTCheckResult
+	if rf, ok := ret.Get(0).(func() []services.STTCheckResult); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]services.STTCheckResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // StartChecks provides a mock function with given fields: checkNames
 func (_m *mockChecksService) StartChecks(checkNames []string) error {
 	ret := _m.Called(checkNames)

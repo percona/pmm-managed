@@ -41,3 +41,11 @@ type STTCheckResult struct {
 	Target    Target
 	Result    check.Result
 }
+
+type CheckSummary struct {
+	ServiceName   string
+	ServiceID     string
+	CriticalCount uint32
+	MajorCount    uint32
+	TrivialCount  uint32
+}

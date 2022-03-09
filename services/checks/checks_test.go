@@ -358,6 +358,7 @@ func TestSTTMetrics(t *testing.T) {
 		assert.NoError(t, promtest.CollectAndCompare(s, expected))
 	})
 }
+
 func TestGetSecurityCheckResults(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
