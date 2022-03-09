@@ -122,7 +122,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 func TestGetFailedChecks(t *testing.T) {
 	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(nil, errors.New("random error"))
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 		serviceName := "svc"
@@ -136,7 +136,7 @@ func TestGetFailedChecks(t *testing.T) {
 
 	t.Run("STT disabled error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(nil, services.ErrSTTDisabled)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, services.ErrSTTDisabled)
 
 		s := NewChecksAPIService(&checksService)
 		serviceName := "svc"
@@ -170,7 +170,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -224,7 +224,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -289,7 +289,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -308,7 +308,7 @@ func TestGetFailedChecks(t *testing.T) {
 func TestListFailedServices(t *testing.T) {
 	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("ListFailedServices", mock.Anything).Return(nil, errors.New("random error"))
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
@@ -377,7 +377,7 @@ func TestListFailedServices(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("ListFailedServices", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 

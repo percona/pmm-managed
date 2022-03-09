@@ -38,8 +38,9 @@ type ChecksAPIService struct {
 	managementpb.UnimplementedSecurityChecksServer
 }
 
+// ListFailedServices returns a list of services with failed checks and their summaries
 func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
-	results, err := s.checksService.ListFailedServices()
+	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
 		if err == services.ErrSTTDisabled {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
@@ -64,6 +65,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 			svcSummary.MajorCount++
 		case common.Notice:
 			svcSummary.TrivialCount++
+		default:
 		}
 
 		summaries[result.Target.ServiceName] = svcSummary
@@ -83,8 +85,9 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 	return &managementpb.ListFailedServicesResponse{Result: failedServices}, nil
 }
 
+// GetFailedChecks returns details of failed checks for a given service
 func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
-	results, err := s.checksService.GetFailedChecks(req.ServiceName)
+	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
 		if err == services.ErrSTTDisabled {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
