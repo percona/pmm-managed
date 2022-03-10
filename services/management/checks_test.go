@@ -212,7 +212,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    common.Warning,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc2", ServiceID: "test_svc2"},
+				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
 				CheckName: "test_check2",
 			},
 			{
@@ -230,23 +230,23 @@ func TestGetFailedChecks(t *testing.T) {
 		response := &managementpb.GetFailedChecksResponse{
 			Results: []*managementpb.CheckResult{
 				{
-					Summary:     "Check summary 3",
-					Description: "Check Description 3",
+					Summary:     "Check summary 2",
+					Description: "Check Description 2",
 					ReadMoreUrl: "https://www.example.com",
-					Severity:    managementpb.Severity(common.Notice),
+					Severity:    managementpb.Severity(common.Warning),
 					Labels:      map[string]string{"label_key": "label_value"},
 					ServiceName: "svc",
 					ServiceId:   "test_svc",
-					CheckName:   "test_check3",
+					CheckName:   "test_check2",
 				},
 			},
 			PageTotals: &managementpb.PageTotals{
-				TotalPages: 2,
-				TotalItems: 2,
+				TotalPages: 3,
+				TotalItems: 3,
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 

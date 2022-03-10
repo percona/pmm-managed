@@ -25,6 +25,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -603,12 +604,13 @@ func TestFilterChecksByInterval(t *testing.T) {
 }
 
 func TestGetFailedChecks(t *testing.T) {
-	var ams mockAlertmanagerService
-	ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	t.Run("STT disabled", func(t *testing.T) {
+		var ams mockAlertmanagerService
+		ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
+
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
 		results, err := s.GetFailedChecks(context.Background(), "test_svc")
@@ -617,6 +619,9 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("STT enabled", func(t *testing.T) {
+		var ams mockAlertmanagerService
+		ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
+
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
 		settings, err := models.GetSettings(db)
