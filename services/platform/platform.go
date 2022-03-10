@@ -566,9 +566,9 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
-	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/entitlements:search", s.host, ssoDetails.OrganizationID)
+	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s", s.host, ssoDetails.OrganizationID)
 
-	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build GetContactInformation request: %s", err)
 		return nil, internalServerError
