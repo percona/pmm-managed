@@ -554,6 +554,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	userAccessToken, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
 		if errors.Is(err, grafana.ErrFailedToGetToken) {
+			s.l.Error("Failed to get access token.")
 			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("GetContactInformation request failed: %s", err)
@@ -610,6 +611,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 
 	// Platform account is not linked to ServiceNow.
 	if res.CustomerSuccess.Email == "" {
+		s.l.Error("Failed to find contact information, non-customer account.")
 		return nil, nonCustomerAccount
 	}
 
