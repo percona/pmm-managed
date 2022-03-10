@@ -54,7 +54,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 	for _, result := range results {
 		var svcSummary services.CheckSummary
 		var exists bool
-		if svcSummary, exists = summaries[result.Target.ServiceName]; !exists {
+		if svcSummary, exists = summaries[result.Target.ServiceID]; !exists {
 			svcSummary.ServiceID = result.Target.ServiceID
 			svcSummary.ServiceName = result.Target.ServiceName
 		}
@@ -68,7 +68,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 		default:
 		}
 
-		summaries[result.Target.ServiceName] = svcSummary
+		summaries[result.Target.ServiceID] = svcSummary
 	}
 
 	failedServices := make([]*managementpb.CheckResultSummary, 0, len(summaries))
@@ -93,12 +93,12 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 
-		return nil, errors.Wrapf(err, "failed to get check results for service '%s'", req.ServiceName)
+		return nil, errors.Wrapf(err, "failed to get check results for service '%s'", req.ServiceId)
 	}
 
 	failedChecks := make([]*managementpb.CheckResult, 0, len(results))
 	for _, result := range results {
-		if result.Target.ServiceName == req.ServiceName {
+		if result.Target.ServiceID == req.ServiceId {
 			failedChecks = append(failedChecks, &managementpb.CheckResult{
 				Summary:     result.Result.Summary,
 				CheckName:   result.CheckName,
@@ -107,6 +107,7 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 				Severity:    managementpb.Severity(result.Result.Severity),
 				Labels:      result.Result.Labels,
 				ServiceName: result.Target.ServiceName,
+				ServiceId:   result.Target.ServiceID,
 			})
 		}
 	}

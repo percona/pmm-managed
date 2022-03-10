@@ -125,12 +125,12 @@ func TestGetFailedChecks(t *testing.T) {
 		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
-		serviceName := "svc"
+		serviceID := "test_svc"
 
 		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceName: serviceName,
+			ServiceId: serviceID,
 		})
-		assert.EqualError(t, err, fmt.Sprintf("failed to get check results for service '%s': random error", serviceName))
+		assert.EqualError(t, err, fmt.Sprintf("failed to get check results for service '%s': random error", serviceID))
 		assert.Nil(t, resp)
 	})
 
@@ -139,10 +139,9 @@ func TestGetFailedChecks(t *testing.T) {
 		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, services.ErrSTTDisabled)
 
 		s := NewChecksAPIService(&checksService)
-		serviceName := "svc"
 
 		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceName: serviceName,
+			ServiceId: "test_svc",
 		})
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
@@ -158,7 +157,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    1,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc"},
+				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
 				CheckName: "test_check",
 			},
 		}
@@ -175,7 +174,7 @@ func TestGetFailedChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceName: "svc2",
+			ServiceId: "test_svc2",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, resp, response)
@@ -191,7 +190,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    common.Emergency,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc"},
+				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
 				CheckName: "test_check",
 			},
 			{
@@ -202,7 +201,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    1,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc2"},
+				Target:    services.Target{ServiceName: "svc2", ServiceID: "test_svc2"},
 				CheckName: "test_check",
 			},
 		}
@@ -215,6 +214,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    managementpb.Severity(common.Emergency),
 					Labels:      map[string]string{"label_key": "label_value"},
 					ServiceName: "svc",
+					ServiceId:   "test_svc",
 					CheckName:   "test_check",
 				},
 			},
@@ -229,7 +229,7 @@ func TestGetFailedChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceName: "svc",
+			ServiceId: "test_svc",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, response, resp)
@@ -245,7 +245,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    common.Critical,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc"},
+				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
 				CheckName: "test_check1",
 			},
 			{
@@ -256,7 +256,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    common.Warning,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc2"},
+				Target:    services.Target{ServiceName: "svc2", ServiceID: "test_svc2"},
 				CheckName: "test_check2",
 			},
 			{
@@ -267,7 +267,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    common.Notice,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
-				Target:    services.Target{ServiceName: "svc"},
+				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
 				CheckName: "test_check3",
 			},
 		}
@@ -280,6 +280,7 @@ func TestGetFailedChecks(t *testing.T) {
 					Severity:    managementpb.Severity(common.Notice),
 					Labels:      map[string]string{"label_key": "label_value"},
 					ServiceName: "svc",
+					ServiceId:   "test_svc",
 					CheckName:   "test_check3",
 				},
 			},
@@ -294,7 +295,7 @@ func TestGetFailedChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceName: "svc",
+			ServiceId: "test_svc",
 			PageParams: &managementpb.PageParams{
 				PageSize: 1,
 				Index:    1,
