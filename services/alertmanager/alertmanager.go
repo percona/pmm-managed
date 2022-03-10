@@ -741,6 +741,21 @@ func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, e
 	return resp.Payload, nil
 }
 
+// GetFilteredAlerts returns available alerts that matches a given filter.
+// The API client is responsible for URL encoding, hence, filters should be provided "as is" with quotes escaped
+// See https://prometheus.io/docs/prometheus/latest/querying/basics/#instant-vector-selectors
+func (svc *Service) GetFilteredAlerts(ctx context.Context, filters []string) ([]*ammodels.GettableAlert, error) {
+	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
+		Context: ctx,
+		Filter:  filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Payload, nil
+}
+
 // FindAlertsByID searches alerts by IDs in alertmanager.
 func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammodels.GettableAlert, error) {
 	alerts, err := svc.GetAlerts(ctx)

@@ -37,6 +37,8 @@ type Target struct {
 // STTCheckResult contains the output from the check file and other information.
 type STTCheckResult struct {
 	CheckName string
+	Silenced  bool
+	AlertID   string
 	Interval  check.Interval
 	Target    Target
 	Result    check.Result

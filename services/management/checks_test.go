@@ -122,7 +122,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 func TestGetFailedChecks(t *testing.T) {
 	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
+		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 		serviceID := "test_svc"
@@ -136,7 +136,7 @@ func TestGetFailedChecks(t *testing.T) {
 
 	t.Run("STT disabled error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, services.ErrSTTDisabled)
+		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -145,39 +145,6 @@ func TestGetFailedChecks(t *testing.T) {
 		})
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
-	})
-
-	t.Run("no failed check for requested service", func(t *testing.T) {
-		checkResult := []services.STTCheckResult{
-			{
-				Result: check.Result{
-					Summary:     "Check summary",
-					Description: "Check Description",
-					ReadMoreURL: "https://www.example.com",
-					Severity:    1,
-					Labels:      map[string]string{"label_key": "label_value"},
-				},
-				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
-				CheckName: "test_check",
-			},
-		}
-		response := &managementpb.GetFailedChecksResponse{
-			Results: []*managementpb.CheckResult{},
-			PageTotals: &managementpb.PageTotals{
-				TotalItems: 0,
-				TotalPages: 1,
-			},
-		}
-		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
-
-		s := NewChecksAPIService(&checksService)
-
-		resp, err := s.GetFailedChecks(context.Background(), &managementpb.GetFailedChecksRequest{
-			ServiceId: "test_svc2",
-		})
-		require.NoError(t, err)
-		assert.Equal(t, resp, response)
 	})
 
 	t.Run("get failed checks for requested service", func(t *testing.T) {
@@ -191,17 +158,6 @@ func TestGetFailedChecks(t *testing.T) {
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
 				Target:    services.Target{ServiceName: "svc", ServiceID: "test_svc"},
-				CheckName: "test_check",
-			},
-			{
-				Result: check.Result{
-					Summary:     "Check summary",
-					Description: "Check Description",
-					ReadMoreURL: "https://www.example.com",
-					Severity:    1,
-					Labels:      map[string]string{"label_key": "label_value"},
-				},
-				Target:    services.Target{ServiceName: "svc2", ServiceID: "test_svc2"},
 				CheckName: "test_check",
 			},
 		}
@@ -224,7 +180,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -290,7 +246,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
+		checksService.On("GetFailedChecks", mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 

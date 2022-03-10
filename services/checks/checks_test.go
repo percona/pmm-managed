@@ -601,3 +601,33 @@ func TestFilterChecksByInterval(t *testing.T) {
 	frequentChecks := s.filterChecks(checks, check.Frequent, nil, nil)
 	assert.Equal(t, map[string]check.Check{"frequentCheck": frequentCheck}, frequentChecks)
 }
+
+func TestGetFailedChecks(t *testing.T) {
+	var ams mockAlertmanagerService
+	ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+	t.Run("STT disabled", func(t *testing.T) {
+		s, err := New(nil, &ams, db)
+		require.NoError(t, err)
+		results, err := s.GetFailedChecks(context.Background(), "test_svc")
+		assert.Nil(t, results)
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
+	})
+
+	t.Run("STT enabled", func(t *testing.T) {
+		s, err := New(nil, &ams, db)
+		require.NoError(t, err)
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTEnabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		results, err := s.GetFailedChecks(context.Background(), "test_svc")
+		assert.Empty(t, results)
+		require.NoError(t, err)
+	})
+}

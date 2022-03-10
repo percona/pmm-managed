@@ -15,6 +15,29 @@ type mockAlertmanagerService struct {
 	mock.Mock
 }
 
+// GetFilteredAlerts provides a mock function with given fields: ctx, filters
+func (_m *mockAlertmanagerService) GetFilteredAlerts(ctx context.Context, filters []string) ([]*ammodels.GettableAlert, error) {
+	ret := _m.Called(ctx, filters)
+
+	var r0 []*ammodels.GettableAlert
+	if rf, ok := ret.Get(0).(func(context.Context, []string) []*ammodels.GettableAlert); ok {
+		r0 = rf(ctx, filters)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ammodels.GettableAlert)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = rf(ctx, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SendAlerts provides a mock function with given fields: ctx, alerts
 func (_m *mockAlertmanagerService) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	_m.Called(ctx, alerts)

@@ -87,7 +87,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 
 // GetFailedChecks returns details of failed checks for a given service
 func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
-	results, err := s.checksService.GetSecurityCheckResults()
+	results, err := s.checksService.GetFailedChecks(ctx, req.ServiceId)
 	if err != nil {
 		if err == services.ErrSTTDisabled {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
@@ -98,18 +98,19 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 
 	failedChecks := make([]*managementpb.CheckResult, 0, len(results))
 	for _, result := range results {
-		if result.Target.ServiceID == req.ServiceId {
-			failedChecks = append(failedChecks, &managementpb.CheckResult{
-				Summary:     result.Result.Summary,
-				CheckName:   result.CheckName,
-				Description: result.Result.Description,
-				ReadMoreUrl: result.Result.ReadMoreURL,
-				Severity:    managementpb.Severity(result.Result.Severity),
-				Labels:      result.Result.Labels,
-				ServiceName: result.Target.ServiceName,
-				ServiceId:   result.Target.ServiceID,
-			})
-		}
+		failedChecks = append(failedChecks, &managementpb.CheckResult{
+			Summary:     result.Result.Summary,
+			CheckName:   result.CheckName,
+			Description: result.Result.Description,
+			ReadMoreUrl: result.Result.ReadMoreURL,
+			Severity:    managementpb.Severity(result.Result.Severity),
+			Labels:      result.Result.Labels,
+			ServiceName: result.Target.ServiceName,
+			ServiceId:   result.Target.ServiceID,
+			AlertId:     result.AlertID,
+			Silenced:    result.Silenced,
+		})
+
 	}
 
 	pageTotals := &managementpb.PageTotals{

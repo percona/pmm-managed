@@ -62,6 +62,7 @@ type checksService interface {
 	StartChecks(checkNames []string) error
 	GetSecurityCheckResults() ([]services.STTCheckResult, error)
 	GetChecks() (map[string]check.Check, error)
+	GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error)
 	GetDisabledChecks() ([]string, error)
 	DisableChecks(checkNames []string) error
 	EnableChecks(checkNames []string) error

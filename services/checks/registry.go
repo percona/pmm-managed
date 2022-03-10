@@ -105,7 +105,8 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	for _, intervalGroup := range r.checkResults {
 		for _, checkNameGroup := range intervalGroup {
 			for _, checkResult := range checkNameGroup {
-				alerts = append(alerts, r.createAlert(checkResult.CheckName, &checkResult.Target, &checkResult.Result, r.alertTTL))
+				checkResult := checkResult
+				alerts = append(alerts, r.createAlert(&checkResult))
 			}
 		}
 	}
@@ -126,7 +127,8 @@ func (r *registry) getCheckResults() []services.STTCheckResult {
 	return results
 }
 
-func (r *registry) createAlert(name string, target *services.Target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {
+func (r *registry) createAlert(checkResult *services.STTCheckResult) *ammodels.PostableAlert {
+	name, target, result, alertTTL := checkResult.CheckName, &checkResult.Target, &checkResult.Result, r.alertTTL
 	labels := make(map[string]string, len(target.Labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range result.Labels {
@@ -137,9 +139,11 @@ func (r *registry) createAlert(name string, target *services.Target, result *che
 	}
 
 	labels[model.AlertNameLabel] = name
+	checkResult.AlertID = makeID(target, result)
 	labels["severity"] = result.Severity.String()
 	labels["stt_check"] = "1"
-	labels["alert_id"] = makeID(target, result)
+	labels["alert_id"] = checkResult.AlertID
+	labels["interval_group"] = string(checkResult.Interval)
 
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description

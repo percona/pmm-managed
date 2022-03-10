@@ -38,6 +38,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
@@ -280,6 +281,45 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	}
 
 	return s.alertsRegistry.getCheckResults(), nil
+}
+
+// GetFailedChecks returns the failed checks for a given service from AlertManager
+func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.SaaS.STTEnabled {
+		return nil, services.ErrSTTDisabled
+	}
+
+	var checkResults []services.STTCheckResult
+	res, err := s.alertmanagerService.GetFilteredAlerts(ctx, []string{fmt.Sprintf("service_id=\"%s\"", serviceID)})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get alerts")
+	}
+
+	for _, alert := range res {
+		checkResults = append(checkResults, services.STTCheckResult{
+			CheckName: alert.Labels[model.AlertNameLabel],
+			Silenced:  len(alert.Status.SilencedBy) != 0,
+			AlertID:   alert.Labels["alert_id"],
+			Interval:  check.Interval(alert.Labels["interval_group"]),
+			Target: services.Target{
+				AgentID:     alert.Labels["agent_id"],
+				ServiceID:   alert.Labels["service_id"],
+				ServiceName: alert.Labels["service_name"],
+				Labels:      alert.Labels,
+			},
+			Result: check.Result{
+				Summary:     alert.Annotations["summary"],
+				Description: alert.Annotations["description"],
+				ReadMoreURL: alert.Annotations["read_more_url"],
+			},
+		})
+	}
+	return checkResults, nil
 }
 
 // runChecksGroup downloads and executes STT checks in synchronous way.

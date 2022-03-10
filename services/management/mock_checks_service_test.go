@@ -3,7 +3,10 @@
 package management
 
 import (
+	context "context"
+
 	check "github.com/percona-platform/saas/pkg/check"
+
 	mock "github.com/stretchr/testify/mock"
 
 	services "github.com/percona/pmm-managed/services"
@@ -95,6 +98,29 @@ func (_m *mockChecksService) GetDisabledChecks() ([]string, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func() error); ok {
 		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetFailedChecks provides a mock function with given fields: ctx, serviceID
+func (_m *mockChecksService) GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error) {
+	ret := _m.Called(ctx, serviceID)
+
+	var r0 []services.STTCheckResult
+	if rf, ok := ret.Get(0).(func(context.Context, string) []services.STTCheckResult); ok {
+		r0 = rf(ctx, serviceID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]services.STTCheckResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, serviceID)
 	} else {
 		r1 = ret.Error(1)
 	}
