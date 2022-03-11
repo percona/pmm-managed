@@ -34,6 +34,7 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -63,7 +64,7 @@ const (
 	scriptExecutionTimeout = 5 * time.Second  // time limit for running pmm-managed-starlark
 	resultCheckInterval    = time.Second
 
-	// sync with API tests
+	// Sync with API tests.
 	resolveTimeoutFactor  = 3
 	defaultResendInterval = 2 * time.Second
 
@@ -283,7 +284,7 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	return s.alertsRegistry.getCheckResults(), nil
 }
 
-// GetFailedChecks returns the failed checks for a given service from AlertManager
+// GetFailedChecks returns the failed checks for a given service from AlertManager.
 func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -294,12 +295,15 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 		return nil, services.ErrSTTDisabled
 	}
 
-	var checkResults []services.STTCheckResult
-	res, err := s.alertmanagerService.GetFilteredAlerts(ctx, []string{fmt.Sprintf("service_id=\"%s\"", serviceID)})
+	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
+		Context: ctx,
+		Filter:  []string{"stt_check=1", fmt.Sprintf("service_id=\"%s\"", serviceID)},
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts")
 	}
 
+	checkResults := make([]services.STTCheckResult, 0, len(res))
 	for _, alert := range res {
 		checkResults = append(checkResults, services.STTCheckResult{
 			CheckName: alert.Labels[model.AlertNameLabel],
@@ -1111,7 +1115,7 @@ func (s *Service) Collect(ch chan<- prom.Metric) {
 	s.mAlertsGenerated.Collect(ch)
 }
 
-// check interfaces
+// check interfaces.
 var (
 	_ prom.Collector = (*Service)(nil)
 )

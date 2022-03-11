@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/percona-platform/saas/pkg/common"
-
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -120,7 +119,11 @@ func TestGetSecurityCheckResults(t *testing.T) {
 }
 
 func TestGetFailedChecks(t *testing.T) {
+	t.Parallel()
+
 	t.Run("internal error", func(t *testing.T) {
+		t.Parallel()
+
 		var checksService mockChecksService
 		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, errors.New("random error"))
 
@@ -135,6 +138,8 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("STT disabled error", func(t *testing.T) {
+		t.Parallel()
+
 		var checksService mockChecksService
 		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
 
@@ -148,6 +153,8 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("get failed checks for requested service", func(t *testing.T) {
+		t.Parallel()
+
 		checkResult := []services.STTCheckResult{
 			{
 				Result: check.Result{
@@ -192,6 +199,8 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("get failed checks with pagination", func(t *testing.T) {
+		t.Parallel()
+
 		checkResult := []services.STTCheckResult{
 			{
 				Result: check.Result{
@@ -263,7 +272,11 @@ func TestGetFailedChecks(t *testing.T) {
 }
 
 func TestListFailedServices(t *testing.T) {
+	t.Parallel()
+
 	t.Run("internal error", func(t *testing.T) {
+		t.Parallel()
+
 		var checksService mockChecksService
 		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
 
@@ -275,6 +288,8 @@ func TestListFailedServices(t *testing.T) {
 	})
 
 	t.Run("list services with failed checks", func(t *testing.T) {
+		t.Parallel()
+
 		checkResult := []services.STTCheckResult{
 			{
 				Result: check.Result{

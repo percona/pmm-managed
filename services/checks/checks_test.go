@@ -604,12 +604,16 @@ func TestFilterChecksByInterval(t *testing.T) {
 }
 
 func TestGetFailedChecks(t *testing.T) {
+	t.Parallel()
+
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	t.Run("STT disabled", func(t *testing.T) {
+		t.Parallel()
+
 		var ams mockAlertmanagerService
-		ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
+		ams.On("GetAlerts", mock.Anything).Return(nil, services.ErrSTTDisabled)
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
@@ -619,8 +623,10 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("STT enabled", func(t *testing.T) {
+		t.Parallel()
+
 		var ams mockAlertmanagerService
-		ams.On("GetFilteredAlerts", mock.Anything, mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
+		ams.On("GetAlerts", mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)

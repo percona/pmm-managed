@@ -19,6 +19,7 @@ package checks
 import (
 	"context"
 
+	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 
 	"github.com/percona/pmm-managed/models"
@@ -45,5 +46,5 @@ type agentsRegistry interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertmanagerService interface {
 	SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts)
-	GetFilteredAlerts(ctx context.Context, filters []string) ([]*ammodels.GettableAlert, error)
+	GetAlerts(params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error)
 }

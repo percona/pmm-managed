@@ -67,8 +67,10 @@ const (
 	receiverNameSeparator = " + "
 )
 
-var notificationLabels = []string{"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
-	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job"}
+var notificationLabels = []string{
+	"node_name", "node_id", "service_name", "service_id", "service_type", "rule_id",
+	"alertgroup", "template_name", "severity", "agent_id", "agent_type", "job",
+}
 
 //go:embed email_template.html
 var emailTemplate string
@@ -730,25 +732,8 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 }
 
 // GetAlerts returns alerts available in alertmanager.
-func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
-	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
-		Context: ctx,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.Payload, nil
-}
-
-// GetFilteredAlerts returns available alerts that matches a given filter.
-// The API client is responsible for URL encoding, hence, filters should be provided "as is" with quotes escaped
-// See https://prometheus.io/docs/prometheus/latest/querying/basics/#instant-vector-selectors
-func (svc *Service) GetFilteredAlerts(ctx context.Context, filters []string) ([]*ammodels.GettableAlert, error) {
-	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
-		Context: ctx,
-		Filter:  filters,
-	})
+func (svc *Service) GetAlerts(params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
+	resp, err := amclient.Default.Alert.GetAlerts(&params)
 	if err != nil {
 		return nil, err
 	}
@@ -758,7 +743,7 @@ func (svc *Service) GetFilteredAlerts(ctx context.Context, filters []string) ([]
 
 // FindAlertsByID searches alerts by IDs in alertmanager.
 func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammodels.GettableAlert, error) {
-	alerts, err := svc.GetAlerts(ctx)
+	alerts, err := svc.GetAlerts(alert.GetAlertsParams{Context: ctx})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")
 	}
@@ -795,7 +780,7 @@ func (svc *Service) Silence(ctx context.Context, ids []string) error {
 
 // SilenceAll mutes all available alerts.
 func (svc *Service) SilenceAll(ctx context.Context) error {
-	alerts, err := svc.GetAlerts(ctx)
+	alerts, err := svc.GetAlerts(alert.GetAlertsParams{Context: ctx})
 	if err != nil {
 		return err
 	}
@@ -859,7 +844,7 @@ func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
 
 // UnsilenceAll unmutes all available alerts.
 func (svc *Service) UnsilenceAll(ctx context.Context) error {
-	alerts, err := svc.GetAlerts(ctx)
+	alerts, err := svc.GetAlerts(alert.GetAlertsParams{Context: ctx})
 	if err != nil {
 		return err
 	}

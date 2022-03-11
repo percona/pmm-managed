@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -69,7 +70,7 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
-	alerts, err := s.alertManager.GetAlerts(ctx)
+	alerts, err := s.alertManager.GetAlerts(alert.GetAlertsParams{Context: ctx})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}

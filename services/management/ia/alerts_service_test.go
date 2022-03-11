@@ -27,6 +27,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	amalert "github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -267,7 +268,7 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
-	mockAlert.On("GetAlerts", ctx).Return(mockedAlerts, nil)
+	mockAlert.On("GetAlerts", amalert.GetAlertsParams{Context: ctx}).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
 	require.NoError(t, err)
@@ -337,7 +338,6 @@ func TestListAlerts(t *testing.T) {
 		assert.True(t, findAlerts(res.Alerts, "20", "21", "22", "23", "24"), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, alertsCount)
 		assert.EqualValues(t, res.Totals.TotalPages, 3)
-
 	})
 
 	t.Run("fetch more than available", func(t *testing.T) {
@@ -364,5 +364,4 @@ func TestListAlerts(t *testing.T) {
 		assert.Len(t, res.Alerts, 0)
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 	})
-
 }

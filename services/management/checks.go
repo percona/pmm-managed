@@ -38,7 +38,7 @@ type ChecksAPIService struct {
 	managementpb.UnimplementedSecurityChecksServer
 }
 
-// ListFailedServices returns a list of services with failed checks and their summaries
+// ListFailedServices returns a list of services with failed checks and their summaries.
 func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
@@ -63,9 +63,9 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 			svcSummary.CriticalCount++
 		case common.Error, common.Warning:
 			svcSummary.MajorCount++
-		case common.Notice:
+		case common.Notice, common.Debug, common.Info:
 			svcSummary.TrivialCount++
-		default:
+		case common.Unknown:
 		}
 
 		summaries[result.Target.ServiceID] = svcSummary
@@ -85,7 +85,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 	return &managementpb.ListFailedServicesResponse{Result: failedServices}, nil
 }
 
-// GetFailedChecks returns details of failed checks for a given service
+// GetFailedChecks returns details of failed checks for a given service.
 func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
 	results, err := s.checksService.GetFailedChecks(ctx, req.ServiceId)
 	if err != nil {
@@ -110,7 +110,6 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 			AlertId:     result.AlertID,
 			Silenced:    result.Silenced,
 		})
-
 	}
 
 	pageTotals := &managementpb.PageTotals{

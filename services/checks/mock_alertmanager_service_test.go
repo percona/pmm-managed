@@ -3,9 +3,10 @@
 package checks
 
 import (
-	context "context"
-
+	alert "github.com/percona/pmm/api/alertmanager/amclient/alert"
 	ammodels "github.com/percona/pmm/api/alertmanager/ammodels"
+
+	context "context"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -15,13 +16,13 @@ type mockAlertmanagerService struct {
 	mock.Mock
 }
 
-// GetFilteredAlerts provides a mock function with given fields: ctx, filters
-func (_m *mockAlertmanagerService) GetFilteredAlerts(ctx context.Context, filters []string) ([]*ammodels.GettableAlert, error) {
-	ret := _m.Called(ctx, filters)
+// GetAlerts provides a mock function with given fields: params
+func (_m *mockAlertmanagerService) GetAlerts(params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
+	ret := _m.Called(params)
 
 	var r0 []*ammodels.GettableAlert
-	if rf, ok := ret.Get(0).(func(context.Context, []string) []*ammodels.GettableAlert); ok {
-		r0 = rf(ctx, filters)
+	if rf, ok := ret.Get(0).(func(alert.GetAlertsParams) []*ammodels.GettableAlert); ok {
+		r0 = rf(params)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ammodels.GettableAlert)
@@ -29,8 +30,8 @@ func (_m *mockAlertmanagerService) GetFilteredAlerts(ctx context.Context, filter
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, []string) error); ok {
-		r1 = rf(ctx, filters)
+	if rf, ok := ret.Get(1).(func(alert.GetAlertsParams) error); ok {
+		r1 = rf(params)
 	} else {
 		r1 = ret.Error(1)
 	}
