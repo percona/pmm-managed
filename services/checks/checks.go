@@ -73,6 +73,9 @@ const (
 
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
+
+	// STTCheckFilter represents AlertManager filter for STT checks
+	STTCheckFilter = "stt_check=1"
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -297,7 +300,7 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 
 	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
 		Context: ctx,
-		Filter:  []string{"stt_check=1", fmt.Sprintf("service_id=\"%s\"", serviceID)},
+		Filter:  []string{STTCheckFilter, fmt.Sprintf("service_id=\"%s\"", serviceID)},
 	})
 	if err != nil {
 		return nil, err
@@ -330,7 +333,7 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
 	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
 		Context: ctx,
-		Filter:  []string{"stt_check=1", fmt.Sprintf("alert_id=\"%s\"", alertID)},
+		Filter:  []string{STTCheckFilter, fmt.Sprintf("alert_id=\"%s\"", alertID)},
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get alerts with id: %s", alertID)

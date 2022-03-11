@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	pmmapitests "github.com/percona/pmm-managed/api-tests"
+	"github.com/percona/pmm-managed/services/checks"
 )
 
 func TestAlertManager(t *testing.T) {
@@ -57,7 +58,7 @@ func TestAlertManager(t *testing.T) {
 		// 120 sec ping for failed checks alerts to appear in alertmanager
 		for i := 0; i < 120; i++ {
 			res, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
-				Filter:  []string{"stt_check=1"},
+				Filter:  []string{checks.STTCheckFilter},
 				Context: pmmapitests.Context,
 			})
 			require.NoError(t, err)
