@@ -775,7 +775,7 @@ func (svc *Service) Silence(ctx context.Context, ids []string) error {
 		return err
 	}
 
-	return silenceAlerts(ctx, alerts)
+	return svc.SilenceAlerts(ctx, alerts)
 }
 
 // SilenceAll mutes all available alerts.
@@ -785,10 +785,11 @@ func (svc *Service) SilenceAll(ctx context.Context) error {
 		return err
 	}
 
-	return silenceAlerts(ctx, alerts)
+	return svc.SilenceAlerts(ctx, alerts)
 }
 
-func silenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+// SilenceAlerts silences a group of provided alerts.
+func (svc *Service) SilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
 	var err error
 	for _, a := range alerts {
 		if len(a.Status.SilencedBy) != 0 {
@@ -839,7 +840,7 @@ func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
 		return err
 	}
 
-	return svc.unsilenceAlerts(ctx, alerts)
+	return svc.UnsilenceAlerts(ctx, alerts)
 }
 
 // UnsilenceAll unmutes all available alerts.
@@ -849,10 +850,11 @@ func (svc *Service) UnsilenceAll(ctx context.Context) error {
 		return err
 	}
 
-	return svc.unsilenceAlerts(ctx, alerts)
+	return svc.UnsilenceAlerts(ctx, alerts)
 }
 
-func (svc *Service) unsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+// UnsilenceAlerts unmutes the provided alerts.
+func (svc *Service) UnsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
 	var err error
 	for _, a := range alerts {
 		for _, silenceID := range a.Status.SilencedBy {

@@ -43,3 +43,31 @@ func (_m *mockAlertmanagerService) GetAlerts(params alert.GetAlertsParams) ([]*a
 func (_m *mockAlertmanagerService) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	_m.Called(ctx, alerts)
 }
+
+// SilenceAlerts provides a mock function with given fields: ctx, alerts
+func (_m *mockAlertmanagerService) SilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+	ret := _m.Called(ctx, alerts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []*ammodels.GettableAlert) error); ok {
+		r0 = rf(ctx, alerts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UnsilenceAlerts provides a mock function with given fields: ctx, alerts
+func (_m *mockAlertmanagerService) UnsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+	ret := _m.Called(ctx, alerts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []*ammodels.GettableAlert) error); ok {
+		r0 = rf(ctx, alerts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

@@ -46,5 +46,7 @@ type agentsRegistry interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertmanagerService interface {
 	SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts)
+	SilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error
+	UnsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error
 	GetAlerts(params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error)
 }

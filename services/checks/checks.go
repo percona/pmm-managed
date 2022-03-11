@@ -300,7 +300,7 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 		Filter:  []string{"stt_check=1", fmt.Sprintf("service_id=\"%s\"", serviceID)},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get alerts")
+		return nil, err
 	}
 
 	checkResults := make([]services.STTCheckResult, 0, len(res))
@@ -324,6 +324,25 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 		})
 	}
 	return checkResults, nil
+}
+
+// ToggleCheckAlert toggles the silence state of the check with the provided alertID.
+func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
+	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
+		Context: ctx,
+		Filter:  []string{"stt_check=1", fmt.Sprintf("alert_id=\"%s\"", alertID)},
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get alerts with id: %s", alertID)
+	}
+
+	if silence {
+		err = s.alertmanagerService.SilenceAlerts(ctx, res)
+	} else {
+		err = s.alertmanagerService.UnsilenceAlerts(ctx, res)
+	}
+
+	return err
 }
 
 // runChecksGroup downloads and executes STT checks in synchronous way.

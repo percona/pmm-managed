@@ -38,6 +38,14 @@ type ChecksAPIService struct {
 	managementpb.UnimplementedSecurityChecksServer
 }
 
+// NewChecksAPIService creates new Checks API Service.
+func NewChecksAPIService(checksService checksService) *ChecksAPIService {
+	return &ChecksAPIService{
+		checksService: checksService,
+		l:             logrus.WithField("component", "management/checks"),
+	}
+}
+
 // ListFailedServices returns a list of services with failed checks and their summaries.
 func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
@@ -141,12 +149,14 @@ func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementp
 	return &managementpb.GetFailedChecksResponse{Results: failedChecks[from:to], PageTotals: pageTotals}, nil
 }
 
-// NewChecksAPIService creates new Checks API Service.
-func NewChecksAPIService(checksService checksService) *ChecksAPIService {
-	return &ChecksAPIService{
-		checksService: checksService,
-		l:             logrus.WithField("component", "management/checks"),
+// ToggleCheckAlert toggles the silence state of the check with the provided alertID.
+func (s *ChecksAPIService) ToggleCheckAlert(ctx context.Context, req *managementpb.ToggleCheckAlertRequest) (*managementpb.ToggleCheckAlertResponse, error) {
+	err := s.checksService.ToggleCheckAlert(ctx, req.AlertId, req.Silence)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to toggle silence status of alert with id: %s", req.AlertId)
 	}
+
+	return &managementpb.ToggleCheckAlertResponse{}, nil
 }
 
 // GetSecurityCheckResults returns Security Thread Tool's latest checks results.

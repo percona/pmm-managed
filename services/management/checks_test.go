@@ -358,7 +358,7 @@ func TestListFailedServices(t *testing.T) {
 
 		resp, err := s.ListFailedServices(context.Background(), &managementpb.ListFailedServicesRequest{})
 		require.NoError(t, err)
-		assert.Equal(t, response, resp)
+		assert.ElementsMatch(t, resp.Result, response.Result)
 	})
 }
 
