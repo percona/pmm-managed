@@ -74,7 +74,7 @@ const (
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
 
-	// STTCheckFilter represents AlertManager filter for STT checks
+	// STTCheckFilter represents AlertManager filter for STT checks.
 	STTCheckFilter = "stt_check=1"
 )
 
