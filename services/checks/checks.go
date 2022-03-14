@@ -74,9 +74,11 @@ const (
 )
 
 // pmm-agent versions with known changes in Query Actions.
+// To match all pre-release versions add '-0' suffix to specified version.
 var (
-	pmmAgent260     = version.MustParse("2.6.0")
-	pmmAgent270     = version.MustParse("2.7.0")
+	pmmAgent2_6_0   = version.MustParse("2.6.0")
+	pmmAgent2_7_0   = version.MustParse("2.7.0")
+	pmmAgent2_27_0  = version.MustParse("2.27.0-0")
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
@@ -168,6 +170,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBBuildInfo))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetCmdLineOpts))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetParameter))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBReplSetGetStatus))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetDiagnosticData))
 
 	return s, nil
 }
@@ -515,7 +519,7 @@ func (s *Service) minPMMAgentVersion(c check.Check) *version.Parsed {
 	case 1:
 		return s.minPMMAgentVersionForType(c.Type)
 	case 2:
-		res := pmmAgent260 // minimum version that can be used with advisors
+		res := pmmAgent2_6_0 // minimum version that can be used with advisors
 		for _, query := range c.Queries {
 			v := s.minPMMAgentVersionForType(query.Type)
 			if res.Less(v) {
@@ -543,10 +547,15 @@ func (s *Service) minPMMAgentVersionForType(t check.Type) *version.Parsed {
 	case check.MongoDBBuildInfo:
 		fallthrough
 	case check.MongoDBGetParameter:
-		return pmmAgent260
+		return pmmAgent2_6_0
 
 	case check.MongoDBGetCmdLineOpts:
-		return pmmAgent270
+		return pmmAgent2_7_0
+
+	case check.MongoDBReplSetGetStatus:
+		fallthrough
+	case check.MongoDBGetDiagnosticData:
+		return pmmAgent2_27_0
 
 	default:
 		s.l.Warnf("minPMMAgentVersion: unhandled check type %q.", t)
@@ -755,6 +764,10 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 			err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 		case check.MongoDBGetCmdLineOpts:
 			err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		case check.MongoDBReplSetGetStatus:
+			err = s.agentsRegistry.StartMongoDBQueryReplSetGetStatusAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		case check.MongoDBGetDiagnosticData:
+			err = s.agentsRegistry.StartMongoDBQueryGetDiagnosticDataAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 		default:
 			return nil, errors.Errorf("unknown check type")
 		}
@@ -929,6 +942,10 @@ func (s *Service) groupChecksByDB(checks map[string]check.Check) (mySQLChecks, p
 			case check.MongoDBBuildInfo:
 				fallthrough
 			case check.MongoDBGetCmdLineOpts:
+				fallthrough
+			case check.MongoDBReplSetGetStatus:
+				fallthrough
+			case check.MongoDBGetDiagnosticData:
 				mongoDBChecks[c.Name] = c
 
 			default:
@@ -1085,6 +1102,8 @@ func isQueryTypeSupported(typ check.Type) bool {
 	case check.MongoDBGetParameter:
 	case check.MongoDBBuildInfo:
 	case check.MongoDBGetCmdLineOpts:
+	case check.MongoDBReplSetGetStatus:
+	case check.MongoDBGetDiagnosticData:
 	default:
 		return false
 	}
