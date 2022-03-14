@@ -6,10 +6,8 @@ templates:
     tiers: [anonymous, registered]
     expr: |-
       mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_io_running == 0
-    for: 0m
+    for: 1m
     severity: critical
-    labels:
-      foo: bar
     annotations:
       description: |-
         MySQL Replication Not Running on {{ $labels.instance }}
