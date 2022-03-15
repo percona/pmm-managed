@@ -601,6 +601,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 		return nil, internalServerError
 	}
 
+	s.l.Warnf("response from platform: %+v", platformResp.Contact)
 	res := &platformpb.GetContactInformationResponse{
 		CustomerSuccess: &platformpb.GetContactInformationResponse_CustomerSuccess{
 			Name:  platformResp.Contact.CustomerSuccess.Name,
