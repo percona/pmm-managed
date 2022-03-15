@@ -652,8 +652,8 @@ github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472 h1:Henk
 github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472/go.mod h1:WZZ3Hi+lAWCaGWmsrfkkvRQPkIa8n1OZ0s8Su+vbgus=
 github.com/percona-platform/saas v0.0.0-20220315201934-92ad1de42182 h1:XotcCC4WvaCqokVGyzcKUMchoUKWao1Pb/KbFtxIiEU=
 github.com/percona-platform/saas v0.0.0-20220315201934-92ad1de42182/go.mod h1:gFUwaFp6Ugu5qsBwiOVJYbDlzgZ77tmXdXGO7tG5xVI=
-github.com/percona/pmm v0.0.0-20220315204028-2dbe6319bb0b h1:WqVvajKAoldiEHzxZOcFrMd2bQJLI+8GoUP3MU+z6yg=
-github.com/percona/pmm v0.0.0-20220315204028-2dbe6319bb0b/go.mod h1:aQ4+fUKcsA1e2HLaOB1oBZjqyhNkNOZqucRJMZvkBJQ=
+github.com/percona/pmm v0.0.0-20220315214957-462b83ccba3f h1:ifSm7eDkx5gKjMSFCQCr9LKDni+VtHeDdodiXvfjxD0=
+github.com/percona/pmm v0.0.0-20220315214957-462b83ccba3f/go.mod h1:aQ4+fUKcsA1e2HLaOB1oBZjqyhNkNOZqucRJMZvkBJQ=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
