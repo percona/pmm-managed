@@ -34,6 +34,7 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
@@ -323,6 +324,8 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 				Summary:     alert.Annotations["summary"],
 				Description: alert.Annotations["description"],
 				ReadMoreURL: alert.Annotations["read_more_url"],
+				Severity:    common.ParseSeverity(alert.Labels["severity"]),
+				Labels:      alert.Labels,
 			},
 		})
 	}

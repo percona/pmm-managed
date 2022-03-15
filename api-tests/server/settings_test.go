@@ -37,7 +37,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/percona/pmm-managed/api-tests"
-	"github.com/percona/pmm-managed/services/checks"
 )
 
 func TestSettings(t *testing.T) {
@@ -349,7 +348,7 @@ func TestSettings(t *testing.T) {
 				var alertsCount int
 				for i := 0; i < 120; i++ {
 					res, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
-						Filter:  []string{checks.STTCheckFilter},
+						Filter:  []string{"stt_check=1"},
 						Context: pmmapitests.Context,
 					})
 					require.NoError(t, err)
