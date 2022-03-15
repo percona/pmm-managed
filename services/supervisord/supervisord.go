@@ -605,6 +605,7 @@ command =
 		--prometheusDataPath=/srv/prometheus/data
 		--http.pathPrefix=/prometheus
 		--envflag.enable
+		--envflag.prefix=VM_
 user = pmm
 autorestart = true
 autostart = true
