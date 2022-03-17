@@ -781,7 +781,7 @@ func (svc *Service) Silence(ctx context.Context, ids []string) error {
 
 // SilenceAll mutes all available alerts.
 func (svc *Service) SilenceAll(ctx context.Context) error {
-	alerts, err := svc.GetAlerts(ctx, alert.GetAlertsParams{Context: ctx})
+	alerts, err := svc.GetAlerts(ctx, alert.GetAlertsParams{})
 	if err != nil {
 		return err
 	}
