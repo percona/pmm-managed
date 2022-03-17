@@ -710,3 +710,59 @@ func TestGetFailedChecks(t *testing.T) {
 		assert.Equal(t, results, response)
 	})
 }
+
+func TestToggleCheckAlert(t *testing.T) {
+	t.Parallel()
+
+	t.Run("silence alert", func(t *testing.T) {
+		t.Parallel()
+
+		testAlert := &ammodels.GettableAlert{
+			Alert: ammodels.Alert{
+				Labels: map[string]string{
+					"alert_id": "test_alert_1",
+				},
+			},
+			Status: &ammodels.AlertStatus{},
+		}
+
+		var ams mockAlertmanagerService
+		ctx := context.Background()
+		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{testAlert}, nil)
+		ams.On("SilenceAlerts", ctx, []*ammodels.GettableAlert{testAlert}).Return(nil)
+
+		s, err := New(nil, &ams, nil)
+		require.NoError(t, err)
+
+		active := len(testAlert.Status.SilencedBy) == 0
+		err = s.ToggleCheckAlert(ctx, "test_alert_1", active)
+		require.NoError(t, err)
+		ams.AssertCalled(t, "SilenceAlerts", ctx, []*ammodels.GettableAlert{testAlert})
+	})
+
+	t.Run("unsilence alert", func(t *testing.T) {
+		t.Parallel()
+
+		testAlert := &ammodels.GettableAlert{
+			Alert: ammodels.Alert{
+				Labels: map[string]string{
+					"alert_id": "test_alert_2",
+				},
+			},
+			Status: &ammodels.AlertStatus{SilencedBy: []string{"test_silence"}},
+		}
+
+		var ams mockAlertmanagerService
+		ctx := context.Background()
+		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{testAlert}, nil)
+		ams.On("UnsilenceAlerts", ctx, []*ammodels.GettableAlert{testAlert}).Return(nil)
+
+		s, err := New(nil, &ams, nil)
+		require.NoError(t, err)
+
+		active := len(testAlert.Status.SilencedBy) == 0
+		err = s.ToggleCheckAlert(ctx, "test_alert_1", active)
+		require.NoError(t, err)
+		ams.AssertCalled(t, "UnsilenceAlerts", ctx, []*ammodels.GettableAlert{testAlert})
+	})
+}
