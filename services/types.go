@@ -44,8 +44,8 @@ type STTCheckResult struct {
 	Result    check.Result
 }
 
-// CheckSummary contains the summary of failed checks for a service.
-type CheckSummary struct {
+// CheckResultSummary contains the summary of failed checks for a service.
+type CheckResultSummary struct {
 	ServiceName   string
 	ServiceID     string
 	CriticalCount uint32

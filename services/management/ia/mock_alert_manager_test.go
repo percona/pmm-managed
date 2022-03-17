@@ -16,13 +16,13 @@ type mockAlertManager struct {
 	mock.Mock
 }
 
-// GetAlerts provides a mock function with given fields: params
-func (_m *mockAlertManager) GetAlerts(params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
-	ret := _m.Called(params)
+// GetAlerts provides a mock function with given fields: ctx, params
+func (_m *mockAlertManager) GetAlerts(ctx context.Context, params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
+	ret := _m.Called(ctx, params)
 
 	var r0 []*ammodels.GettableAlert
-	if rf, ok := ret.Get(0).(func(alert.GetAlertsParams) []*ammodels.GettableAlert); ok {
-		r0 = rf(params)
+	if rf, ok := ret.Get(0).(func(context.Context, alert.GetAlertsParams) []*ammodels.GettableAlert); ok {
+		r0 = rf(ctx, params)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ammodels.GettableAlert)
@@ -30,8 +30,8 @@ func (_m *mockAlertManager) GetAlerts(params alert.GetAlertsParams) ([]*ammodels
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(alert.GetAlertsParams) error); ok {
-		r1 = rf(params)
+	if rf, ok := ret.Get(1).(func(context.Context, alert.GetAlertsParams) error); ok {
+		r1 = rf(ctx, params)
 	} else {
 		r1 = ret.Error(1)
 	}

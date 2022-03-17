@@ -70,7 +70,7 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
-	alerts, err := s.alertManager.GetAlerts(alert.GetAlertsParams{Context: ctx})
+	alerts, err := s.alertManager.GetAlerts(ctx, alert.GetAlertsParams{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}

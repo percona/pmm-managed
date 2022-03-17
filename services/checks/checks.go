@@ -299,9 +299,8 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 		return nil, services.ErrSTTDisabled
 	}
 
-	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
-		Context: ctx,
-		Filter:  []string{STTCheckFilter, fmt.Sprintf("service_id=\"%s\"", serviceID)},
+	res, err := s.alertmanagerService.GetAlerts(ctx, alert.GetAlertsParams{
+		Filter: []string{STTCheckFilter, fmt.Sprintf("service_id=\"%s\"", serviceID)},
 	})
 	if err != nil {
 		return nil, err
@@ -334,9 +333,8 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 
 // ToggleCheckAlert toggles the silence state of the check with the provided alertID.
 func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
-	res, err := s.alertmanagerService.GetAlerts(alert.GetAlertsParams{
-		Context: ctx,
-		Filter:  []string{STTCheckFilter, fmt.Sprintf("alert_id=\"%s\"", alertID)},
+	res, err := s.alertmanagerService.GetAlerts(ctx, alert.GetAlertsParams{
+		Filter: []string{STTCheckFilter, fmt.Sprintf("alert_id=\"%s\"", alertID)},
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get alerts with id: %s", alertID)

@@ -268,7 +268,7 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
-	mockAlert.On("GetAlerts", amalert.GetAlertsParams{Context: ctx}).Return(mockedAlerts, nil)
+	mockAlert.On("GetAlerts", ctx, amalert.GetAlertsParams{}).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
 	require.NoError(t, err)

@@ -57,11 +57,11 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 		return nil, errors.Wrap(err, "failed to get check results")
 	}
 
-	summaries := make(map[string]services.CheckSummary)
+	summaries := make(map[string]services.CheckResultSummary)
 
+	var svcSummary services.CheckResultSummary
+	var exists bool
 	for _, result := range results {
-		var svcSummary services.CheckSummary
-		var exists bool
 		if svcSummary, exists = summaries[result.Target.ServiceID]; !exists {
 			svcSummary.ServiceID = result.Target.ServiceID
 			svcSummary.ServiceName = result.Target.ServiceName
