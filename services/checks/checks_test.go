@@ -442,6 +442,9 @@ func TestFilterChecks(t *testing.T) {
 		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
 		{Name: "MongoDBReplSetGetStatus", Version: 1, Type: check.MongoDBReplSetGetStatus},
 		{Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
+		{Name: "MySQL check V2", Version: 2, Queries: []check.Query{{Type: check.MySQLShow}, {Type: check.MySQLSelect}}},
+		{Name: "PostgreSQL check V2", Version: 2, Queries: []check.Query{{Type: check.PostgreSQLShow}, {Type: check.PostgreSQLSelect}}},
+		{Name: "MongoDB check V2", Version: 2, Queries: []check.Query{{Type: check.MongoDBBuildInfo}, {Type: check.MongoDBGetParameter}, {Type: check.MongoDBGetCmdLineOpts}}},
 	}
 
 	invalid := []check.Check{
@@ -473,16 +476,21 @@ func TestGroupChecksByDB(t *testing.T) {
 		"MongoDBGetDiagnosticData": {Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
 		"unsupported type":         {Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
 		"missing type":             {Name: "missing type", Version: 1},
+		"MySQL family V2":          {Name: "MySQL family V2", Version: 2, Family: check.MySQL},
+		"PostrgeSQL family V2":     {Name: "PostrgeSQL family V2", Version: 2, Family: check.PostgreSQL},
+		"MongoDB family V2":        {Name: "MongoDB family V2", Version: 2, Family: check.MongoDB},
+		"missing family":           {Name: "missing family", Version: 2},
 	}
 
 	s, err := New(nil, nil, nil)
 	require.NoError(t, err)
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
 
-	require.Len(t, mySQLChecks, 2)
-	require.Len(t, postgreSQLChecks, 2)
-	require.Len(t, mongoDBChecks, 5)
+	require.Len(t, mySQLChecks, 3)
+	require.Len(t, postgreSQLChecks, 3)
+	require.Len(t, mongoDBChecks, 6)
 
+	// V1 checks
 	assert.Equal(t, check.MySQLShow, mySQLChecks["MySQLShow"].Type)
 	assert.Equal(t, check.MySQLSelect, mySQLChecks["MySQLSelect"].Type)
 
@@ -494,6 +502,44 @@ func TestGroupChecksByDB(t *testing.T) {
 	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks["MongoDBGetCmdLineOpts"].Type)
 	assert.Equal(t, check.MongoDBReplSetGetStatus, mongoDBChecks["MongoDBReplSetGetStatus"].Type)
 	assert.Equal(t, check.MongoDBGetDiagnosticData, mongoDBChecks["MongoDBGetDiagnosticData"].Type)
+
+	// V2 checks
+	assert.Equal(t, check.MySQL, mySQLChecks["MySQL family V2"].Family)
+	assert.Equal(t, check.PostgreSQL, postgreSQLChecks["PostrgeSQL family V2"].Family)
+	assert.Equal(t, check.MongoDB, mongoDBChecks["MongoDB family V2"].Family)
+}
+
+func TestMinPMMAgents(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		check      check.Check
+		minVersion *version.Parsed
+	}{
+		{name: "MySQLShow", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.MySQLShow}},
+		{name: "MySQLSelect", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.MySQLSelect}},
+		{name: "PostgreSQLShow", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.PostgreSQLShow}},
+		{name: "PostgreSQLSelect", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.PostgreSQLSelect}},
+		{name: "MongoDBGetParameter", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.MongoDBGetParameter}},
+		{name: "MongoDBBuildInfo", minVersion: pmmAgent2_6_0, check: check.Check{Version: 1, Type: check.MongoDBBuildInfo}},
+		{name: "MongoDBGetCmdLineOpts", minVersion: pmmAgent2_7_0, check: check.Check{Version: 1, Type: check.MongoDBGetCmdLineOpts}},
+		{name: "MySQL Family", minVersion: pmmAgent2_6_0, check: check.Check{Version: 2, Queries: []check.Query{{Type: check.MySQLShow}, {Type: check.MySQLSelect}}}},
+		{name: "MongoDB Family", minVersion: pmmAgent2_7_0, check: check.Check{Version: 2, Queries: []check.Query{{Type: check.MongoDBBuildInfo}, {Type: check.MongoDBGetParameter}, {Type: check.MongoDBGetCmdLineOpts}}}},
+		{name: "PostgreSQL Family", minVersion: pmmAgent2_6_0, check: check.Check{Version: 2, Queries: []check.Query{{Type: check.PostgreSQLShow}, {Type: check.PostgreSQLSelect}}}},
+	}
+
+	s, err := New(nil, nil, nil)
+	require.NoError(t, err)
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, test.minVersion, s.minPMMAgentVersion(test.check))
+		})
+	}
 }
 
 func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
