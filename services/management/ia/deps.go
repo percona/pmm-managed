@@ -29,7 +29,7 @@ import (
 // alertManager is is a subset of methods of alertmanager.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertManager interface {
-	GetAlerts(ctx context.Context, params alert.GetAlertsParams) ([]*ammodels.GettableAlert, error)
+	GetAlerts(ctx context.Context, params *alert.GetAlertsParams) ([]*ammodels.GettableAlert, error)
 	Silence(ctx context.Context, ids []string) error
 	SilenceAll(ctx context.Context) error
 	Unsilence(ctx context.Context, ids []string) error

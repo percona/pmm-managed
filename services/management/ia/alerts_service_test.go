@@ -27,11 +27,11 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
-	amalert "github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -268,7 +268,7 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
-	mockAlert.On("GetAlerts", ctx, amalert.GetAlertsParams{}).Return(mockedAlerts, nil)
+	mockAlert.On("GetAlerts", ctx, mock.Anything).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
 	require.NoError(t, err)
