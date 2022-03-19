@@ -21,6 +21,6 @@ import (
 	"embed"
 )
 
-// IATemplates holds IA template files in the struct of type embed.FS which implements the io/fs package's FS interface
+// IATemplates holds IA template files in the struct of type embed.FS which implements the io/fs package's FS interface.
 //go:embed iatemplates/*
 var IATemplates embed.FS
