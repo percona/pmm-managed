@@ -17,4 +17,7 @@
 // Package data provides access to embedded data.
 package data
 
-//go:generate go-bindata -o bindata.go -pkg data -nometadata iatemplates/
+import "embed"
+
+//go:embed iatemplates/*
+var IATemplates embed.FS
