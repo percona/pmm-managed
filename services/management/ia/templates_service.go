@@ -79,6 +79,8 @@ type TemplatesService struct {
 
 	rw        sync.RWMutex
 	templates map[string]templateInfo
+
+	iav1beta1.UnimplementedTemplatesServer
 }
 
 // NewTemplatesService creates a new TemplatesService.
