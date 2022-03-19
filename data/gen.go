@@ -17,7 +17,9 @@
 // Package data provides access to embedded data.
 package data
 
-import "embed"
+import (
+	"embed"
+)
 
 //go:embed iatemplates/*
 var IATemplates embed.FS
