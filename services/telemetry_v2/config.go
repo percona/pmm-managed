@@ -12,10 +12,11 @@ import (
 )
 
 type ServiceConfig struct {
-	l              *logrus.Entry
-	Enabled        bool   `yaml:"enabled"`
-	ConfigLocation string `yaml:"config_location"`
-	Signing        struct {
+	l                          *logrus.Entry
+	Enabled                    bool   `yaml:"enabled"`
+	ConfigLocation             string `yaml:"config_location"`
+	DisableSigningVerification bool   `yaml:"disable_signing_verification"` //TODO: remove this flag after testing
+	Signing                    struct {
 		TrustedPublicKeys       []string             `yaml:"trusted_public_keys"`
 		trustedPublicKeysParsed []minisign.PublicKey `yaml:"-"`
 	} `yaml:"signing"`
@@ -201,19 +202,21 @@ func (c *ServiceConfig) loadConfig(location string) ([]TelemetryConfig, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
 		}
-		bufSign, err := ioutil.ReadFile(match + ".minisig")
-		if err != nil {
-			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
-		}
-		valid := false
-		for _, publicKey := range c.Signing.trustedPublicKeysParsed {
-			if ok := minisign.Verify(publicKey, buf, bufSign); ok {
-				valid = true
-				break
+		if !c.DisableSigningVerification {
+			bufSign, err := ioutil.ReadFile(match + ".minisig")
+			if err != nil {
+				return nil, errors.Wrapf(err, "error while reading config [%s]", match)
 			}
-		}
-		if !valid {
-			return nil, errors.Errorf("signature verification failed for [%s]", match)
+			valid := false
+			for _, publicKey := range c.Signing.trustedPublicKeysParsed {
+				if ok := minisign.Verify(publicKey, buf, bufSign); ok {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return nil, errors.Errorf("signature verification failed for [%s]", match)
+			}
 		}
 		if err := yaml.Unmarshal(buf, &fileCfg); err != nil {
 			return nil, errors.Wrapf(err, "cannot unmashal config [%s]", match)

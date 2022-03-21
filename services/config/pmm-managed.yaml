@@ -14,6 +14,8 @@ services:
       rules_dir: "/etc/ia/rules"
       dir_owner: "pmm"
       dir_owner_group: "pmm"
+  platform:
+    skip_tls_verification: false
   telemetry:
     enabled: true
     # priority is as follows, from the highest priority
@@ -45,6 +47,7 @@ services:
   telemetry_v2:
     enabled: true
     config_location: /etc/percona/telemetry/*.yml
+    disable_signing_verification: false
     signing:
       trusted_public_keys:
         - RWToO+zBnSKDsXC2k64DZ23kwgRW52+BtHfYtFM1NC8MoNL7LxxgoyKn # TODO: must be removed after config is signed with legit key

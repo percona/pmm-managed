@@ -158,7 +158,7 @@ type gRPCServerDeps struct {
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
-func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
+func runGRPCServer(ctx context.Context, deps *gRPCServerDeps, cfg platform.Config) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
@@ -225,7 +225,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
 
-	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient)
+	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient, cfg)
 	if err == nil {
 		platformpb.RegisterPlatformServer(gRPCServer, platformService)
 	} else {
@@ -952,33 +952,37 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runGRPCServer(ctx, &gRPCServerDeps{
-			db:                   db,
-			vmdb:                 vmdb,
-			server:               server,
-			agentsRegistry:       agentsRegistry,
-			handler:              agentsHandler,
-			actions:              actionsService,
-			agentsStateUpdater:   agentsStateUpdater,
-			connectionCheck:      connectionCheck,
-			grafanaClient:        grafanaClient,
-			checksService:        checksService,
-			dbaasClient:          dbaasClient,
-			alertmanager:         alertManager,
-			vmalert:              vmalert,
-			settings:             settings,
-			alertsService:        alertsService,
-			templatesService:     templatesService,
-			rulesService:         rulesService,
-			jobsService:          jobsService,
-			versionServiceClient: versionService,
-			schedulerService:     schedulerService,
-			backupService:        backupService,
-			backupRemovalService: backupRemovalService,
-			minioService:         minioService,
-			versionCache:         versionCache,
-			supervisord:          supervisord,
-		})
+		runGRPCServer(
+			ctx,
+			&gRPCServerDeps{
+				db:                   db,
+				vmdb:                 vmdb,
+				server:               server,
+				agentsRegistry:       agentsRegistry,
+				handler:              agentsHandler,
+				actions:              actionsService,
+				agentsStateUpdater:   agentsStateUpdater,
+				connectionCheck:      connectionCheck,
+				grafanaClient:        grafanaClient,
+				checksService:        checksService,
+				dbaasClient:          dbaasClient,
+				alertmanager:         alertManager,
+				vmalert:              vmalert,
+				settings:             settings,
+				alertsService:        alertsService,
+				templatesService:     templatesService,
+				rulesService:         rulesService,
+				jobsService:          jobsService,
+				versionServiceClient: versionService,
+				schedulerService:     schedulerService,
+				backupService:        backupService,
+				backupRemovalService: backupRemovalService,
+				minioService:         minioService,
+				versionCache:         versionCache,
+				supervisord:          supervisord,
+			},
+			cfg.Config.Services.Platform,
+		)
 	}()
 
 	wg.Add(1)

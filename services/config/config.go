@@ -20,6 +20,7 @@ import (
 	_ "embed"
 	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/management/ia"
+	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/services/telemetry_v2"
@@ -47,6 +48,7 @@ type Service struct {
 
 type Config struct {
 	Services struct {
+		Platform        platform.Config        `yaml:"platform"`
 		AlertManager    alertmanager.Config    `yaml:"alert_manager"`
 		VMAlert         vmalert.Config         `yaml:"vmalert"`
 		VictoriaMetrics victoriametrics.Config `yaml:"victoria_metrics"`
@@ -103,6 +105,7 @@ func (s *Service) Load() error {
 		}
 	}
 
+	cfg.Services.Platform.Init()
 	cfg.Services.AlertManager.Init()
 	cfg.Services.VMAlert.Init()
 	cfg.Services.VictoriaMetrics.Init()

@@ -42,7 +42,7 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (_ *PerconaSSO
 
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsTable, "")
 	if err == reform.ErrNoRows {
-		return nil, errors.New("No Percona SSO token found"), false
+		return nil, errors.Wrap(err, "No Percona SSO token found"), false
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to get Percona SSO Details"), true
 	}
