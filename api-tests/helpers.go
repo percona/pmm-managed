@@ -75,7 +75,7 @@ func AssertAPIErrorf(t TestingT, actual error, httpStatus int, grpcCode codes.Co
 	if len(a) != 0 {
 		format = fmt.Sprintf(format, a...)
 	}
-	assert.Equal(t, format, errorField.String())
+	assert.Contains(t, errorField.String(), format)
 }
 
 func ExpectFailure(t *testing.T, link string) *expectedFailureTestingT {
