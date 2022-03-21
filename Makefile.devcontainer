@@ -36,7 +36,7 @@ PMM_TEST_FLAGS ?= -timeout=90s
 PMM_TEST_RUN_UPDATE ?= 0
 
 test:                           ## Run tests.
-	go test $(PMM_TEST_FLAGS) -p 1 ./services/victoriametrics/...
+	go test $(PMM_TEST_FLAGS) -p 1 $(PMM_TEST_PACKAGES)
 
 test-race:                      ## Run tests with race detector.
 	go test $(PMM_TEST_FLAGS) -p 1 -race $(PMM_TEST_PACKAGES)
