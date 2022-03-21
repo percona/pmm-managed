@@ -89,7 +89,7 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 			paramsHost = pmmAgentNode.Address
 			paramPMMAgentVersion, err = version.Parse(pointer.GetString(pmmAgent.Version))
 			if err != nil {
-				l.Warnf("couldn't parse pmm-agent version")
+				l.Warnf("couldn't parse pmm-agent version for pmm-agent %s: %q", pmmAgent.AgentID, err)
 			}
 		case agent.RunsOnNodeID != nil:
 			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
