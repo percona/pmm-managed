@@ -688,7 +688,7 @@ var databaseSchema = [][]string{
 			ADD COLUMN organization_id VARCHAR`,
 	},
 	58: {
-		`UPDATE agents SET mongo_db_tls_options = jsonb_set(mongo_db_tls_options, '{stats_collections}', '[]')
+		`UPDATE agents SET mongo_db_tls_options = jsonb_set(mongo_db_tls_options, '{stats_collections}', to_jsonb(string_to_array(mongo_db_tls_options->>'stats_collections', ',')))
 			WHERE 'mongo_db_tls_options' is not null`,
 	},
 }
