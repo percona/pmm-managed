@@ -130,6 +130,7 @@ func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetailsIns
 		ClientSecret:   ssoDetails.ClientSecret,
 		Scope:          ssoDetails.Scope,
 		OrganizationID: ssoDetails.OrganizationID,
+		PMMServerName:  ssoDetails.PMMServerName,
 	}
 
 	if err := q.Save(details); err != nil {
