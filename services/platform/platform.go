@@ -107,8 +107,6 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 
 	connectResp, err := s.connect(ctx, &connectPMMParams{
 		serverName:                req.ServerName,
-		email:                     req.Email,
-		password:                  req.Password,
 		pmmServerURL:              pmmServerURL,
 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
 		pmmServerID:               settings.PMMServerID,
@@ -204,7 +202,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 }
 
 type connectPMMParams struct {
-	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, email, password string
+	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, personalAccessToken string
 }
 
 type connectPMMRequest struct {
@@ -253,7 +251,8 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*conne
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
 		return nil, internalServerError
 	}
-	req.SetBasicAuth(params.email, params.password)
+	h := req.Header
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", params.personalAccessToken))
 	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
