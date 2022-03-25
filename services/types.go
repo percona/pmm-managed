@@ -49,6 +49,6 @@ type CheckResultSummary struct {
 	ServiceName   string
 	ServiceID     string
 	CriticalCount uint32
-	MajorCount    uint32
-	TrivialCount  uint32
+	ErrorCount    uint32
+	NoticeCount   uint32
 }

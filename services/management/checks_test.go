@@ -342,12 +342,12 @@ func TestListFailedServices(t *testing.T) {
 					ServiceName:   "svc1",
 					ServiceId:     "test_svc1",
 					CriticalCount: 2,
-					TrivialCount:  1,
+					NoticeCount:   1,
 				},
 				{
 					ServiceName: "svc2",
 					ServiceId:   "test_svc2",
-					MajorCount:  1,
+					ErrorCount:  1,
 				},
 			},
 		}
