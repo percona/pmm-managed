@@ -751,11 +751,9 @@ command =
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
 		cfg:default.auth.generic_oauth.role_attribute_path="contains(portal_admin_orgs[*], '{{ .PerconaSSODetails.OrganizationID }}') && 'Admin' || 'Viewer'"
         {{- end}}
-
-environment=
+environment =
 	PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
 	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
-
 user = grafana
 directory = /usr/share/grafana
 autorestart = true
