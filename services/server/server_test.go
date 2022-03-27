@@ -40,41 +40,51 @@ func TestServer(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 
 	newServer := func(t *testing.T) *Server {
-		r := new(mockSupervisordService)
+		var r mockSupervisordService
 		r.Test(t)
 		r.On("UpdateConfiguration", mock.Anything, mock.Anything).Return(nil)
 
-		mvmdb := new(mockPrometheusService)
+		var mvmdb mockPrometheusService
 		mvmdb.Test(t)
 		mvmdb.On("RequestConfigurationUpdate").Return(nil)
-		mState := new(mockAgentsStateUpdater)
+		mState := &mockAgentsStateUpdater{}
 		mState.Test(t)
 		mState.On("UpdateAgentsState", context.TODO()).Return(nil)
 
-		mvmalert := new(mockPrometheusService)
+		var mvmalert mockPrometheusService
 		mvmalert.Test(t)
 		mvmalert.On("RequestConfigurationUpdate").Return(nil)
 
-		malertmanager := new(mockAlertmanagerService)
+		var malertmanager mockAlertmanagerService
 		malertmanager.Test(t)
 		malertmanager.On("RequestConfigurationUpdate").Return(nil)
 
-		par := new(mockVmAlertExternalRules)
+		var mtemplatesService mockTemplatesService
+		mtemplatesService.Test(t)
+		mtemplatesService.On("CollectTemplates", context.TODO()).Return(nil)
+
+		var mchecksService mockChecksService
+		mchecksService.Test(t)
+		mchecksService.On("CollectChecks", context.TODO()).Return(nil)
+
+		var par mockVmAlertExternalRules
 		par.Test(t)
 		par.On("ReadRules").Return("", nil)
 
-		ts := new(mockTelemetryService)
+		var ts mockTelemetryService
 		ts.Test(t)
 
 		s, err := NewServer(&Params{
 			DB:                   reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			VMDB:                 mvmdb,
-			VMAlert:              mvmalert,
-			Alertmanager:         malertmanager,
+			VMDB:                 &mvmdb,
+			VMAlert:              &mvmalert,
+			Alertmanager:         &malertmanager,
+			ChecksService:        &mchecksService,
+			TemplatesService:     &mtemplatesService,
 			AgentsStateUpdater:   mState,
-			Supervisord:          r,
-			VMAlertExternalRules: par,
-			TelemetryService:     ts,
+			Supervisord:          &r,
+			VMAlertExternalRules: &par,
+			TelemetryService:     &ts,
 		})
 		require.NoError(t, err)
 		return s
@@ -90,6 +100,7 @@ func TestServer(t *testing.T) {
 				"METRICS_RESOLUTION_MR=2s",
 				"METRICS_RESOLUTION_LR=3s",
 				"DATA_RETENTION=240h",
+				"PMM_PUBLIC_ADDRESS=1.2.3.4:5678",
 			})
 			require.Empty(t, errs)
 			assert.Equal(t, true, s.envSettings.DisableUpdates)
@@ -98,6 +109,7 @@ func TestServer(t *testing.T) {
 			assert.Equal(t, 2*time.Second, s.envSettings.MetricsResolutions.MR)
 			assert.Equal(t, 3*time.Second, s.envSettings.MetricsResolutions.LR)
 			assert.Equal(t, 10*24*time.Hour, s.envSettings.DataRetention)
+			assert.Equal(t, "1.2.3.4:5678", s.envSettings.PMMPublicAddress)
 		})
 
 		t.Run("Untypical", func(t *testing.T) {
@@ -234,7 +246,7 @@ func TestServer(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
-		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+		settings, err := server.GetSettings(ctx, &serverpb.GetSettingsRequest{})
 
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
@@ -244,8 +256,8 @@ func TestServer(t *testing.T) {
 
 	t.Run("ChangeSettings IA", func(t *testing.T) {
 		server := newServer(t)
-		rs := new(mockRulesService)
-		server.rulesService = rs
+		var rs mockRulesService
+		server.rulesService = &rs
 		server.UpdateSettingsFromEnv([]string{})
 
 		ctx := context.TODO()
@@ -276,10 +288,10 @@ func TestServer(t *testing.T) {
 func TestServer_TestEmailAlertingSettings(t *testing.T) {
 	t.Parallel()
 
-	server := &Server{}
+	var server Server
 
-	e := new(mockEmailer)
-	server.emailer = e
+	var e mockEmailer
+	server.emailer = &e
 
 	ctx := context.TODO()
 
@@ -428,5 +440,5 @@ func TestServer_TestEmailAlertingSettings(t *testing.T) {
 		})
 	}
 
-	mock.AssertExpectationsForObjects(t, e)
+	mock.AssertExpectationsForObjects(t, &e)
 }

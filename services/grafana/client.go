@@ -41,6 +41,9 @@ import (
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
+// ErrFailedToGetToken means it failed to get user's token. Most likely due to the fact user is not logged in using Percona Account.
+var ErrFailedToGetToken = errors.New("failed to get token")
+
 // Client represents a client for Grafana API.
 type Client struct {
 	addr string
@@ -365,10 +368,10 @@ func (c *Client) authHeadersFromContext(ctx context.Context) (http.Header, error
 	}
 
 	authHeaders := make(http.Header)
-	if len(authorizationHeaders) > 0 {
+	if len(authorizationHeaders) != 0 {
 		authHeaders.Add("Authorization", authorizationHeaders[0])
 	}
-	if len(cookieHeaders) > 0 {
+	if len(cookieHeaders) != 0 {
 		for _, header := range cookieHeaders {
 			authHeaders.Add("Cookie", header)
 		}
@@ -506,6 +509,40 @@ func (c *Client) IsReady(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+const grpcGatewayCookie = "grpcgateway-cookie"
+
+type currentUser struct {
+	AccessToken string `json:"access_token"`
+}
+
+var errCookieIsNotSet = errors.Errorf("cookie %q is not set", grpcGatewayCookie)
+
+// GetCurrentUserAccessToken return users access token from Grafana.
+func (c *Client) GetCurrentUserAccessToken(ctx context.Context) (string, error) {
+	// We need to set cookie to the request to make it execute in grafana user context.
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", errors.Wrap(errCookieIsNotSet, "metada not set in the context")
+	}
+	cookies := md.Get(grpcGatewayCookie)
+	if len(cookies) == 0 {
+		return "", errCookieIsNotSet
+	}
+	headers := http.Header{}
+	headers.Set("Cookie", strings.Join(cookies, "; "))
+
+	var user currentUser
+	if err := c.do(ctx, http.MethodGet, "/percona-api/user/oauth-token", "", headers, nil, &user); err != nil {
+		var e *clientError
+		if errors.As(err, &e) && e.ErrorMessage == "Failed to get token" && e.Code == http.StatusInternalServerError {
+			return "", ErrFailedToGetToken
+		}
+		return "", errors.Wrap(err, "unknown error occured during getting of user's token")
+	}
+
+	return user.AccessToken, nil
 }
 
 // check interfaces

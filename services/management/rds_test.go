@@ -47,16 +47,16 @@ import (
 func TestRDSService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
-	uuid.SetRand(new(tests.IDReader))
+	uuid.SetRand(&tests.IDReader{})
 	defer uuid.SetRand(nil)
 
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	cc := new(mockConnectionChecker)
+	cc := &mockConnectionChecker{}
 	cc.Test(t)
-	state := new(mockAgentsStateUpdater)
+	state := &mockAgentsStateUpdater{}
 	state.Test(t)
 	defer func() {
 		cc.AssertExpectations(t)
@@ -75,6 +75,7 @@ func TestRDSService(t *testing.T) {
 				"ap-south-1",
 				"ap-southeast-1",
 				"ap-southeast-2",
+				"ap-southeast-3",
 				"ca-central-1",
 				"cn-north-1",
 				"cn-northwest-1",
@@ -91,6 +92,7 @@ func TestRDSService(t *testing.T) {
 				"us-gov-east-1",
 				"us-gov-west-1",
 				"us-iso-east-1",
+				"us-iso-west-1",
 				"us-isob-east-1",
 				"us-west-1",
 				"us-west-2",
@@ -202,7 +204,7 @@ func TestRDSService(t *testing.T) {
 				cfg := &aws.Config{
 					CredentialsChainVerboseErrors: aws.Bool(true),
 					Credentials:                   creds,
-					HTTPClient:                    new(http.Client),
+					HTTPClient:                    &http.Client{},
 				}
 				sess, err := session.NewSession(cfg)
 				require.NoError(t, err)

@@ -66,7 +66,7 @@ const (
 )
 
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
-const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
+const PMMServerAgentID = string("pmm-server") // no /agent_id/ prefix
 
 // MySQLOptions represents structure for special MySQL options.
 type MySQLOptions struct {
@@ -83,13 +83,14 @@ func (c *MySQLOptions) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // MongoDBOptions represents structure for special MongoDB options.
 type MongoDBOptions struct {
-	TLSCertificateKey             string `json:"tls_certificate_key"`
-	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
-	TLSCa                         string `json:"tls_ca"`
-	AuthenticationMechanism       string `json:"authentication_mechanism"`
-	AuthenticationDatabase        string `json:"authentication_database"`
-	StatsCollections              string `json:"stats_collections"`
-	CollectionsLimit              int32  `json:"collections_limit"`
+	TLSCertificateKey             string   `json:"tls_certificate_key"`
+	TLSCertificateKeyFilePassword string   `json:"tls_certificate_key_file_password"`
+	TLSCa                         string   `json:"tls_ca"`
+	AuthenticationMechanism       string   `json:"authentication_mechanism"`
+	AuthenticationDatabase        string   `json:"authentication_database"`
+	StatsCollections              []string `json:"stats_collections"`
+	CollectionsLimit              int32    `json:"collections_limit"`
+	EnableAllCollectors           bool     `json:"enable_all_collectors"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -313,7 +314,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			switch {
 			case s.TLSSkipVerify:
 				cfg.Params["tls"] = "skip-verify"
-			case len(s.Files()) > 0:
+			case len(s.Files()) != 0:
 				cfg.Params["tls"] = "custom"
 			default:
 				cfg.Params["tls"] = "true"
@@ -342,7 +343,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			switch {
 			case s.TLSSkipVerify:
 				cfg.Params["tls"] = "skip-verify"
-			case len(s.Files()) > 0:
+			case len(s.Files()) != 0:
 				cfg.Params["tls"] = "custom"
 			default:
 				cfg.Params["tls"] = "true"
@@ -460,7 +461,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		q.Set("sslmode", sslmode)
 
 		if s.PostgreSQLOptions != nil {
-			if files := s.Files(); len(files) > 0 {
+			if files := s.Files(); len(files) != 0 {
 				for key := range files {
 					switch key {
 					case caFilePlaceholder:

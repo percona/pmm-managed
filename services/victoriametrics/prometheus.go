@@ -18,6 +18,7 @@ package victoriametrics
 
 import (
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/version"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -69,6 +70,7 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 
 		// find Node address where the agent runs
 		var paramsHost string
+		var paramPMMAgentVersion *version.Parsed
 		switch {
 		// special case for push metrics mode,
 		// vmagent scrapes it from localhost.
@@ -85,6 +87,7 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 				return errors.WithStack(err)
 			}
 			paramsHost = pmmAgentNode.Address
+			paramPMMAgentVersion = version.MustParse(*pmmAgent.Version)
 		case agent.RunsOnNodeID != nil:
 			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
 			if err = q.Reload(externalExporterNode); err != nil {
@@ -117,10 +120,11 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 
 		case models.MongoDBExporterType:
 			scfgs, err = scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
+				host:            paramsHost,
+				node:            paramsNode,
+				service:         paramsService,
+				agent:           agent,
+				pmmAgentVersion: paramPMMAgentVersion,
 			})
 
 		case models.PostgresExporterType:
@@ -203,8 +207,7 @@ func AddInternalServicesToScrape(cfg *config.Config, s models.MetricsResolutions
 		scrapeConfigForAlertmanager(s.MR),
 		scrapeConfigForGrafana(s.MR),
 		scrapeConfigForPMMManaged(s.MR),
-		scrapeConfigForQANAPI2(s.MR),
-	)
+		scrapeConfigForQANAPI2(s.MR))
 	// TODO Refactor to remove boolean positional parameter when Prometheus is removed
 	if dbaas {
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForDBaaSController(s.MR))

@@ -23,7 +23,7 @@ import (
 	_ "github.com/BurntSushi/go-sumtype"
 	_ "github.com/go-delve/delve/cmd/dlv"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/kevinburke/go-bindata/go-bindata"
+	_ "github.com/quasilyte/go-consistent"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/perf/cmd/benchstat"
@@ -36,7 +36,6 @@ import (
 
 //go:generate go build -o ../bin/benchstat golang.org/x/perf/cmd/benchstat
 //go:generate go build -o ../bin/dlv github.com/go-delve/delve/cmd/dlv
-//go:generate go build -o ../bin/go-bindata github.com/kevinburke/go-bindata/go-bindata
 //go:generate go build -o ../bin/go-sumtype github.com/BurntSushi/go-sumtype
 //go:generate go build -o ../bin/gofumpt mvdan.cc/gofumpt
 //go:generate go build -o ../bin/goimports golang.org/x/tools/cmd/goimports
@@ -45,3 +44,4 @@ import (
 //go:generate go build -o ../bin/mockery github.com/vektra/mockery/cmd/mockery
 //go:generate go build -o ../bin/reform gopkg.in/reform.v1/reform
 //go:generate go build -o ../bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
+//go:generate go build -o ../bin/go-consistent github.com/quasilyte/go-consistent

@@ -14,29 +14,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package grpc
+package ia
 
 import (
-	"context"
+	"testing"
 
-	"github.com/percona/pmm/api/managementpb"
+	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
+	"github.com/percona/pmm/api/managementpb/ia/json/client/alerts"
+	"github.com/stretchr/testify/require"
 
-	"github.com/percona/pmm-managed/services/management"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
-// TODO merge into ../proxysql.go
-type proxySQLServer struct {
-	svc *management.ProxySQLService
+func TestAlertsAPI(t *testing.T) {
+	client := channelsClient.Default.Alerts
 
-	managementpb.UnimplementedProxySQLServer
-}
+	t.Run("list", func(t *testing.T) {
+		_, err := client.ListAlerts(&alerts.ListAlertsParams{
+			Body:    alerts.ListAlertsBody{},
+			Context: pmmapitests.Context})
 
-// NewManagementProxySQLServer creates Management ProxySQL Server.
-func NewManagementProxySQLServer(s *management.ProxySQLService) managementpb.ProxySQLServer {
-	return &proxySQLServer{svc: s}
-}
-
-// AddProxySQL adds "ProxySQL Service", "Postgres Exporter Agent".
-func (s *proxySQLServer) AddProxySQL(ctx context.Context, req *managementpb.AddProxySQLRequest) (*managementpb.AddProxySQLResponse, error) {
-	return s.svc.Add(ctx, req)
+		require.NoError(t, err)
+	})
 }

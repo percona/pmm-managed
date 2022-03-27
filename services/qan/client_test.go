@@ -25,7 +25,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/api/qanpb"
+	qanpb "github.com/percona/pmm/api/qanpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -125,7 +125,7 @@ func TestClient(t *testing.T) {
 	}
 
 	t.Run("Test MySQL Metrics conversion", func(t *testing.T) {
-		c := new(mockQanCollectorClient)
+		c := &mockQanCollectorClient{}
 		c.Test(t)
 		defer c.AssertExpectations(t)
 
@@ -213,7 +213,7 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("Test MongoDB Metrics conversion", func(t *testing.T) {
-		c := new(mockQanCollectorClient)
+		c := &mockQanCollectorClient{}
 		c.Test(t)
 		defer c.AssertExpectations(t)
 
@@ -275,7 +275,7 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("Test PostgreSQL Metrics conversion", func(t *testing.T) {
-		c := new(mockQanCollectorClient)
+		c := &mockQanCollectorClient{}
 		c.Test(t)
 		defer c.AssertExpectations(t)
 
@@ -402,7 +402,7 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("Test conversion skips bad buckets", func(t *testing.T) {
-		c := new(mockQanCollectorClient)
+		c := &mockQanCollectorClient{}
 		c.Test(t)
 		defer c.AssertExpectations(t)
 
@@ -459,7 +459,7 @@ func TestClientPerformance(t *testing.T) {
 	}
 
 	ctx := logger.Set(context.Background(), t.Name())
-	c := new(mockQanCollectorClient)
+	c := &mockQanCollectorClient{}
 	c.Test(t)
 	c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
 	defer c.AssertExpectations(t)

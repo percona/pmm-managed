@@ -40,6 +40,8 @@ type componentsService struct {
 	db                   *reform.DB
 	dbaasClient          dbaasClient
 	versionServiceClient versionService
+
+	dbaasv1beta1.UnimplementedComponentsServer
 }
 
 type installedComponentsVersion struct {
@@ -375,7 +377,7 @@ func (c componentsService) matrix(m map[string]componentVersion, minimalVersion 
 
 func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*models.Component, error) {
 	if kc == nil {
-		kc = new(models.Component)
+		kc = &models.Component{}
 	}
 	if rc.DefaultVersion != "" {
 		kc.DefaultVersion = rc.DefaultVersion

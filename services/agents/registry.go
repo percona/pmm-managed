@@ -47,26 +47,22 @@ var (
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
 		"A total number of messages sent to pmm-agent.",
 		[]string{"agent_id"},
-		nil,
-	)
+		nil)
 	mRecvDesc = prom.NewDesc(
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
 		"A total number of messages received from pmm-agent.",
 		[]string{"agent_id"},
-		nil,
-	)
+		nil)
 	mResponsesDesc = prom.NewDesc(
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
 		"The current length of the response queue.",
 		[]string{"agent_id"},
-		nil,
-	)
+		nil)
 	mRequestsDesc = prom.NewDesc(
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
 		"The current length of the request queue.",
 		[]string{"agent_id"},
-		nil,
-	)
+		nil)
 )
 
 type pmmAgentInfo struct {
@@ -202,11 +198,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		return nil, err
 	}
 
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	// do not use r.get() - r.rw is already locked
-	if agent := r.agents[agentMD.ID]; agent != nil {
+	if r.IsConnected(agentMD.ID) {
 		// pmm-agent with the same ID can still be connected in two cases:
 		//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
 		//   2. pmm-agent detects broken connection and reconnects,
@@ -215,6 +207,8 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
 		r.Kick(ctx, agentMD.ID)
 	}
+	r.rw.Lock()
+	defer r.rw.Unlock()
 
 	agent := &pmmAgentInfo{
 		channel:         channel.New(stream),
@@ -288,7 +282,7 @@ func (r *Registry) unregister(pmmAgentID, disconnectReason string) *pmmAgentInfo
 func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) error {
 	l := logger.Get(ctx)
 	start := time.Now()
-	resp, err := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
+	resp, err := agent.channel.SendAndWaitResponse(&agentpb.Ping{})
 	if err != nil {
 		return err
 	}

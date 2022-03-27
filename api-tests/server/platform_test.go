@@ -19,11 +19,8 @@ package server
 import (
 	"net/http"
 	"os"
-	"os/user"
-	"strings"
 	"testing"
 
-	"github.com/brianvoe/gofakeit"
 	platformClient "github.com/percona/pmm/api/platformpb/json/client"
 	"github.com/percona/pmm/api/platformpb/json/client/platform"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
@@ -38,11 +35,12 @@ import (
 func TestPlatform(t *testing.T) {
 	client := platformClient.Default.Platform
 	serverClient := serverClient.Default.Server
-	t.Run("connect", func(t *testing.T) {
-		const serverName string = "my PMM"
-		email, password := os.Getenv("PERCONA_TEST_PORTAL_EMAIL"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
-		if email == "" || password == "" {
-			t.Skip("Environment variables PERCONA_TEST_PORTAL_EMAIL, PERCONA_TEST_PORTAL_PASSWORD not set.")
+
+	const serverName = string("my PMM")
+	username, password := os.Getenv("PERCONA_TEST_PORTAL_USERNAME"), os.Getenv("PERCONA_TEST_PORTAL_PASSWORD")
+	t.Run("connect and disconnect", func(t *testing.T) {
+		if username == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_USERNAME, PERCONA_TEST_PORTAL_PASSWORD not set.")
 		}
 		t.Run("PMM server does not have address set", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
@@ -81,7 +79,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("wrong password", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					Password:   "WrongPassword12345",
 					ServerName: serverName,
 				},
@@ -105,7 +103,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("empty password", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					ServerName: serverName,
 					Password:   "",
 				},
@@ -117,7 +115,7 @@ func TestPlatform(t *testing.T) {
 		t.Run("empty server name", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
-					Email:      email,
+					Email:      username,
 					Password:   password,
 					ServerName: "",
 				},
@@ -126,13 +124,11 @@ func TestPlatform(t *testing.T) {
 			pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.InvalidArgument, "invalid field ServerName: value '' must not be an empty string")
 		})
 
-		t.Run("successful call", func(t *testing.T) {
-			t.Skip("Skip this test until we've got disconnect")
-
+		t.Run("successful connect and disconnect", func(t *testing.T) {
 			_, err := client.Connect(&platform.ConnectParams{
 				Body: platform.ConnectBody{
 					ServerName: serverName,
-					Email:      email,
+					Email:      username,
 					Password:   password,
 				},
 				Context: pmmapitests.Context,
@@ -144,21 +140,73 @@ func TestPlatform(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, settings)
 			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
+
+			_, err = client.Disconnect(&platform.DisconnectParams{
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			// Confirm we are disconnected from Portal.
+			settings, err = serverClient.GetSettings(nil)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.False(t, settings.GetPayload().Settings.ConnectedToPlatform)
 		})
 	})
-}
 
-// genCredentials creates test user email, password, firstName and lastName.
-func genCredentials(t *testing.T) (string, string, string, string) {
-	hostname, err := os.Hostname()
-	require.NoError(t, err)
+	t.Run("search_tickets", func(t *testing.T) {
+		if username == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_USERNAME, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		}
 
-	u, err := user.Current()
-	require.NoError(t, err)
+		t.Run("success", func(t *testing.T) {
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
+					ServerName: serverName,
+					Email:      username,
+					Password:   password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
 
-	email := strings.Join([]string{u.Username, hostname, gofakeit.Email(), "test"}, ".")
-	password := gofakeit.Password(true, true, true, false, false, 14)
-	firstName := gofakeit.FirstName()
-	lastName := gofakeit.LastName()
-	return email, password, firstName, lastName
+			// Confirm we are connected to Portal.
+			settings, err := serverClient.GetSettings(nil)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
+
+			resp, err := client.SearchOrganizationTickets(&platform.SearchOrganizationTicketsParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+			require.NotNil(t, resp.GetPayload().Tickets)
+		})
+	})
+
+	t.Run("search_entitlements", func(t *testing.T) { //nolint:dupl
+		if username == "" || password == "" {
+			t.Skip("Environment variables PERCONA_TEST_PORTAL_USERNAME, PERCONA_TEST_PORTAL_PASSWORD not set.")
+		}
+
+		t.Run("success", func(t *testing.T) {
+			_, err := client.Connect(&platform.ConnectParams{
+				Body: platform.ConnectBody{
+					ServerName: serverName,
+					Email:      username,
+					Password:   password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			// Confirm we are connected to Portal.
+			settings, err := serverClient.GetSettings(nil)
+			require.NoError(t, err)
+			require.NotNil(t, settings)
+			assert.True(t, settings.GetPayload().Settings.ConnectedToPlatform)
+
+			resp, err := client.SearchOrganizationEntitlements(&platform.SearchOrganizationEntitlementsParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+			require.NotNil(t, resp.GetPayload().Entitlements)
+		})
+	})
 }

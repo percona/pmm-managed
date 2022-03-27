@@ -53,6 +53,8 @@ type RDSService struct {
 	db    *reform.DB
 	state agentsStateUpdater
 	cc    connectionChecker
+
+	managementpb.UnimplementedRDSServer
 }
 
 // NewRDSService creates new instance discovery service.
@@ -151,7 +153,7 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 	cfg := &aws.Config{
 		CredentialsChainVerboseErrors: aws.Bool(true),
 		Credentials:                   creds,
-		HTTPClient:                    new(http.Client),
+		HTTPClient:                    &http.Client{},
 	}
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		cfg.LogLevel = aws.LogLevel(aws.LogDebug)
@@ -199,7 +201,7 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 		close(instances)
 	}()
 
-	res := new(managementpb.DiscoverRDSResponse)
+	res := &managementpb.DiscoverRDSResponse{}
 	for i := range instances {
 		res.RdsInstances = append(res.RdsInstances, i)
 	}
@@ -213,7 +215,7 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 	})
 
 	// ignore error if there are some results
-	if len(res.RdsInstances) > 0 {
+	if len(res.RdsInstances) != 0 {
 		return res, nil
 	}
 
@@ -234,7 +236,7 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 
 // AddRDS adds RDS instance.
 func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest) (*managementpb.AddRDSResponse, error) {
-	res := new(managementpb.AddRDSResponse)
+	res := &managementpb.AddRDSResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		// tweak according to API docs

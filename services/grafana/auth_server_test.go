@@ -60,7 +60,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 		req, err := http.NewRequest("GET", "/graph", nil)
 		require.NoError(t, err)
 
-		checker := new(mockAwsInstanceChecker)
+		checker := &mockAwsInstanceChecker{}
 		checker.Test(t)
 		defer checker.AssertExpectations(t)
 
@@ -103,7 +103,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 		req, err := http.NewRequest("GET", "/graph", nil)
 		require.NoError(t, err)
 
-		checker := new(mockAwsInstanceChecker)
+		checker := &mockAwsInstanceChecker{}
 		checker.Test(t)
 		defer checker.AssertExpectations(t)
 
@@ -129,7 +129,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 		req, err := http.NewRequest("GET", "/dummy", nil)
 		require.NoError(t, err)
 
-		checker := new(mockAwsInstanceChecker)
+		checker := &mockAwsInstanceChecker{}
 		checker.Test(t)
 		defer checker.AssertExpectations(t)
 
@@ -154,7 +154,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 func TestAuthServerAuthenticate(t *testing.T) {
 	// logrus.SetLevel(logrus.TraceLevel)
 
-	checker := new(mockAwsInstanceChecker)
+	checker := &mockAwsInstanceChecker{}
 	checker.Test(t)
 	defer checker.AssertExpectations(t)
 
@@ -208,7 +208,6 @@ func TestAuthServerAuthenticate(t *testing.T) {
 		"/v1/Updates/Status":                               none,
 		"/v1/Settings/Get":                                 admin,
 		"/v1/AWSInstanceCheck":                             none,
-		"/v1/Platform/SignUp":                              admin,
 		"/v1/Platform/Connect":                             admin,
 
 		"/v1/readyz": none,

@@ -64,7 +64,7 @@ func (e InvalidDurationError) Error() string { return string(e) }
 //  - ENABLE_DBAAS enables Database as a Service feature, it's a replacement for deprecated PERCONA_TEST_DBAAS which still works but will be removed eventually;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
-	envSettings = new(models.ChangeSettingsParams)
+	envSettings = &models.ChangeSettingsParams{}
 
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
@@ -141,6 +141,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
 			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
+
+		case "PMM_PUBLIC_ADDRESS":
+			envSettings.PMMPublicAddress = v
 
 		case envEnableDbaas, envTestDbaas:
 			envSettings.EnableDBaaS, err = strconv.ParseBool(v)

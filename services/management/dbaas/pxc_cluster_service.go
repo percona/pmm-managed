@@ -40,6 +40,8 @@ type PXCClustersService struct {
 	controllerClient     dbaasClient
 	grafanaClient        grafanaClient
 	versionServiceClient versionService
+
+	dbaasv1beta1.UnimplementedPXCClustersServer
 }
 
 // NewPXCClusterService creates PXC Service.
@@ -130,7 +132,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.PXCClusterParams_PXC{
 				Image:            req.Params.Pxc.Image,
-				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{},
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
 			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
@@ -140,7 +142,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 	if req.Params.Proxysql != nil {
 		in.Params.Proxysql = &dbaascontrollerv1beta1.PXCClusterParams_ProxySQL{
 			Image:            req.Params.Proxysql.Image,
-			ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
+			ComputeResources: &dbaascontrollerv1beta1.ComputeResources{},
 			DiskSize:         req.Params.Proxysql.DiskSize,
 		}
 		if req.Params.Proxysql.ComputeResources != nil {
@@ -152,7 +154,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 	} else {
 		in.Params.Haproxy = &dbaascontrollerv1beta1.PXCClusterParams_HAProxy{
 			Image:            req.Params.Haproxy.Image,
-			ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
+			ComputeResources: &dbaascontrollerv1beta1.ComputeResources{},
 		}
 		if req.Params.Haproxy.ComputeResources != nil {
 			in.Params.Haproxy.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{

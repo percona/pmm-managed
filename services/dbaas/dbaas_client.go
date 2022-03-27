@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/credentials/insecure"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
@@ -38,9 +39,9 @@ type Client struct {
 	pxcClusterClient          controllerv1beta1.PXCClusterAPIClient
 	psmdbClusterClient        controllerv1beta1.PSMDBClusterAPIClient
 	logsClient                controllerv1beta1.LogsAPIClient
-	xtradbOperatorClient      controllerv1beta1.PXCOperatorAPIClient
+	pxcOperatorClient         controllerv1beta1.PXCOperatorAPIClient
 	psmdbOperatorClient       controllerv1beta1.PSMDBOperatorAPIClient
-	connM                     *sync.RWMutex
+	connM                     sync.RWMutex
 	conn                      *grpc.ClientConn
 	dbaasControllerAPIAddress string
 }
@@ -49,7 +50,6 @@ type Client struct {
 func NewClient(dbaasControllerAPIAddress string) *Client {
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
-		connM:                     new(sync.RWMutex),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
 	}
 	return c
@@ -68,7 +68,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	backoffConfig.MaxDelay = 10 * time.Second
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), // Dial blocks, we do not connect in background.
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoffConfig, MinConnectTimeout: 10 * time.Second}),
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 	}
@@ -84,7 +84,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.psmdbClusterClient = controllerv1beta1.NewPSMDBClusterAPIClient(conn)
 	c.logsClient = controllerv1beta1.NewLogsAPIClient(conn)
 	c.psmdbOperatorClient = controllerv1beta1.NewPSMDBOperatorAPIClient(conn)
-	c.xtradbOperatorClient = controllerv1beta1.NewPXCOperatorAPIClient(conn)
+	c.pxcOperatorClient = controllerv1beta1.NewPXCOperatorAPIClient(conn)
 
 	c.l.Info("Connected to dbaas-controller API.")
 	return nil
@@ -222,7 +222,7 @@ func (c *Client) GetResources(ctx context.Context, in *controllerv1beta1.GetReso
 func (c *Client) InstallPXCOperator(ctx context.Context, in *controllerv1beta1.InstallPXCOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPXCOperatorResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	return c.xtradbOperatorClient.InstallPXCOperator(ctx, in, opts...)
+	return c.pxcOperatorClient.InstallPXCOperator(ctx, in, opts...)
 }
 
 // InstallPSMDBOperator installs kubernetes PSMDB operator.

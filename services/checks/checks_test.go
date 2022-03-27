@@ -68,13 +68,39 @@ func TestDownloadChecks(t *testing.T) {
 	s.host = devChecksHost
 	s.publicKeys = []string{devChecksPublicKey}
 
-	assert.Empty(t, s.GetAllChecks())
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	t.Run("normal", func(t *testing.T) {
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Empty(t, checks)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-	checks, err := s.downloadChecks(ctx)
-	require.NoError(t, err)
-	assert.NotEmpty(t, checks)
+		dChecks, err := s.downloadChecks(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, dChecks)
+
+		checks, err = s.GetChecks()
+		require.NoError(t, err)
+		assert.NotEmpty(t, checks)
+	})
+
+	t.Run("disabled telemetry", func(t *testing.T) {
+		_, err := models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
+			DisableTelemetry: true,
+		})
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		dChecks, err := s.downloadChecks(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, dChecks)
+
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Empty(t, checks)
+	})
 }
 
 func TestLoadLocalChecks(t *testing.T) {
@@ -83,9 +109,9 @@ func TestLoadLocalChecks(t *testing.T) {
 
 	checks, err := s.loadLocalChecks(testChecksFile)
 	require.NoError(t, err)
-	require.Len(t, checks, 3)
+	require.Len(t, checks, 5)
 
-	c1, c2, c3 := checks[0], checks[1], checks[2]
+	c1, c2, c3, c4, c5 := checks[0], checks[1], checks[2], checks[3], checks[4]
 
 	assert.Equal(t, check.PostgreSQLSelect, c1.Type)
 	assert.Equal(t, "good_check_pg", c1.Name)
@@ -101,6 +127,16 @@ func TestLoadLocalChecks(t *testing.T) {
 	assert.Equal(t, "good_check_mongo", c3.Name)
 	assert.Equal(t, uint32(1), c3.Version)
 	assert.Empty(t, c3.Query)
+
+	assert.Equal(t, check.MongoDBReplSetGetStatus, c4.Type)
+	assert.Equal(t, "check_mongo_replSetGetStatus", c4.Name)
+	assert.Equal(t, uint32(1), c4.Version)
+	assert.Empty(t, c4.Query)
+
+	assert.Equal(t, check.MongoDBGetDiagnosticData, c5.Type)
+	assert.Equal(t, "check_mongo_getDiagnosticData", c5.Name)
+	assert.Equal(t, uint32(1), c5.Version)
+	assert.Empty(t, c5.Query)
 }
 
 func TestCollectChecks(t *testing.T) {
@@ -111,21 +147,23 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
-		mySQLChecks := s.getMySQLChecks()
-		postgreSQLChecks := s.getPostgreSQLChecks()
-		mongoDBChecks := s.getMongoDBChecks()
-		allChecks := s.GetAllChecks()
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		require.Len(t, checks, 5)
 
-		require.Len(t, mySQLChecks, 1)
-		require.Len(t, postgreSQLChecks, 1)
-		require.Len(t, mongoDBChecks, 1)
-		require.Len(t, allChecks, 3)
-
-		assert.Equal(t, check.MySQLShow, mySQLChecks["bad_check_mysql"].Type)
-		assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks["good_check_pg"].Type)
-		assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks["good_check_mongo"].Type)
+		checkNames := make([]string, 0, len(checks))
+		for _, c := range checks {
+			checkNames = append(checkNames, c.Name)
+		}
+		assert.ElementsMatch(t, []string{
+			"bad_check_mysql",
+			"good_check_pg",
+			"good_check_mongo",
+			"check_mongo_replSetGetStatus",
+			"check_mongo_getDiagnosticData",
+		}, checkNames)
 	})
 
 	t.Run("download checks", func(t *testing.T) {
@@ -135,11 +173,8 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
-
-		assert.NotEmpty(t, s.mySQLChecks)
-		assert.NotEmpty(t, s.postgreSQLChecks)
-		assert.NotEmpty(t, s.mongoDBChecks)
+		s.CollectChecks(context.Background())
+		assert.NotEmpty(t, s.checks)
 	})
 }
 
@@ -151,10 +186,11 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
-		checks := s.GetAllChecks()
-		assert.Len(t, checks, 3)
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Len(t, checks, 5)
 
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
@@ -175,10 +211,11 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
-		checks := s.GetAllChecks()
-		assert.Len(t, checks, 3)
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Len(t, checks, 5)
 
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
@@ -202,7 +239,7 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
 		err = s.DisableChecks([]string{"unknown_check"})
 		require.Error(t, err)
@@ -221,10 +258,11 @@ func TestEnableChecks(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
-		checks := s.GetAllChecks()
-		assert.Len(t, checks, 3)
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Len(t, checks, 5)
 
 		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name, checks["good_check_pg"].Name, checks["good_check_mongo"].Name})
 		require.NoError(t, err)
@@ -235,6 +273,9 @@ func TestEnableChecks(t *testing.T) {
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
 		assert.Equal(t, []string{checks["bad_check_mysql"].Name}, disChecks)
+
+		enabledChecksCount := len(checks) - len(disChecks)
+		assert.Equal(t, 4, enabledChecksCount)
 	})
 }
 
@@ -248,10 +289,11 @@ func TestChangeInterval(t *testing.T) {
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
-		s.collectChecks(context.Background())
+		s.CollectChecks(context.Background())
 
-		checks := s.GetAllChecks()
-		assert.Len(t, checks, 3)
+		checks, err := s.GetChecks()
+		require.NoError(t, err)
+		assert.Len(t, checks, 5)
 
 		// change all check intervals from standard to rare
 		params := make(map[string]check.Interval)
@@ -261,7 +303,8 @@ func TestChangeInterval(t *testing.T) {
 		err = s.ChangeInterval(params)
 		require.NoError(t, err)
 
-		updatedChecks := s.GetAllChecks()
+		updatedChecks, err := s.GetChecks()
+		require.NoError(t, err)
 		for _, c := range updatedChecks {
 			assert.Equal(t, check.Rare, c.Interval)
 		}
@@ -274,10 +317,11 @@ func TestChangeInterval(t *testing.T) {
 			err = models.SaveSettings(db, settings)
 			require.NoError(t, err)
 
-			err = s.StartChecks(context.Background(), "", nil)
+			err = s.runChecksGroup(context.Background(), "")
 			require.NoError(t, err)
 
-			checks := s.GetAllChecks()
+			checks, err := s.GetChecks()
+			require.NoError(t, err)
 			for _, c := range checks {
 				assert.Equal(t, check.Rare, c.Interval)
 			}
@@ -298,7 +342,9 @@ func TestSTTMetrics(t *testing.T) {
 		    # TYPE pmm_managed_checks_alerts_generated_total counter
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_BUILDINFO",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETCMDLINEOPTS",service_type="mongodb"} 0
+			pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETDIAGNOSTICDATA",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETPARAMETER",service_type="mongodb"} 0
+			pmm_managed_checks_alerts_generated_total{check_type="MONGODB_REPLSETGETSTATUS",service_type="mongodb"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SELECT",service_type="mysql"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SHOW",service_type="mysql"} 0
 		    pmm_managed_checks_alerts_generated_total{check_type="POSTGRESQL_SELECT",service_type="postgresql"} 0
@@ -347,7 +393,7 @@ func TestStartChecks(t *testing.T) {
 	t.Run("stt disabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		err = s.StartChecks(context.Background(), "", nil)
+		err = s.runChecksGroup(context.Background(), "")
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 
@@ -361,7 +407,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background(), check.Interval("unknown"), nil)
+		err = s.runChecksGroup(context.Background(), check.Interval("unknown"))
 		assert.EqualError(t, err, "unknown check interval: unknown")
 	})
 
@@ -378,7 +424,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background(), "", nil)
+		err = s.runChecksGroup(context.Background(), "")
 		require.NoError(t, err)
 	})
 }
@@ -394,6 +440,8 @@ func TestFilterChecks(t *testing.T) {
 		{Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
 		{Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
 		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
+		{Name: "MongoDBReplSetGetStatus", Version: 1, Type: check.MongoDBReplSetGetStatus},
+		{Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
 	}
 
 	invalid := []check.Check{
@@ -413,16 +461,18 @@ func TestFilterChecks(t *testing.T) {
 func TestGroupChecksByDB(t *testing.T) {
 	t.Parallel()
 
-	checks := []check.Check{
-		{Name: "MySQLShow", Version: 1, Type: check.MySQLShow},
-		{Name: "MySQLSelect", Version: 1, Type: check.MySQLSelect},
-		{Name: "PostgreSQLShow", Version: 1, Type: check.PostgreSQLShow},
-		{Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
-		{Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
-		{Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
-		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
-		{Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
-		{Name: "missing type", Version: 1},
+	checks := map[string]check.Check{
+		"MySQLShow":                {Name: "MySQLShow", Version: 1, Type: check.MySQLShow},
+		"MySQLSelect":              {Name: "MySQLSelect", Version: 1, Type: check.MySQLSelect},
+		"PostgreSQLShow":           {Name: "PostgreSQLShow", Version: 1, Type: check.PostgreSQLShow},
+		"PostgreSQLSelect":         {Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
+		"MongoDBGetParameter":      {Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
+		"MongoDBBuildInfo":         {Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
+		"MongoDBGetCmdLineOpts":    {Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
+		"MongoDBReplSetGetStatus":  {Name: "MongoDBReplSetGetStatus", Version: 1, Type: check.MongoDBReplSetGetStatus},
+		"MongoDBGetDiagnosticData": {Name: "MongoDBGetDiagnosticData", Version: 1, Type: check.MongoDBGetDiagnosticData},
+		"unsupported type":         {Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
+		"missing type":             {Name: "missing type", Version: 1},
 	}
 
 	s, err := New(nil, nil, nil)
@@ -431,7 +481,7 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	require.Len(t, mySQLChecks, 2)
 	require.Len(t, postgreSQLChecks, 2)
-	require.Len(t, mongoDBChecks, 3)
+	require.Len(t, mongoDBChecks, 5)
 
 	assert.Equal(t, check.MySQLShow, mySQLChecks["MySQLShow"].Type)
 	assert.Equal(t, check.MySQLSelect, mySQLChecks["MySQLSelect"].Type)
@@ -442,6 +492,8 @@ func TestGroupChecksByDB(t *testing.T) {
 	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks["MongoDBGetParameter"].Type)
 	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks["MongoDBBuildInfo"].Type)
 	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks["MongoDBGetCmdLineOpts"].Type)
+	assert.Equal(t, check.MongoDBReplSetGetStatus, mongoDBChecks["MongoDBReplSetGetStatus"].Type)
+	assert.Equal(t, check.MongoDBGetDiagnosticData, mongoDBChecks["MongoDBGetDiagnosticData"].Type)
 }
 
 func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
@@ -524,20 +576,27 @@ func TestFindTargets(t *testing.T) {
 
 func TestFilterChecksByInterval(t *testing.T) {
 	t.Parallel()
+	s, err := New(nil, nil, nil)
+	require.NoError(t, err)
 
 	rareCheck := check.Check{Name: "rareCheck", Interval: check.Rare}
 	standardCheck := check.Check{Name: "standardCheck", Interval: check.Standard}
 	frequentCheck := check.Check{Name: "frequentCheck", Interval: check.Frequent}
 	emptyCheck := check.Check{Name: "emptyCheck"}
 
-	checks := []check.Check{rareCheck, standardCheck, frequentCheck, emptyCheck}
+	checks := map[string]check.Check{
+		rareCheck.Name:     rareCheck,
+		standardCheck.Name: standardCheck,
+		frequentCheck.Name: frequentCheck,
+		emptyCheck.Name:    emptyCheck,
+	}
 
-	rareChecks := filterChecksByInterval(checks, check.Rare)
-	assert.ElementsMatch(t, []check.Check{rareCheck}, rareChecks)
+	rareChecks := s.filterChecks(checks, check.Rare, nil, nil)
+	assert.Equal(t, map[string]check.Check{"rareCheck": rareCheck}, rareChecks)
 
-	standardChecks := filterChecksByInterval(checks, check.Standard)
-	assert.ElementsMatch(t, []check.Check{standardCheck, emptyCheck}, standardChecks)
+	standardChecks := s.filterChecks(checks, check.Standard, nil, nil)
+	assert.Equal(t, map[string]check.Check{"standardCheck": standardCheck, "emptyCheck": emptyCheck}, standardChecks)
 
-	frequentChecks := filterChecksByInterval(checks, check.Frequent)
-	assert.ElementsMatch(t, []check.Check{frequentCheck}, frequentChecks)
+	frequentChecks := s.filterChecks(checks, check.Frequent, nil, nil)
+	assert.Equal(t, map[string]check.Check{"frequentCheck": frequentCheck}, frequentChecks)
 }

@@ -49,8 +49,7 @@ import (
 
 const (
 	defaultClickhouseDatabase = "pmm"
-	defaultClickhouseHostname = "127.0.0.1"
-	defaultClickhousePort     = "9000"
+	defaultClickhouseAddr     = "127.0.0.1:9000"
 )
 
 // Service is responsible for interactions with Supervisord via supervisorctl.
@@ -411,25 +410,31 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		clickhouseDatabase = defaultClickhouseDatabase
 	}
 
-	clickhouseHostname, ok := os.LookupEnv("PMM_CLICKHOUSE_HOST")
+	clickhouseAddr, ok := os.LookupEnv("PMM_CLICKHOUSE_ADDR")
 	if !ok {
-		clickhouseHostname = defaultClickhouseHostname
+		clickhouseAddr = defaultClickhouseAddr
 	}
 
-	clickhousePort, ok := os.LookupEnv("PMM_CLICKHOUSE_PORT")
+	clickhousePoolSize, ok := os.LookupEnv("PMM_CLICKHOUSE_POOL_SIZE")
 	if !ok {
-		clickhousePort = defaultClickhousePort
+		clickhousePoolSize = ""
+	}
+
+	clickhouseBlockSize, ok := os.LookupEnv("PMM_CLICKHOUSE_BLOCK_SIZE")
+	if !ok {
+		clickhouseBlockSize = ""
 	}
 
 	templateParams := map[string]interface{}{
-		"DataRetentionHours": int(settings.DataRetention.Hours()),
-		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
-		"VMAlertFlags":       s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
-		"PerconaTestDbaas":   settings.DBaaS.Enabled,
-		"ClickhouseHostname": clickhouseHostname,
-		"ClickhouseDatabase": clickhouseDatabase,
-		"ClickhousePort":     clickhousePort,
+		"DataRetentionHours":  int(settings.DataRetention.Hours()),
+		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
+		"VMAlertFlags":        s.vmParams.VMAlertFlags,
+		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
+		"PerconaTestDbaas":    settings.DBaaS.Enabled,
+		"ClickhouseAddr":      clickhouseAddr,
+		"ClickhouseDatabase":  clickhouseDatabase,
+		"ClickhousePoolSize":  clickhousePoolSize,
+		"ClickhouseBlockSize": clickhouseBlockSize,
 	}
 
 	if ssoDetails != nil {
@@ -739,15 +744,20 @@ command =
         cfg:default.auth.generic_oauth.name="Percona Account"
         cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
         cfg:default.auth.generic_oauth.client_secret="{{ .PerconaSSODetails.ClientSecret }}"
-        cfg:default.auth.generic_oauth.scopes="openid profile email offline_access"
+        cfg:default.auth.generic_oauth.scopes="openid profile email offline_access percona"
         cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
         cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
+		cfg:default.auth.generic_oauth.role_attribute_path="contains(portal_admin_orgs[*], '{{ .PerconaSSODetails.OrganizationID }}') && 'Admin' || 'Viewer'"
         {{- end}}
-environment =
-	PMM_CLICKHOUSE_HOST="{{ .ClickhouseHostname }}",
-	PMM_CLICKHOUSE_PORT="{{ .ClickhousePort }}",
+
+environment=
+	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
+	PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
 	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
+	{{- if .ClickhousePoolSize }}PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }}{{- end}}
+	{{- if .ClickhouseBlockSize }}PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
+
 	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 user = grafana
 directory = /usr/share/grafana

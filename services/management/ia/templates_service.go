@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -78,6 +79,8 @@ type TemplatesService struct {
 
 	rw        sync.RWMutex
 	templates map[string]templateInfo
+
+	iav1beta1.UnimplementedTemplatesServer
 }
 
 // NewTemplatesService creates a new TemplatesService.
@@ -129,19 +132,19 @@ func (s *TemplatesService) getTemplates() map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]templateInfo)
+	res := make(map[string]templateInfo, len(s.templates))
 	for n, r := range s.templates {
 		res[n] = r
 	}
 	return res
 }
 
-// Collect collects IA rule templates from various sources like:
-// builtin templates: read from the generated code in bindata.go.
+// CollectTemplates collects IA rule templates from various sources like:
+// builtin templates: read from the generated variable of type embed.FS
 // SaaS templates: templates downloaded from checks service.
 // user file templates: read from yaml files created by the user in `/srv/ia/templates`
 // user API templates: in the DB created using the API.
-func (s *TemplatesService) Collect(ctx context.Context) {
+func (s *TemplatesService) CollectTemplates(ctx context.Context) {
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
@@ -207,16 +210,23 @@ func (s *TemplatesService) Collect(ctx context.Context) {
 
 // loadTemplatesFromAssets loads built-in alerting rule templates from pmm-managed binary's assets.
 func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
-	paths := data.AssetNames()
-	res := make([]alert.Template, 0, len(paths))
-	for _, path := range paths {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+	var res []alert.Template
+	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return errors.Wrapf(err, "error occurred while traversing templates folder: %s", path)
 		}
 
-		data, err := data.Asset(path)
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		data, err := fs.ReadFile(data.IATemplates, path)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read rule template asset: %s", path)
+			return errors.Wrapf(err, "failed to read rule template asset: %s", path)
 		}
 
 		// be strict about built-in templates
@@ -226,33 +236,38 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 		}
 		templates, err := alert.Parse(bytes.NewReader(data), params)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse rule template asset: %s", path)
+			return errors.Wrapf(err, "failed to parse rule template asset: %s", path)
 		}
 
 		// built-in-specific validations
 		// TODO move to some better / common place
 
 		if l := len(templates); l != 1 {
-			return nil, errors.Errorf("%q should contain exactly one template, got %d", path, l)
+			return errors.Errorf("%q should contain exactly one template, got %d", path, l)
 		}
 
 		t := templates[0]
 
 		filename := filepath.Base(path)
 		if strings.HasPrefix(filename, "pmm_") {
-			return nil, errors.Errorf("%q file name should not start with 'pmm_' prefix", path)
+			return errors.Errorf("%q file name should not start with 'pmm_' prefix", path)
 		}
 		if !strings.HasPrefix(t.Name, "pmm_") {
-			return nil, errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
+			return errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
 		}
 		if expected := strings.TrimPrefix(t.Name, "pmm_") + ".yml"; filename != expected {
-			return nil, errors.Errorf("template file name %q should be %q", filename, expected)
+			return errors.Errorf("template file name %q should be %q", filename, expected)
 		}
 		if len(t.Annotations) != 2 || t.Annotations["summary"] == "" || t.Annotations["description"] == "" {
-			return nil, errors.Errorf("%s %q: template should contain exactly two annotations: summary and description", path, t.Name)
+			return errors.Errorf("%s %q: template should contain exactly two annotations: summary and description", path, t.Name)
 		}
 
 		res = append(res, t)
+		return nil
+	}
+	err := fs.WalkDir(data.IATemplates, ".", walkDirFunc)
+	if err != nil {
+		return nil, err
 	}
 	return res, nil
 }
@@ -373,6 +388,16 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 
 // downloadTemplates downloads IA templates from SaaS.
 func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Template, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if settings.Telemetry.Disabled {
+		s.l.Debug("Alert templates downloading skipped due to disabled telemetry.")
+		return nil, nil
+	}
+
 	s.l.Infof("Downloading templates from %s ...", s.host)
 
 	var accessToken string
@@ -478,7 +503,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	}
 
 	if req.Reload {
-		s.Collect(ctx)
+		s.CollectTemplates(ctx)
 	}
 
 	templates := s.getTemplates()
@@ -562,7 +587,7 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
-	s.Collect(ctx)
+	s.CollectTemplates(ctx)
 
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
@@ -605,7 +630,7 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, e
 	}
 
-	s.Collect(ctx)
+	s.CollectTemplates(ctx)
 
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }
@@ -619,7 +644,7 @@ func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.De
 		return nil, e
 	}
 
-	s.Collect(ctx)
+	s.CollectTemplates(ctx)
 
 	return &iav1beta1.DeleteTemplateResponse{}, nil
 }

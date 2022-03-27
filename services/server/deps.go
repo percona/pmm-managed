@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 
@@ -37,6 +36,7 @@ import (
 //go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
 //go:generate mockery -name=emailer -case=snake -inpkg -testonly
+//go:generate mockery -name=templatesService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
 // service health for the Readiness check.
@@ -69,7 +69,8 @@ type alertmanagerService interface {
 // checksService is a subset of methods of checks.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type checksService interface {
-	StartChecks(ctx context.Context, group check.Interval, checkNames []string) error
+	StartChecks(checkNames []string) error
+	CollectChecks(ctx context.Context)
 	CleanupAlerts()
 	UpdateIntervals(rare, standard, frequent time.Duration)
 }
@@ -125,4 +126,10 @@ type rulesService interface {
 
 type emailer interface {
 	Send(ctx context.Context, settings *models.EmailAlertingSettings, emailTo string) error
+}
+
+// rulesService is a subset of methods of ia.TemplatesService used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type templatesService interface {
+	CollectTemplates(ctx context.Context)
 }

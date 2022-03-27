@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version:
-          - 1.16.x
+          - 1.17.x
         os: [ubuntu-latest]
         may-fail: [false]
 
@@ -114,6 +114,7 @@ jobs:
       - name: Cache
         run: |
           docker exec pmm-managed-server go clean -testcache
+          docker exec --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server find . -type d -name fuzzdata -exec rm -r {} +
           rm -fr ~/.cache/go-build
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
 
@@ -129,12 +130,12 @@ jobs:
 
   check:
     name: Check
-    timeout-minutes: 10
+    timeout-minutes: 15
     if: github.event_name == 'pull_request'
 
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.17.x]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -183,7 +184,8 @@ jobs:
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          make env-ci TARGET=check
+          go run .github/check-license.go
+          bin/go-sumtype ./...
           # use GITHUB_TOKEN because only it has access to GitHub Checks API
           bin/golangci-lint run -c=.golangci-required.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -name='Required checks' -reporter=github-pr-check
 
@@ -215,8 +217,8 @@ jobs:
       - name: Cache
         run: |
           docker exec pmm-managed-server go clean -testcache
+          docker exec --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server find . -type d -name fuzzdata -exec rm -r {} +
           rm -fr ~/.cache/go-build
-          mkdir -p ~/.cache
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
 
       - name: Run debug commands on failure

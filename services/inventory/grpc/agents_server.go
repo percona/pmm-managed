@@ -28,11 +28,13 @@ import (
 
 type agentsServer struct {
 	s *inventory.AgentsService
+
+	inventorypb.UnimplementedAgentsServer
 }
 
 // NewAgentsServer returns Inventory API handler for managing Agents.
 func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
-	return &agentsServer{s}
+	return &agentsServer{s: s}
 }
 
 var agentTypes = map[inventorypb.AgentType]models.AgentType{
@@ -74,7 +76,7 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 		return nil, err
 	}
 
-	res := new(inventorypb.ListAgentsResponse)
+	res := &inventorypb.ListAgentsResponse{}
 	for _, agent := range agents {
 		switch agent := agent.(type) {
 		case *inventorypb.PMMAgent:
@@ -121,7 +123,7 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		return nil, err
 	}
 
-	res := new(inventorypb.GetAgentResponse)
+	res := &inventorypb.GetAgentResponse{}
 	switch agent := agent.(type) {
 	case *inventorypb.PMMAgent:
 		res.Agent = &inventorypb.GetAgentResponse_PmmAgent{PmmAgent: agent}
@@ -530,5 +532,5 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveA
 		return nil, err
 	}
 
-	return new(inventorypb.RemoveAgentResponse), nil
+	return &inventorypb.RemoveAgentResponse{}, nil
 }

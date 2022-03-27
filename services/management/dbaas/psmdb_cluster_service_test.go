@@ -37,37 +37,37 @@ import (
 )
 
 const psmdbKubeconfTest = `
-	{
-		"apiVersion": "v1",
-		"kind": "Config",
-		"users": [
-			{
-				"name": "percona-server-mongodb-operator",
-				"user": {
-					"token": "some-token"
-				}
+{
+	"apiVersion": "v1",
+	"kind": "Config",
+	"users": [
+		{
+			"name": "percona-server-mongodb-operator",
+			"user": {
+				"token": "some-token"
 			}
-		],
-		"clusters": [
-			{
-				"cluster": {
-					"certificate-authority-data": "some-certificate-authority-data",
-					"server": "https://192.168.0.42:8443"
-				},
-				"name": "self-hosted-cluster"
-			}
-		],
-		"contexts": [
-			{
-				"context": {
-					"cluster": "self-hosted-cluster",
-					"user": "percona-server-mongodb-operator"
-				},
-				"name": "svcs-acct-context"
-			}
-		],
-		"current-context": "svcs-acct-context"
-	}
+		}
+	],
+	"clusters": [
+		{
+			"cluster": {
+				"certificate-authority-data": "some-certificate-authority-data",
+				"server": "https://192.168.0.42:8443"
+			},
+			"name": "self-hosted-cluster"
+		}
+	],
+	"contexts": [
+		{
+			"context": {
+				"cluster": "self-hosted-cluster",
+				"user": "percona-server-mongodb-operator"
+			},
+			"name": "svcs-acct-context"
+		}
+	],
+	"current-context": "svcs-acct-context"
+}
 `
 const psmdbKubernetesClusterNameTest = "test-k8s-cluster-name"
 
@@ -76,12 +76,12 @@ func TestPSMDBClusterService(t *testing.T) {
 		t.Helper()
 
 		ctx = logger.Set(context.Background(), t.Name())
-		uuid.SetRand(new(tests.IDReader))
+		uuid.SetRand(&tests.IDReader{})
 
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db = reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		dbaasClient = new(mockDbaasClient)
-		grafanaClient = new(mockGrafanaClient)
+		dbaasClient = &mockDbaasClient{}
+		grafanaClient = &mockGrafanaClient{}
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
