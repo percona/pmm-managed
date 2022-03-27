@@ -709,9 +709,10 @@ command =
 	/usr/sbin/percona-qan-api2
 		--data-retention={{ .DataRetentionDays }}
 environment =
-	PMM_CLICKHOUSE_HOST="{{ .ClickhouseHostname }}",
-	PMM_CLICKHOUSE_PORT="{{ .ClickhousePort }}",
+	PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
 	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
+	{{- if .ClickhousePoolSize }}PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }}{{- end}}
+	{{- if .ClickhouseBlockSize }}PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
 user = pmm
 autorestart = true
 autostart = true
@@ -754,11 +755,7 @@ command =
 environment=
 	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 	PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
-	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
-	{{- if .ClickhousePoolSize }}PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }}{{- end}}
-	{{- if .ClickhouseBlockSize }}PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
 
-	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 user = grafana
 directory = /usr/share/grafana
 autorestart = true
