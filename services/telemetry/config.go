@@ -25,15 +25,16 @@ type EndpointsConfig struct {
 }
 
 type ReportingConfig struct {
-	IntervalStr     string        `yaml:"interval"`
-	IntervalEnv     string        `yaml:"interval_env"`
-	Interval        time.Duration `yaml:"-"`
-	RetryBackoffStr string        `yaml:"retry_backoff"`
-	RetryBackoffEnv string        `yaml:"retry_backoff_env"`
-	RetryBackoff    time.Duration `yaml:"-"`
-	SendTimeoutStr  string        `yaml:"send_timeout"`
-	SendTimeout     time.Duration `yaml:"-"`
-	RetryCount      int           `yaml:"retry_count"`
+	SkipTlsVerification bool          `yaml:"skip_tls_verification"`
+	IntervalStr         string        `yaml:"interval"`
+	IntervalEnv         string        `yaml:"interval_env"`
+	Interval            time.Duration `yaml:"-"`
+	RetryBackoffStr     string        `yaml:"retry_backoff"`
+	RetryBackoffEnv     string        `yaml:"retry_backoff_env"`
+	RetryBackoff        time.Duration `yaml:"-"`
+	SendTimeoutStr      string        `yaml:"send_timeout"`
+	SendTimeout         time.Duration `yaml:"-"`
+	RetryCount          int           `yaml:"retry_count"`
 }
 
 func (c *Config) Init() error {
