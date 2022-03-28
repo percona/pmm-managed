@@ -543,18 +543,28 @@ func convertEntitlement(ent *entitlementResponse) (*platformpb.OrganizationEntit
 	}, nil
 }
 
+// Status API returns a boolean indicating whether the PMM server is connected to Platform
+// and the logged-in user is a Platform organization member.
 func (s *Service) Status(ctx context.Context, req *platformpb.StatusRequest) (*platformpb.StatusResponse, error) {
-	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	// We use the access token instead of `models.GetPerconaSSODetails()`.
+	// The reason for that is Frontend needs to use this API to know whether they can
+	// show certain menu items to users "logged in with their Percona Accounts" after PMM
+	// server has been connected to Platform. If we use the presence of SSO details in
+	// the DB as the deciding factor for this it will also return true for the admin user
+	// who connected the PMM server to Platform but wasn't logged into PMM with Platform creds.
+	_, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
-		s.l.Errorf("failed to get SSO details: %s", err)
-		if err == models.ErrNotConnectedToPortal {
+		if errors.Is(err, grafana.ErrFailedToGetToken) {
+			s.l.Error("false")
 			return &platformpb.StatusResponse{
 				Connected: false,
 			}, nil
 		}
-		return nil, errGetSSODetailsFailed
+		s.l.Errorf("Status request failed: %s", err)
+		return nil, errInternalServer
 	}
 
+	s.l.Error("true")
 	return &platformpb.StatusResponse{
 		Connected: true,
 	}, nil
