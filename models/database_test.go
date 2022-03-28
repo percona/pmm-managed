@@ -430,7 +430,7 @@ func TestDatabaseMigrations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Insert dummy agent in DB
-		pmmAgent, err := models.CreatePMMAgent(db.Querier, "node_id", map[string]string{})
+		pmmAgent, err := models.CreatePMMAgent(db.Querier, "node_id", make(map[string]string))
 		require.NoError(t, err)
 
 		createdAgent, err := models.CreateAgent(db.Querier, models.NodeExporterType,
