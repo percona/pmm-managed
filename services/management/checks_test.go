@@ -345,9 +345,9 @@ func TestListFailedServices(t *testing.T) {
 					NoticeCount:   1,
 				},
 				{
-					ServiceName: "svc2",
-					ServiceId:   "test_svc2",
-					ErrorCount:  1,
+					ServiceName:  "svc2",
+					ServiceId:    "test_svc2",
+					WarningCount: 1,
 				},
 			},
 		}
