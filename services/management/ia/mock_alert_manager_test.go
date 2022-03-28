@@ -16,6 +16,29 @@ type mockAlertManager struct {
 	mock.Mock
 }
 
+// FindAlertsByID provides a mock function with given fields: ctx, params, ids
+func (_m *mockAlertManager) FindAlertsByID(ctx context.Context, params *alert.GetAlertsParams, ids []string) ([]*ammodels.GettableAlert, error) {
+	ret := _m.Called(ctx, params, ids)
+
+	var r0 []*ammodels.GettableAlert
+	if rf, ok := ret.Get(0).(func(context.Context, *alert.GetAlertsParams, []string) []*ammodels.GettableAlert); ok {
+		r0 = rf(ctx, params, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ammodels.GettableAlert)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *alert.GetAlertsParams, []string) error); ok {
+		r1 = rf(ctx, params, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetAlerts provides a mock function with given fields: ctx, params
 func (_m *mockAlertManager) GetAlerts(ctx context.Context, params *alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
 	ret := _m.Called(ctx, params)
@@ -44,13 +67,13 @@ func (_m *mockAlertManager) RequestConfigurationUpdate() {
 	_m.Called()
 }
 
-// Silence provides a mock function with given fields: ctx, ids
-func (_m *mockAlertManager) Silence(ctx context.Context, ids []string) error {
-	ret := _m.Called(ctx, ids)
+// SilenceAlerts provides a mock function with given fields: ctx, alerts
+func (_m *mockAlertManager) SilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+	ret := _m.Called(ctx, alerts)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string) error); ok {
-		r0 = rf(ctx, ids)
+	if rf, ok := ret.Get(0).(func(context.Context, []*ammodels.GettableAlert) error); ok {
+		r0 = rf(ctx, alerts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,41 +81,13 @@ func (_m *mockAlertManager) Silence(ctx context.Context, ids []string) error {
 	return r0
 }
 
-// SilenceAll provides a mock function with given fields: ctx
-func (_m *mockAlertManager) SilenceAll(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// UnsilenceAlerts provides a mock function with given fields: ctx, alerts
+func (_m *mockAlertManager) UnsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error {
+	ret := _m.Called(ctx, alerts)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Unsilence provides a mock function with given fields: ctx, ids
-func (_m *mockAlertManager) Unsilence(ctx context.Context, ids []string) error {
-	ret := _m.Called(ctx, ids)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string) error); ok {
-		r0 = rf(ctx, ids)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UnsilenceAll provides a mock function with given fields: ctx
-func (_m *mockAlertManager) UnsilenceAll(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, []*ammodels.GettableAlert) error); ok {
+		r0 = rf(ctx, alerts)
 	} else {
 		r0 = ret.Error(0)
 	}

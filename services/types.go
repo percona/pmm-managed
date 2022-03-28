@@ -17,9 +17,19 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 
 	"github.com/percona/pmm-managed/models"
+)
+
+const (
+	// CheckFilter represents AlertManager filter for Checks/Advisor results.
+	CheckFilter = "stt_check=1"
+	// IAFilter represents AlertManager filter for Integrated Alerts.
+	IAFilter = "ia=1"
 )
 
 // Target contains required info about STT check target.
@@ -49,6 +59,34 @@ type CheckResultSummary struct {
 	ServiceName   string
 	ServiceID     string
 	CriticalCount uint32
-	ErrorCount    uint32
+	WarningCount  uint32
 	NoticeCount   uint32
+}
+
+type FilterParams struct {
+	// IsIA specifies if only Integrated Alerts should be matched.
+	IsIA bool
+	// IsCheck specifies if only Checks/Advisors alerts should be matched.
+	IsCheck bool
+	// AlertID is the ID of alert to be matched (if any).
+	AlertID string
+	// ServiceID is the ID of service to be matched (if any).
+	ServiceID string
+}
+
+func (fp FilterParams) ToAlertManagerParams() *alert.GetAlertsParams {
+	alertParams := alert.NewGetAlertsParams()
+	if fp.IsCheck {
+		alertParams.Filter = append(alertParams.Filter, CheckFilter)
+	}
+	if fp.IsIA {
+		alertParams.Filter = append(alertParams.Filter, IAFilter)
+	}
+	if fp.ServiceID != "" {
+		alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("service_id=\"%s\"", fp.ServiceID))
+	}
+	if fp.AlertID != "" {
+		alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("alert_id=\"%s\"", fp.AlertID))
+	}
+	return alertParams
 }

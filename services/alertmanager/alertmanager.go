@@ -737,6 +737,7 @@ func (svc *Service) GetAlerts(ctx context.Context, params *alert.GetAlertsParams
 		params = alert.NewGetAlertsParams()
 	}
 	params.Context = ctx
+	svc.l.Debugf("%+v", params)
 	resp, err := amclient.Default.Alert.GetAlerts(params)
 	if err != nil {
 		return nil, err
@@ -746,8 +747,8 @@ func (svc *Service) GetAlerts(ctx context.Context, params *alert.GetAlertsParams
 }
 
 // FindAlertsByID searches alerts by IDs in alertmanager.
-func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammodels.GettableAlert, error) {
-	alerts, err := svc.GetAlerts(ctx, nil)
+func (svc *Service) FindAlertsByID(ctx context.Context, params *alert.GetAlertsParams, ids []string) ([]*ammodels.GettableAlert, error) {
+	alerts, err := svc.GetAlerts(ctx, params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")
 	}
@@ -766,30 +767,6 @@ func (svc *Service) FindAlertsByID(ctx context.Context, ids []string) ([]*ammode
 	}
 
 	return res, nil
-}
-
-// Silence mutes alerts with specified ids.
-func (svc *Service) Silence(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	alerts, err := svc.FindAlertsByID(ctx, ids)
-	if err != nil {
-		return err
-	}
-
-	return svc.SilenceAlerts(ctx, alerts)
-}
-
-// SilenceAll mutes all available alerts.
-func (svc *Service) SilenceAll(ctx context.Context) error {
-	alerts, err := svc.GetAlerts(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	return svc.SilenceAlerts(ctx, alerts)
 }
 
 // SilenceAlerts silences a group of provided alerts.
@@ -831,30 +808,6 @@ func (svc *Service) SilenceAlerts(ctx context.Context, alerts []*ammodels.Gettab
 	}
 
 	return nil
-}
-
-// Unsilence unmutes alerts with specified ids.
-func (svc *Service) Unsilence(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	alerts, err := svc.FindAlertsByID(ctx, ids)
-	if err != nil {
-		return err
-	}
-
-	return svc.UnsilenceAlerts(ctx, alerts)
-}
-
-// UnsilenceAll unmutes all available alerts.
-func (svc *Service) UnsilenceAll(ctx context.Context) error {
-	alerts, err := svc.GetAlerts(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	return svc.UnsilenceAlerts(ctx, alerts)
 }
 
 // UnsilenceAlerts unmutes the provided alerts.

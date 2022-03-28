@@ -35,7 +35,6 @@ import (
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/common"
-	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -74,9 +73,6 @@ const (
 
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
-
-	// STTCheckFilter represents AlertManager filter for STT checks.
-	STTCheckFilter = "stt_check=1"
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -299,9 +295,11 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 		return nil, services.ErrSTTDisabled
 	}
 
-	res, err := s.alertmanagerService.GetAlerts(ctx, &alert.GetAlertsParams{
-		Filter: []string{STTCheckFilter, fmt.Sprintf("service_id=\"%s\"", serviceID)},
-	})
+	filters := services.FilterParams{
+		IsCheck:   true,
+		ServiceID: serviceID,
+	}
+	res, err := s.alertmanagerService.GetAlerts(ctx, filters.ToAlertManagerParams())
 	if err != nil {
 		return nil, err
 	}
@@ -333,9 +331,11 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 
 // ToggleCheckAlert toggles the silence state of the check with the provided alertID.
 func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
-	res, err := s.alertmanagerService.GetAlerts(ctx, &alert.GetAlertsParams{
-		Filter: []string{STTCheckFilter, fmt.Sprintf("alert_id=\"%s\"", alertID)},
-	})
+	filters := services.FilterParams{
+		IsCheck: true,
+		AlertID: alertID,
+	}
+	res, err := s.alertmanagerService.GetAlerts(ctx, filters.ToAlertManagerParams())
 	if err != nil {
 		return errors.Wrapf(err, "failed to get alerts with id: %s", alertID)
 	}

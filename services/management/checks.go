@@ -72,7 +72,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 		case common.Emergency, common.Alert, common.Critical, common.Error:
 			svcSummary.CriticalCount++
 		case common.Warning:
-			svcSummary.ErrorCount++
+			svcSummary.WarningCount++
 		case common.Notice, common.Debug, common.Info:
 			svcSummary.NoticeCount++
 		case common.Unknown:
@@ -86,7 +86,7 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 			ServiceId:     result.ServiceID,
 			ServiceName:   result.ServiceName,
 			CriticalCount: result.CriticalCount,
-			ErrorCount:    result.ErrorCount,
+			WarningCount:  result.WarningCount,
 			NoticeCount:   result.NoticeCount,
 		})
 	}
