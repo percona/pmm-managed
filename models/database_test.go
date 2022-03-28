@@ -20,14 +20,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/AlekSi/pointer"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-	"testing"
-	"time"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
