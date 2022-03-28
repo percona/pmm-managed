@@ -63,6 +63,7 @@ type CheckResultSummary struct {
 	NoticeCount   uint32
 }
 
+// FilterParams provides fields needed to filter alerts from AlertManager.
 type FilterParams struct {
 	// IsIA specifies if only Integrated Alerts should be matched.
 	IsIA bool
@@ -74,6 +75,7 @@ type FilterParams struct {
 	ServiceID string
 }
 
+// ToAlertManagerParams returns an AlertManager-style filter for FilterParams.
 func (fp FilterParams) ToAlertManagerParams() *alert.GetAlertsParams {
 	alertParams := alert.NewGetAlertsParams()
 	if fp.IsCheck {

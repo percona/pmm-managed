@@ -77,7 +77,6 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 			svcSummary.NoticeCount++
 		case common.Unknown:
 		}
-
 	}
 
 	failedServices := make([]*managementpb.CheckResultSummary, 0, len(summaries))
