@@ -50,33 +50,34 @@ func NewChecksAPIService(checksService checksService) *ChecksAPIService {
 func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *managementpb.ListFailedServicesRequest) (*managementpb.ListFailedServicesResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
-		if err == services.ErrSTTDisabled {
+		if errors.Is(err, services.ErrSTTDisabled) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 
 		return nil, errors.Wrap(err, "failed to get check results")
 	}
 
-	summaries := make(map[string]services.CheckResultSummary)
-
-	var svcSummary services.CheckResultSummary
+	summaries := make(map[string]*services.CheckResultSummary)
+	var svcSummary *services.CheckResultSummary
 	var exists bool
 	for _, result := range results {
 		if svcSummary, exists = summaries[result.Target.ServiceID]; !exists {
-			svcSummary.ServiceID = result.Target.ServiceID
-			svcSummary.ServiceName = result.Target.ServiceName
+			svcSummary = &services.CheckResultSummary{
+				ServiceName: result.Target.ServiceName,
+				ServiceID:   result.Target.ServiceID,
+			}
+			summaries[result.Target.ServiceID] = svcSummary
 		}
 		switch result.Result.Severity {
-		case common.Emergency, common.Alert, common.Critical:
+		case common.Emergency, common.Alert, common.Critical, common.Error:
 			svcSummary.CriticalCount++
-		case common.Error, common.Warning:
+		case common.Warning:
 			svcSummary.ErrorCount++
 		case common.Notice, common.Debug, common.Info:
 			svcSummary.NoticeCount++
 		case common.Unknown:
 		}
 
-		summaries[result.Target.ServiceID] = svcSummary
 	}
 
 	failedServices := make([]*managementpb.CheckResultSummary, 0, len(summaries))
@@ -95,9 +96,9 @@ func (s *ChecksAPIService) ListFailedServices(ctx context.Context, req *manageme
 
 // GetFailedChecks returns details of failed checks for a given service.
 func (s *ChecksAPIService) GetFailedChecks(ctx context.Context, req *managementpb.GetFailedChecksRequest) (*managementpb.GetFailedChecksResponse, error) {
-	results, err := s.checksService.GetFailedChecks(ctx, req.ServiceId)
+	results, err := s.checksService.GetChecksResults(ctx, req.ServiceId)
 	if err != nil {
-		if err == services.ErrSTTDisabled {
+		if errors.Is(err, services.ErrSTTDisabled) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 
@@ -163,7 +164,7 @@ func (s *ChecksAPIService) ToggleCheckAlert(ctx context.Context, req *management
 func (s *ChecksAPIService) GetSecurityCheckResults(ctx context.Context, req *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
-		if err == services.ErrSTTDisabled {
+		if errors.Is(err, services.ErrSTTDisabled) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 

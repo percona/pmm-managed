@@ -621,7 +621,7 @@ func TestGetFailedChecks(t *testing.T) {
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
-		results, err := s.GetFailedChecks(ctx, "test_svc")
+		results, err := s.GetChecksResults(ctx, "test_svc")
 		assert.Nil(t, results)
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
@@ -642,7 +642,7 @@ func TestGetFailedChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		results, err := s.GetFailedChecks(context.Background(), "test_svc")
+		results, err := s.GetChecksResults(context.Background(), "test_svc")
 		assert.Empty(t, results)
 		require.NoError(t, err)
 	})
@@ -671,7 +671,7 @@ func TestGetFailedChecks(t *testing.T) {
 			Status: &ammodels.AlertStatus{},
 		}
 
-		results := []services.STTCheckResult{
+		results := []services.CheckResult{
 			{
 				CheckName: "test_check",
 				AlertID:   "test_alert",
@@ -705,7 +705,7 @@ func TestGetFailedChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		response, err := s.GetFailedChecks(ctx, "test_svc")
+		response, err := s.GetChecksResults(ctx, "test_svc")
 		require.NoError(t, err)
 		assert.Equal(t, results, response)
 	})

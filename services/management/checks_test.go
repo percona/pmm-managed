@@ -83,7 +83,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	})
 
 	t.Run("STT enabled", func(t *testing.T) {
-		checkResult := []services.STTCheckResult{
+		checkResult := []services.CheckResult{
 			{
 				Result: check.Result{
 					Summary:     "Check summary",
@@ -125,7 +125,7 @@ func TestGetFailedChecks(t *testing.T) {
 		t.Parallel()
 
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, errors.New("random error"))
+		checksService.On("GetChecksResults", mock.Anything, mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 		serviceID := "test_svc"
@@ -141,7 +141,7 @@ func TestGetFailedChecks(t *testing.T) {
 		t.Parallel()
 
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
+		checksService.On("GetChecksResults", mock.Anything, mock.Anything).Return(nil, services.ErrSTTDisabled)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -155,7 +155,7 @@ func TestGetFailedChecks(t *testing.T) {
 	t.Run("get failed checks for requested service", func(t *testing.T) {
 		t.Parallel()
 
-		checkResult := []services.STTCheckResult{
+		checkResult := []services.CheckResult{
 			{
 				Result: check.Result{
 					Summary:     "Check summary",
@@ -187,7 +187,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(checkResult, nil)
+		checksService.On("GetChecksResults", mock.Anything, mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -201,7 +201,7 @@ func TestGetFailedChecks(t *testing.T) {
 	t.Run("get failed checks with pagination", func(t *testing.T) {
 		t.Parallel()
 
-		checkResult := []services.STTCheckResult{
+		checkResult := []services.CheckResult{
 			{
 				Result: check.Result{
 					Summary:     "Check summary",
@@ -255,7 +255,7 @@ func TestGetFailedChecks(t *testing.T) {
 			},
 		}
 		var checksService mockChecksService
-		checksService.On("GetFailedChecks", mock.Anything, mock.Anything).Return(checkResult, nil)
+		checksService.On("GetChecksResults", mock.Anything, mock.Anything).Return(checkResult, nil)
 
 		s := NewChecksAPIService(&checksService)
 
@@ -290,7 +290,7 @@ func TestListFailedServices(t *testing.T) {
 	t.Run("list services with failed checks", func(t *testing.T) {
 		t.Parallel()
 
-		checkResult := []services.STTCheckResult{
+		checkResult := []services.CheckResult{
 			{
 				Result: check.Result{
 					Summary:     "Check summary",
@@ -307,7 +307,7 @@ func TestListFailedServices(t *testing.T) {
 					Summary:     "Check summary",
 					Description: "Check Description",
 					ReadMoreURL: "https://www.example.com",
-					Severity:    common.Critical,
+					Severity:    common.Error,
 					Labels:      map[string]string{"label_key": "label_value"},
 				},
 				Target:    services.Target{ServiceName: "svc1", ServiceID: "test_svc1"},

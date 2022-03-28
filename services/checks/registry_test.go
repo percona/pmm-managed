@@ -37,7 +37,7 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []services.STTCheckResult{
+		checkResults := []services.CheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,
@@ -132,7 +132,7 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []services.STTCheckResult{
+		checkResults := []services.CheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,
@@ -209,7 +209,7 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []services.STTCheckResult{
+		checkResults := []services.CheckResult{
 			{
 				CheckName: "name1",
 				Target: services.Target{
@@ -284,7 +284,7 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []services.STTCheckResult{
+		checkResults := []services.CheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,

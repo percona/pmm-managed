@@ -275,7 +275,7 @@ func (s *Service) runChecksLoop(ctx context.Context) {
 }
 
 // GetSecurityCheckResults returns the results of the STT checks that were run. It returns services.ErrSTTDisabled if STT is disabled.
-func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
+func (s *Service) GetSecurityCheckResults() ([]services.CheckResult, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -288,8 +288,8 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	return s.alertsRegistry.getCheckResults(), nil
 }
 
-// GetFailedChecks returns the failed checks for a given service from AlertManager.
-func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error) {
+// GetChecksResults returns the failed checks for a given service from AlertManager.
+func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]services.CheckResult, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -306,9 +306,9 @@ func (s *Service) GetFailedChecks(ctx context.Context, serviceID string) ([]serv
 		return nil, err
 	}
 
-	checkResults := make([]services.STTCheckResult, 0, len(res))
+	checkResults := make([]services.CheckResult, 0, len(res))
 	for _, alert := range res {
-		checkResults = append(checkResults, services.STTCheckResult{
+		checkResults = append(checkResults, services.CheckResult{
 			CheckName: alert.Labels[model.AlertNameLabel],
 			Silenced:  len(alert.Status.SilencedBy) != 0,
 			AlertID:   alert.Labels["alert_id"],
@@ -643,7 +643,7 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 		return errors.WithStack(err)
 	}
 
-	var checkResults []services.STTCheckResult
+	var checkResults []services.CheckResult
 	checks, err := s.GetChecks()
 	if err != nil {
 		return errors.WithStack(err)
@@ -680,8 +680,8 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 }
 
 // executeMySQLChecks runs specified checks for available MySQL service.
-func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -709,8 +709,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]chec
 }
 
 // executePostgreSQLChecks runs specified PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -738,8 +738,8 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string
 }
 
 // executeMongoDBChecks runs specified MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -766,7 +766,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]ch
 	return res
 }
 
-func (s *Service) executeCheck(ctx context.Context, target services.Target, c check.Check) ([]services.STTCheckResult, error) {
+func (s *Service) executeCheck(ctx context.Context, target services.Target, c check.Check) ([]services.CheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, checkExecutionTimeout)
 	defer cancel()
 
@@ -817,7 +817,7 @@ type StarlarkScriptData struct {
 	QueryResult []byte `json:"query_result"`
 }
 
-func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.STTCheckResult, error) {
+func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.CheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultAwaitTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -869,9 +869,9 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	l.Infof("Check script returned %d results.", len(results))
 	l.Debugf("Results: %+v.", results)
 
-	checkResults := make([]services.STTCheckResult, len(results))
+	checkResults := make([]services.CheckResult, len(results))
 	for i, result := range results {
-		checkResults[i] = services.STTCheckResult{
+		checkResults[i] = services.CheckResult{
 			CheckName: sttCheck.Name,
 			Interval:  sttCheck.Interval,
 			Target:    target,

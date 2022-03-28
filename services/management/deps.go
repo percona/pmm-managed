@@ -60,9 +60,9 @@ type prometheusService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type checksService interface {
 	StartChecks(checkNames []string) error
-	GetSecurityCheckResults() ([]services.STTCheckResult, error)
+	GetSecurityCheckResults() ([]services.CheckResult, error)
 	GetChecks() (map[string]check.Check, error)
-	GetFailedChecks(ctx context.Context, serviceID string) ([]services.STTCheckResult, error)
+	GetChecksResults(ctx context.Context, serviceID string) ([]services.CheckResult, error)
 	GetDisabledChecks() ([]string, error)
 	DisableChecks(checkNames []string) error
 	EnableChecks(checkNames []string) error

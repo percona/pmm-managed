@@ -34,8 +34,8 @@ type Target struct {
 	TLSSkipVerify bool
 }
 
-// STTCheckResult contains the output from the check file and other information.
-type STTCheckResult struct {
+// CheckResult contains the output from the check file and other information.
+type CheckResult struct {
 	CheckName string
 	Silenced  bool
 	AlertID   string
