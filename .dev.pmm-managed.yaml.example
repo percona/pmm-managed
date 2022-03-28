@@ -1,0 +1,137 @@
+services:
+  alert_manager:
+    enabled: false
+  vmalert:
+    enabled: false
+  victoria_metrics:
+    enabled: false
+  supervisord:
+    enabled: false
+  platform:
+    skip_tls_verification: true
+  management:
+    ia:
+      enabled: false
+      templates_dir: "./local/templates"
+      rules_dir: "./local/templates"
+      dir_owner: "am"
+      dir_owner_group: "staff"
+  telemetry:
+    enabled: false
+    # priority is as follows, from the highest priority
+    #   1. this config value
+    #   2. PERCONA_TEST_SAAS_HOST env variable
+    #   3. check.percona.com
+    saas_hostname: "portal.localhost"
+    reporting:
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `interval_env`
+      #   2. this config value
+      interval: 10s
+      interval_env: "PERCONA_TEST_TELEMETRY_INTERVAL"
+      # priority is as follows, from the highest priority
+      #   1. value from env name provided by `retry_backoff_env`
+      #   2. this config value
+      retry_backoff: 10s
+      retry_backoff_env: "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
+      retry_count: 20
+      send_timeout: 5s
+    v1_url_env: "PERCONA_VERSION_CHECK_URL"
+    # priority is as follows, from the highest priority
+    #   1. value from env name provided by `v1_url_env`
+    #   2. this config value
+    v1_url: http://localhost:20202/
+    endpoints:
+      # %s is substituted with `saas_hostname`
+      report: https://%s/v1/telemetry/Report
+  telemetry_v2:
+    enabled: true
+    config_location: config/telemetry/dev/*.yml
+    disable_signing_verification: true
+    signing:
+      trusted_public_keys:
+        - RWToO+zBnSKDsXC2k64DZ23kwgRW52+BtHfYtFM1NC8MoNL7LxxgoyKn
+    skip_tls_verification: false
+    # priority is as follows, from the highest priority
+    #   1. this config value
+    #   2. PERCONA_TEST_SAAS_HOST env variable
+    #   3. check.percona.com
+    saas_hostname: "localhost"
+    endpoints:
+      # %s is substituted with `saas_hostname`
+      report: https://%s/v1/telemetry/Report
+    datasources:
+      VM:
+        enabled: true
+        timeout: 2s
+        address: http://localhost:80/victoriametrics/
+      QANDB_SELECT:
+        enabled: true
+        timeout: 2s
+        dsn: tcp://127.0.0.1:11000?database=pmm&block_size=10000&pool_size=2
+      PMMDB_SELECT:
+        enabled: true
+        timeout: 2s
+        credentials:
+          username: pmm-managed
+          password: pmm-managed
+
+    reporting:
+      skip_tls_verification: false
+      send_on_start: true
+      interval: 10s
+      interval_env: "PERCONA_TEST_TELEMETRY_INTERVAL"
+      retry_backoff: 1s
+      retry_backoff_env: "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
+      retry_count: 2
+      send_timeout: 10s
+
+extra_headers:
+  enabled: true
+#  endpoints:
+#    - method: POST
+#      endpoint: http://localhost:20202/v1/telemetry/Report
+#      headers:
+#        Auth-Status: "0"
+#        Grpc-Metadata-X-Real-IP: "188.255.42.42"
+
+telemetry:
+  - id: MySQLVersion
+    source: VM
+    query: mysql_version_info
+    summary: “Select version of monitored MySQL service”
+    data:
+      - metric_name: "mysql_version"
+        label: "version"
+  - id: NodeLoad1min
+    source: VM
+    query: node_load1
+    summary: “Select monitored nodes load 1 minute”
+    data:
+#      - metric_name: "node_load1"  <--- error
+#        value: 1
+#        label: 'job'
+      - metric_name: "node_load1_job"
+        label: 'job'
+      - metric_name: "node_load1_instance"
+        label: 'instance'
+  - id: PMMAgentVersion
+    source: PMMDB_SELECT
+    query: version FROM agents WHERE agent_type='pmm-agent' AND agent_id != 'pmm-server'
+    summary: “Select PMM Agents version”
+    data:
+      - metric_name: "pmm_server_agent_version"
+        column: "version"
+  - id: PMMServerQAN
+    source: QANDB_SELECT
+    query: |
+      m_query_time_sum, m_query_time_cnt, num_queries FROM metrics
+      LIMIT 1
+    summary: “Select QAN”
+    data:
+      - metric_name: "node_load1"
+        column: "m_query_time_sum"
+      - metric_name: "m_query_tune_cnt"
+        column: "m_query_tune_cnt"
+      - metric_name: "num_queries"
+        column: "num_queries"
