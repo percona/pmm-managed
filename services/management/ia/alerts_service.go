@@ -71,10 +71,10 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
-	filter := services.FilterParams{
+	filter := &services.FilterParams{
 		IsIA: true,
 	}
-	alerts, err := s.alertManager.GetAlerts(ctx, filter.ToAlertManagerParams())
+	alerts, err := s.alertManager.GetAlerts(ctx, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}
@@ -226,13 +226,13 @@ func (s *AlertsService) ToggleAlerts(ctx context.Context, req *iav1beta1.ToggleA
 	var err error
 	var alerts []*ammodels.GettableAlert
 
-	filters := services.FilterParams{
+	filters := &services.FilterParams{
 		IsIA: true,
 	}
 	if len(req.AlertIds) == 0 {
-		alerts, err = s.alertManager.GetAlerts(ctx, filters.ToAlertManagerParams())
+		alerts, err = s.alertManager.GetAlerts(ctx, filters)
 	} else {
-		alerts, err = s.alertManager.FindAlertsByID(ctx, filters.ToAlertManagerParams(), req.AlertIds)
+		alerts, err = s.alertManager.FindAlertsByID(ctx, filters, req.AlertIds)
 	}
 	if err != nil {
 		return nil, err

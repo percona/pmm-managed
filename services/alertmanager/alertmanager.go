@@ -49,6 +49,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -732,13 +733,27 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 }
 
 // GetAlerts returns alerts available in alertmanager.
-func (svc *Service) GetAlerts(ctx context.Context, params *alert.GetAlertsParams) ([]*ammodels.GettableAlert, error) {
-	if params == nil {
-		params = alert.NewGetAlertsParams()
+func (svc *Service) GetAlerts(ctx context.Context, fp *services.FilterParams) ([]*ammodels.GettableAlert, error) {
+	alertParams := alert.NewGetAlertsParams()
+	alertParams.Context = ctx
+
+	if fp != nil {
+		if fp.IsCheck {
+			alertParams.Filter = append(alertParams.Filter, services.CheckFilter)
+		}
+		if fp.IsIA {
+			alertParams.Filter = append(alertParams.Filter, services.IAFilter)
+		}
+		if fp.ServiceID != "" {
+			alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("service_id=\"%s\"", fp.ServiceID))
+		}
+		if fp.AlertID != "" {
+			alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("alert_id=\"%s\"", fp.AlertID))
+		}
 	}
-	params.Context = ctx
-	svc.l.Debugf("%+v", params)
-	resp, err := amclient.Default.Alert.GetAlerts(params)
+
+	svc.l.Debugf("%+v", alertParams)
+	resp, err := amclient.Default.Alert.GetAlerts(alertParams)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +762,7 @@ func (svc *Service) GetAlerts(ctx context.Context, params *alert.GetAlertsParams
 }
 
 // FindAlertsByID searches alerts by IDs in alertmanager.
-func (svc *Service) FindAlertsByID(ctx context.Context, params *alert.GetAlertsParams, ids []string) ([]*ammodels.GettableAlert, error) {
+func (svc *Service) FindAlertsByID(ctx context.Context, params *services.FilterParams, ids []string) ([]*ammodels.GettableAlert, error) {
 	alerts, err := svc.GetAlerts(ctx, params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")

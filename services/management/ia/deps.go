@@ -19,7 +19,8 @@ package ia
 import (
 	"context"
 
-	"github.com/percona/pmm/api/alertmanager/amclient/alert"
+	"github.com/percona/pmm-managed/services"
+
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
@@ -29,8 +30,8 @@ import (
 // alertManager is is a subset of methods of alertmanager.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertManager interface {
-	GetAlerts(ctx context.Context, params *alert.GetAlertsParams) ([]*ammodels.GettableAlert, error)
-	FindAlertsByID(ctx context.Context, params *alert.GetAlertsParams, ids []string) ([]*ammodels.GettableAlert, error)
+	GetAlerts(ctx context.Context, params *services.FilterParams) ([]*ammodels.GettableAlert, error)
+	FindAlertsByID(ctx context.Context, params *services.FilterParams, ids []string) ([]*ammodels.GettableAlert, error)
 	SilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error
 	UnsilenceAlerts(ctx context.Context, alerts []*ammodels.GettableAlert) error
 	RequestConfigurationUpdate()

@@ -17,10 +17,7 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/percona-platform/saas/pkg/check"
-	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -73,22 +70,4 @@ type FilterParams struct {
 	AlertID string
 	// ServiceID is the ID of service to be matched (if any).
 	ServiceID string
-}
-
-// ToAlertManagerParams returns an AlertManager-style filter for FilterParams.
-func (fp FilterParams) ToAlertManagerParams() *alert.GetAlertsParams {
-	alertParams := alert.NewGetAlertsParams()
-	if fp.IsCheck {
-		alertParams.Filter = append(alertParams.Filter, CheckFilter)
-	}
-	if fp.IsIA {
-		alertParams.Filter = append(alertParams.Filter, IAFilter)
-	}
-	if fp.ServiceID != "" {
-		alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("service_id=\"%s\"", fp.ServiceID))
-	}
-	if fp.AlertID != "" {
-		alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("alert_id=\"%s\"", fp.AlertID))
-	}
-	return alertParams
 }
