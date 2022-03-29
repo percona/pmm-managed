@@ -384,7 +384,7 @@ func TestDatabaseMigrations(t *testing.T) {
 			LR: 60 * time.Second,
 		}, settings.MetricsResolutions)
 	})
-	t.Run("Update type for stats_collections field", func(t *testing.T) {
+	t.Run("stats_collections field migration: string to string array", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(57))
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		defer sqlDB.Close() //nolint:errcheck
@@ -415,7 +415,7 @@ func TestDatabaseMigrations(t *testing.T) {
 		require.Equal(t, "id", agent.AgentID)
 		require.Equal(t, []string{"db.col1", "db.col2", "db.col3"}, agent.MongoDBOptions.StatsCollections)
 	})
-	t.Run("Update type for stats_collections field", func(t *testing.T) {
+	t.Run("stats_collections field migration: string array to string array", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(57))
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		defer sqlDB.Close() //nolint:errcheck
