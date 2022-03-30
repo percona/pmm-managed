@@ -71,9 +71,6 @@ const (
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID = string("pmm-server") // no /agent_id/ prefix
 
-// bcrypt hashing cost
-const passwordHashCost = 14
-
 // MySQLOptions represents structure for special MySQL options.
 type MySQLOptions struct {
 	TLSCa   string `json:"tls_ca"`
@@ -573,7 +570,7 @@ func (s Agent) Files() map[string]string {
 	switch s.AgentType {
 	case NodeExporterType:
 		return map[string]string{
-			webConfigFilePlaceholder: s.buildWebConfigFile(s.GetAgentPassword()),
+			webConfigFilePlaceholder: s.buildWebConfigFile(),
 		}
 	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
 		if s.MySQLOptions != nil {
@@ -641,13 +638,24 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 	return &tdp
 }
 
-func (s *Agent) buildWebConfigFile(password string) string {
-	buf, err := bcrypt.GenerateFromPassword([]byte(password), passwordHashCost)
+func (s *Agent) buildWebConfigFile() string {
+	password := s.GetAgentPassword()
+	salt := getPasswordSalt(s)
+
+	buf, err := bcrypt.GenerateFromPasswordAndSalt([]byte(password), bcrypt.DefaultCost, []byte(salt))
 	if err != nil {
 		log.Fatal(err, "cannot calculate hash for password")
 	}
 
 	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", string(buf))
+}
+
+func getPasswordSalt(s *Agent) string {
+	if s.AgentID != "" && len(s.AgentID) >= bcrypt.MaxSaltSize {
+		return string(s.AgentID[len(s.AgentID)-bcrypt.MaxSaltSize:])
+	}
+
+	return "pmm-salt-magic--"
 }
 
 // check interfaces.
