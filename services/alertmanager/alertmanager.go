@@ -66,6 +66,11 @@ const (
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
 
 	receiverNameSeparator = " + "
+
+	// CheckFilter represents AlertManager filter for Checks/Advisor results.
+	CheckFilter = "stt_check=1"
+	// IAFilter represents AlertManager filter for Integrated Alerts.
+	IAFilter = "ia=1"
 )
 
 var notificationLabels = []string{
@@ -739,10 +744,10 @@ func (svc *Service) GetAlerts(ctx context.Context, fp *services.FilterParams) ([
 
 	if fp != nil {
 		if fp.IsCheck {
-			alertParams.Filter = append(alertParams.Filter, services.CheckFilter)
+			alertParams.Filter = append(alertParams.Filter, CheckFilter)
 		}
 		if fp.IsIA {
-			alertParams.Filter = append(alertParams.Filter, services.IAFilter)
+			alertParams.Filter = append(alertParams.Filter, IAFilter)
 		}
 		if fp.ServiceID != "" {
 			alertParams.Filter = append(alertParams.Filter, fmt.Sprintf("service_id=\"%s\"", fp.ServiceID))

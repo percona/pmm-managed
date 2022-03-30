@@ -22,13 +22,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-const (
-	// CheckFilter represents AlertManager filter for Checks/Advisor results.
-	CheckFilter = "stt_check=1"
-	// IAFilter represents AlertManager filter for Integrated Alerts.
-	IAFilter = "ia=1"
-)
-
 // Target contains required info about STT check target.
 type Target struct {
 	AgentID       string

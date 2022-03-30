@@ -19,11 +19,10 @@ package checks
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/services"
-
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
