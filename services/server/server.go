@@ -429,7 +429,8 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 }
 
 // convertSettings merges database settings and settings from environment variables into API response.
-func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
+// Checking if PMM is connected to Platform is separated from settings for security and concurrency reasons.
+func (s *Server) convertSettings(settings *models.Settings, connectedToPlatform bool) *serverpb.Settings {
 	res := &serverpb.Settings{
 		UpdatesDisabled:  settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
@@ -454,6 +455,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 
 		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
+		ConnectedToPlatform:     connectedToPlatform,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -494,8 +496,10 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		return nil, err
 	}
 
+	_, err = models.GetPerconaSSODetails(ctx, s.db.Querier)
+
 	return &serverpb.GetSettingsResponse{
-		Settings: s.convertSettings(settings),
+		Settings: s.convertSettings(settings, err == nil),
 	}, nil
 }
 
@@ -743,8 +747,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
+	_, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+
 	return &serverpb.ChangeSettingsResponse{
-		Settings: s.convertSettings(newSettings),
+		Settings: s.convertSettings(newSettings, err == nil),
 	}, nil
 }
 
