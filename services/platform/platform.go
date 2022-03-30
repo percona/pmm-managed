@@ -543,9 +543,8 @@ func convertEntitlement(ent *entitlementResponse) (*platformpb.OrganizationEntit
 	}, nil
 }
 
-// Status API returns a boolean indicating whether the PMM server is connected to Platform
-// and the logged-in user is a Platform organization member.
-func (s *Service) Status(ctx context.Context, req *platformpb.StatusRequest) (*platformpb.StatusResponse, error) {
+// UserStatus API returns a boolean indicating whether the the logged-in user is a Platform organization member or not.
+func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequest) (*platformpb.UserStatusResponse, error) {
 	// We use the access token instead of `models.GetPerconaSSODetails()`.
 	// The reason for that is Frontend needs to use this API to know whether they can
 	// show certain menu items to users "logged in with their Percona Accounts" after PMM
@@ -555,18 +554,14 @@ func (s *Service) Status(ctx context.Context, req *platformpb.StatusRequest) (*p
 	_, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
 	if err != nil {
 		if errors.Is(err, grafana.ErrFailedToGetToken) {
-			s.l.Error("false")
-			return &platformpb.StatusResponse{
-				Connected: false,
-			}, nil
+			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
-		s.l.Errorf("Status request failed: %s", err)
+		s.l.Errorf("UserStatus request failed: %s", err)
 		return nil, errInternalServer
 	}
 
-	s.l.Error("true")
-	return &platformpb.StatusResponse{
-		Connected: true,
+	return &platformpb.UserStatusResponse{
+		IsPlatformUser: true,
 	}, nil
 
 }
