@@ -652,7 +652,7 @@ func (s *Agent) buildWebConfigFile() string {
 
 func getPasswordSalt(s *Agent) string {
 	if s.AgentID != "" && len(s.AgentID) >= bcrypt.MaxSaltSize {
-		return string(s.AgentID[len(s.AgentID)-bcrypt.MaxSaltSize:])
+		return s.AgentID[len(s.AgentID)-bcrypt.MaxSaltSize:]
 	}
 
 	return "pmm-salt-magic--"
