@@ -113,6 +113,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		pmmServerURL:              pmmServerURL,
 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
 		pmmServerID:               settings.PMMServerID,
+		personalAccessToken:       req.PersonalAccessToken,
 	})
 	if err != nil {
 		return nil, err // this is already a status error
