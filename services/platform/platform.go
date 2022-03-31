@@ -547,14 +547,18 @@ func (s *Service) ServerInfo(ctx context.Context, req *platformpb.ServerInfoRequ
 		return nil, internalServerError
 	}
 
+	serverName := ""
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
-		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+	}
+
+	if ssoDetails != nil {
+		serverName = ssoDetails.PMMServerName
 	}
 
 	return &platformpb.ServerInfoResponse{
-		PmmServerName: ssoDetails.PMMServerName,
+		PmmServerName: serverName,
 		PmmServerId:   settings.PMMServerID,
 	}, nil
 }
