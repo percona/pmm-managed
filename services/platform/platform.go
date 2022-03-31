@@ -560,6 +560,8 @@ func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequ
 		return nil, errInternalServer
 	}
 
-	return &platformpb.UserStatusResponse{}, nil
+	return &platformpb.UserStatusResponse{
+		IsPlatformUser: true,
+	}, nil
 
 }
