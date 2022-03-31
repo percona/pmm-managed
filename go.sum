@@ -34,8 +34,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 github.com/AlekSi/pointer v1.1.0/go.mod h1:y7BvfRI3wXPWKXEBhU71nbnIEEZX0QTSB2Bj48UJIZE=
 github.com/AlekSi/pointer v1.2.0 h1:glcy/gc4h8HnG2Z3ZECSzZ1IX1x2JxRVuDzaJwQE0+w=
 github.com/AlekSi/pointer v1.2.0/go.mod h1:gZGfd3dpW4vEc/UlyfKKi1roIqcCgwOIvb0tSNSBle0=
-github.com/Azure/azure-sdk-for-go v62.2.0+incompatible h1:o596qtwrgDH44VC3J0JOCwkT1xKekn8kPvCGpAceYs0=
-github.com/Azure/azure-sdk-for-go v62.2.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
+github.com/Azure/azure-sdk-for-go v63.0.0+incompatible h1:whPsa+jCHQSo5wGMPNLw4bz8q9Co2+vnXHzXGctoTaQ=
+github.com/Azure/azure-sdk-for-go v63.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-autorest v14.2.0+incompatible h1:V5VMDjClD3GiElqLWO7mz2MxNAK/vTfRHdAubSIPRgs=
 github.com/Azure/go-autorest v14.2.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/Azure/go-autorest/autorest v0.11.24 h1:1fIGgHKqVm54KIPT+q8Zmd1QlVsmHqeUGso5qm2BqqE=
@@ -652,8 +652,13 @@ github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472 h1:Henk
 github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472/go.mod h1:WZZ3Hi+lAWCaGWmsrfkkvRQPkIa8n1OZ0s8Su+vbgus=
 github.com/percona-platform/saas v0.0.0-20220317155708-e7f0cb2ec37f h1:yQmj2OdE1hhZ6W3YUyu3uywokveAE/63AoxBu7VcxqM=
 github.com/percona-platform/saas v0.0.0-20220317155708-e7f0cb2ec37f/go.mod h1:gFUwaFp6Ugu5qsBwiOVJYbDlzgZ77tmXdXGO7tG5xVI=
+<<<<<<< HEAD
 github.com/percona/pmm v0.0.0-20220331141617-6ce9d73f9c61 h1:oms6HEI52kpOWZw0BZHppPkkzTQ0bwlvp2WGbMXAxdU=
 github.com/percona/pmm v0.0.0-20220331141617-6ce9d73f9c61/go.mod h1:stX2hCHtTjCsIhcvZXuu7VoaCiU+DYHwHxzANI/7Ps0=
+=======
+github.com/percona/pmm v0.0.0-20220331130854-dd57d622bb68 h1:HT9LE/N1UTRqqTXCgEVA9XCy2YDmvD94wGmLX0uCAvw=
+github.com/percona/pmm v0.0.0-20220331130854-dd57d622bb68/go.mod h1:stX2hCHtTjCsIhcvZXuu7VoaCiU+DYHwHxzANI/7Ps0=
+>>>>>>> origin/main
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=

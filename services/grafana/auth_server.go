@@ -59,7 +59,11 @@ var rules = map[string]role{
 	"/v1/Platform/Disconnect":                     admin,
 	"/v1/Platform/SearchOrganizationTickets":      viewer,
 	"/v1/Platform/SearchOrganizationEntitlements": viewer,
+<<<<<<< HEAD
 	"/v1/Platform/ServerInfo":                     viewer,
+=======
+	"/v1/Platform/UserStatus":                     viewer,
+>>>>>>> origin/main
 
 	// must be available without authentication for health checking
 	"/v1/readyz": none,
