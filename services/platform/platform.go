@@ -543,7 +543,7 @@ func convertEntitlement(ent *entitlementResponse) (*platformpb.OrganizationEntit
 	}, nil
 }
 
-// UserStatus API returns a boolean indicating whether the the logged-in user is a Platform organization member or not.
+// UserStatus API tells whether the logged-in user is a Platform organization member or not.
 func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequest) (*platformpb.UserStatusResponse, error) {
 	// We use the access token instead of `models.GetPerconaSSODetails()`.
 	// The reason for that is Frontend needs to use this API to know whether they can
@@ -560,8 +560,6 @@ func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequ
 		return nil, errInternalServer
 	}
 
-	return &platformpb.UserStatusResponse{
-		IsPlatformUser: true,
-	}, nil
+	return &platformpb.UserStatusResponse{}, nil
 
 }
