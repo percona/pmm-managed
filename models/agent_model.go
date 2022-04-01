@@ -662,7 +662,7 @@ func (s *Agent) buildWebConfigFile() string {
 
 	buf := HashPassword(password, salt)
 
-	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", string(buf))
+	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", buf)
 }
 
 func getPasswordSalt(s *Agent) string {
