@@ -24,7 +24,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	models.HashPassword = func(password string) string {
+	models.HashPassword = func(password, salt string) string {
 		return password
 	}
 
