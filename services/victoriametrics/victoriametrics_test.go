@@ -102,6 +102,7 @@ func TestVictoriaMetrics(t *testing.T) {
 				AgentID:      "/agent_id/217907dc-d34d-4e2e-aa84-a1b765d49853",
 				AgentType:    models.PMMAgentType,
 				RunsOnNodeID: pointer.ToString("/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d"),
+				Version:      pointer.ToString("2.26.0"),
 			},
 
 			// listen port not known
@@ -131,6 +132,26 @@ func TestVictoriaMetrics(t *testing.T) {
 				Address:      pointer.ToString("50.60.70.80"),
 				Port:         pointer.ToUint16(3306),
 				CustomLabels: []byte(`{"_service_label": "bar"}`),
+			},
+
+			&models.Service{
+				ServiceID:    "/service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4",
+				ServiceType:  models.MongoDBServiceType,
+				ServiceName:  "test-mongodb",
+				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+				Address:      pointer.ToString("5.6.7.8"),
+				Port:         pointer.ToUint16(27017),
+				CustomLabels: []byte(`{"_service_label": "bam"}`),
+			},
+
+			&models.Agent{
+				AgentID:        "/agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb",
+				AgentType:      models.MongoDBExporterType,
+				PMMAgentID:     pointer.ToString("/agent_id/217907dc-d34d-4e2e-aa84-a1b765d49853"),
+				ServiceID:      pointer.ToString("/service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4"),
+				CustomLabels:   []byte(`{"_agent_label": "mongodb-baz"}`),
+				ListenPort:     pointer.ToUint16(12346),
+				MongoDBOptions: &models.MongoDBOptions{EnableAllCollectors: true},
 			},
 
 			&models.Agent{
@@ -178,6 +199,47 @@ func TestVictoriaMetrics(t *testing.T) {
 				NodeID:     pointer.ToString("/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d"),
 				Disabled:   true,
 				ListenPort: pointer.ToUint16(12345),
+			},
+
+			// PMM Agent without version
+			&models.Agent{
+				AgentID:      "/agent_id/892b3d86-12e5-4765-aa32-e5092ecd78e1",
+				AgentType:    models.PMMAgentType,
+				RunsOnNodeID: pointer.ToString("/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d"),
+			},
+
+			&models.Service{
+				ServiceID:    "/service_id/1eae647b-f1e2-4e15-bc58-dfdbc3c37cbf",
+				ServiceType:  models.MongoDBServiceType,
+				ServiceName:  "test-mongodb-noversion",
+				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+				Address:      pointer.ToString("5.6.7.9"),
+				Port:         pointer.ToUint16(27017),
+				CustomLabels: []byte(`{"_service_label": "bam"}`),
+			},
+
+			// Agent with push model
+			&models.Agent{
+				AgentID:        "/agent_id/386c4ce6-7cd2-4bc9-9d6f-b4691c6e7eb7",
+				AgentType:      models.MongoDBExporterType,
+				PMMAgentID:     pointer.ToString("/agent_id/892b3d86-12e5-4765-aa32-e5092ecd78e1"),
+				ServiceID:      pointer.ToString("/service_id/1eae647b-f1e2-4e15-bc58-dfdbc3c37cbf"),
+				CustomLabels:   []byte(`{"_agent_label": "mongodb-baz-push"}`),
+				ListenPort:     pointer.ToUint16(12346),
+				MongoDBOptions: &models.MongoDBOptions{EnableAllCollectors: true},
+				PushMetrics:    true,
+			},
+
+			// Agent with pull model
+			&models.Agent{
+				AgentID:        "/agent_id/cfec996c-4fe6-41d9-83cb-e1a3b1fe10a8",
+				AgentType:      models.MongoDBExporterType,
+				PMMAgentID:     pointer.ToString("/agent_id/892b3d86-12e5-4765-aa32-e5092ecd78e1"),
+				ServiceID:      pointer.ToString("/service_id/1eae647b-f1e2-4e15-bc58-dfdbc3c37cbf"),
+				CustomLabels:   []byte(`{"_agent_label": "mongodb-baz-pull"}`),
+				ListenPort:     pointer.ToUint16(12346),
+				MongoDBOptions: &models.MongoDBOptions{EnableAllCollectors: true},
+				PushMetrics:    false,
 			},
 		} {
 			check.NoError(db.Insert(str), "%+v", str)
@@ -252,6 +314,88 @@ scrape_configs:
             - 127.0.0.1:9933
           labels:
             instance: pmm-server
+    - job_name: mongodb_exporter_agent_id_cfec996c-4fe6-41d9-83cb-e1a3b1fe10a8_hr-5s
+      honor_timestamps: false
+      scrape_interval: 5s
+      scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12346
+          labels:
+            _agent_label: mongodb-baz-pull
+            _node_label: foo
+            _service_label: bam
+            agent_id: /agent_id/cfec996c-4fe6-41d9-83cb-e1a3b1fe10a8
+            agent_type: mongodb_exporter
+            instance: /agent_id/cfec996c-4fe6-41d9-83cb-e1a3b1fe10a8
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/1eae647b-f1e2-4e15-bc58-dfdbc3c37cbf
+            service_name: test-mongodb-noversion
+            service_type: mongodb
+      basic_auth:
+        username: pmm
+        password: /agent_id/cfec996c-4fe6-41d9-83cb-e1a3b1fe10a8
+    - job_name: mongodb_exporter_agent_id_ecd8995a-d479-4b4d-bfb7-865bac4ac2fb_hr-5s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - diagnosticdata
+            - replicasetstatus
+            - topmetrics
+      scrape_interval: 5s
+      scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12346
+          labels:
+            _agent_label: mongodb-baz
+            _node_label: foo
+            _service_label: bam
+            agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            agent_type: mongodb_exporter
+            instance: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4
+            service_name: test-mongodb
+            service_type: mongodb
+      basic_auth:
+        username: pmm
+        password: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+    - job_name: mongodb_exporter_agent_id_ecd8995a-d479-4b4d-bfb7-865bac4ac2fb_lr-1m0s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - collstats
+            - dbstats
+            - indexstats
+      scrape_interval: 1m
+      scrape_timeout: 54s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12346
+          labels:
+            _agent_label: mongodb-baz
+            _node_label: foo
+            _service_label: bam
+            agent_id: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            agent_type: mongodb_exporter
+            instance: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/acds89846-3cd2-47f8-a5f9-ac789513cde4
+            service_name: test-mongodb
+            service_type: mongodb
+      basic_auth:
+        username: pmm
+        password: /agent_id/ecd8995a-d479-4b4d-bfb7-865bac4ac2fb
     - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
       honor_timestamps: false
       params:
@@ -472,12 +616,68 @@ scrape_configs:
       honor_timestamps: false
       params:
         collect[]:
-            - custom_query
+            - custom_query.hr
             - exporter
             - standard.go
             - standard.process
       scrape_interval: 5s
       scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12345
+          labels:
+            _agent_label: postgres-baz
+            _node_label: foo
+            _service_label: bar
+            agent_id: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            agent_type: postgres_exporter
+            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/9cffbdd4-3cd2-47f8-a5f9-a749c3d5fee1
+            service_name: test-postgresql
+            service_type: postgresql
+      basic_auth:
+        username: pmm
+        password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+      stream_parse: true
+    - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_mr-10s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - custom_query.mr
+      scrape_interval: 10s
+      scrape_timeout: 9s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 1.2.3.4:12345
+          labels:
+            _agent_label: postgres-baz
+            _node_label: foo
+            _service_label: bar
+            agent_id: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            agent_type: postgres_exporter
+            instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+            node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
+            node_name: test-generic-node
+            node_type: generic
+            service_id: /service_id/9cffbdd4-3cd2-47f8-a5f9-a749c3d5fee1
+            service_name: test-postgresql
+            service_type: postgresql
+      basic_auth:
+        username: pmm
+        password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
+      stream_parse: true
+    - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_lr-1m0s
+      honor_timestamps: false
+      params:
+        collect[]:
+            - custom_query.lr
+      scrape_interval: 1m
+      scrape_timeout: 54s
       metrics_path: /metrics
       static_configs:
         - targets:

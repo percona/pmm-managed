@@ -34,10 +34,12 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
@@ -62,7 +64,7 @@ const (
 	scriptExecutionTimeout = 5 * time.Second  // time limit for running pmm-managed-starlark
 	resultCheckInterval    = time.Second
 
-	// sync with API tests
+	// Sync with API tests.
 	resolveTimeoutFactor  = 3
 	defaultResendInterval = 2 * time.Second
 
@@ -74,9 +76,11 @@ const (
 )
 
 // pmm-agent versions with known changes in Query Actions.
+// To match all pre-release versions add '-0' suffix to specified version.
 var (
-	pmmAgent260     = version.MustParse("2.6.0")
-	pmmAgent270     = version.MustParse("2.7.0")
+	pmmAgent2_6_0   = version.MustParse("2.6.0")
+	pmmAgent2_7_0   = version.MustParse("2.7.0")
+	pmmAgent2_27_0  = version.MustParse("2.27.0-0")
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
@@ -168,6 +172,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBBuildInfo))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetCmdLineOpts))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetParameter))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBReplSetGetStatus))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetDiagnosticData))
 
 	return s, nil
 }
@@ -265,7 +271,7 @@ func (s *Service) runChecksLoop(ctx context.Context) {
 }
 
 // GetSecurityCheckResults returns the results of the STT checks that were run. It returns services.ErrSTTDisabled if STT is disabled.
-func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
+func (s *Service) GetSecurityCheckResults() ([]services.CheckResult, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -276,6 +282,71 @@ func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	}
 
 	return s.alertsRegistry.getCheckResults(), nil
+}
+
+// GetChecksResults returns the failed checks for a given service from AlertManager.
+func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]services.CheckResult, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.SaaS.STTEnabled {
+		return nil, services.ErrSTTDisabled
+	}
+
+	filters := &services.FilterParams{
+		IsCheck:   true,
+		ServiceID: serviceID,
+	}
+	res, err := s.alertmanagerService.GetAlerts(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	checkResults := make([]services.CheckResult, 0, len(res))
+	for _, alert := range res {
+		checkResults = append(checkResults, services.CheckResult{
+			CheckName: alert.Labels[model.AlertNameLabel],
+			Silenced:  len(alert.Status.SilencedBy) != 0,
+			AlertID:   alert.Labels["alert_id"],
+			Interval:  check.Interval(alert.Labels["interval_group"]),
+			Target: services.Target{
+				AgentID:     alert.Labels["agent_id"],
+				ServiceID:   alert.Labels["service_id"],
+				ServiceName: alert.Labels["service_name"],
+				Labels:      alert.Labels,
+			},
+			Result: check.Result{
+				Summary:     alert.Annotations["summary"],
+				Description: alert.Annotations["description"],
+				ReadMoreURL: alert.Annotations["read_more_url"],
+				Severity:    common.ParseSeverity(alert.Labels["severity"]),
+				Labels:      alert.Labels,
+			},
+		})
+	}
+	return checkResults, nil
+}
+
+// ToggleCheckAlert toggles the silence state of the check with the provided alertID.
+func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
+	filters := &services.FilterParams{
+		IsCheck: true,
+		AlertID: alertID,
+	}
+	res, err := s.alertmanagerService.GetAlerts(ctx, filters)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get alerts with id: %s", alertID)
+	}
+
+	if silence {
+		err = s.alertmanagerService.SilenceAlerts(ctx, res)
+	} else {
+		err = s.alertmanagerService.UnsilenceAlerts(ctx, res)
+	}
+
+	return err
 }
 
 // runChecksGroup downloads and executes STT checks in synchronous way.
@@ -511,10 +582,15 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 	case check.MongoDBBuildInfo:
 		fallthrough
 	case check.MongoDBGetParameter:
-		return pmmAgent260
+		return pmmAgent2_6_0
 
 	case check.MongoDBGetCmdLineOpts:
-		return pmmAgent270
+		return pmmAgent2_7_0
+
+	case check.MongoDBReplSetGetStatus:
+		fallthrough
+	case check.MongoDBGetDiagnosticData:
+		return pmmAgent2_27_0
 
 	default:
 		s.l.Warnf("minPMMAgentVersion: unhandled check type %q.", t)
@@ -567,7 +643,7 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 		return errors.WithStack(err)
 	}
 
-	var checkResults []services.STTCheckResult
+	var checkResults []services.CheckResult
 	checks, err := s.GetChecks()
 	if err != nil {
 		return errors.WithStack(err)
@@ -604,8 +680,8 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 }
 
 // executeMySQLChecks runs specified checks for available MySQL service.
-func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -633,8 +709,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks map[string]chec
 }
 
 // executePostgreSQLChecks runs specified PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -662,8 +738,8 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks map[string
 }
 
 // executeMongoDBChecks runs specified MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]check.Check) []services.STTCheckResult {
-	var res []services.STTCheckResult
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]check.Check) []services.CheckResult {
+	var res []services.CheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -690,7 +766,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks map[string]ch
 	return res
 }
 
-func (s *Service) executeCheck(ctx context.Context, target services.Target, c check.Check) ([]services.STTCheckResult, error) {
+func (s *Service) executeCheck(ctx context.Context, target services.Target, c check.Check) ([]services.CheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, checkExecutionTimeout)
 	defer cancel()
 
@@ -705,15 +781,19 @@ func (s *Service) executeCheck(ctx context.Context, target services.Target, c ch
 	case check.MySQLSelect:
 		err = s.agentsRegistry.StartMySQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, c.Query, target.Files, target.TDP, target.TLSSkipVerify)
 	case check.PostgreSQLShow:
-		err = s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN)
+		err = s.agentsRegistry.StartPostgreSQLQueryShowAction(nCtx, r.ID, target.AgentID, target.DSN)
 	case check.PostgreSQLSelect:
-		err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, c.Query)
+		err = s.agentsRegistry.StartPostgreSQLQuerySelectAction(nCtx, r.ID, target.AgentID, target.DSN, c.Query)
 	case check.MongoDBGetParameter:
-		err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		err = s.agentsRegistry.StartMongoDBQueryGetParameterAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 	case check.MongoDBBuildInfo:
-		err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		err = s.agentsRegistry.StartMongoDBQueryBuildInfoAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 	case check.MongoDBGetCmdLineOpts:
-		err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+		err = s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+	case check.MongoDBReplSetGetStatus:
+		err = s.agentsRegistry.StartMongoDBQueryReplSetGetStatusAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
+	case check.MongoDBGetDiagnosticData:
+		err = s.agentsRegistry.StartMongoDBQueryGetDiagnosticDataAction(nCtx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP)
 	default:
 		return nil, errors.Errorf("unknown check type")
 	}
@@ -737,7 +817,7 @@ type StarlarkScriptData struct {
 	QueryResult []byte `json:"query_result"`
 }
 
-func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.STTCheckResult, error) {
+func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.CheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultAwaitTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -789,9 +869,9 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	l.Infof("Check script returned %d results.", len(results))
 	l.Debugf("Results: %+v.", results)
 
-	checkResults := make([]services.STTCheckResult, len(results))
+	checkResults := make([]services.CheckResult, len(results))
 	for i, result := range results {
-		checkResults[i] = services.STTCheckResult{
+		checkResults[i] = services.CheckResult{
 			CheckName: sttCheck.Name,
 			Interval:  sttCheck.Interval,
 			Target:    target,
@@ -888,6 +968,10 @@ func (s *Service) groupChecksByDB(checks map[string]check.Check) (mySQLChecks, p
 		case check.MongoDBBuildInfo:
 			fallthrough
 		case check.MongoDBGetCmdLineOpts:
+			fallthrough
+		case check.MongoDBReplSetGetStatus:
+			fallthrough
+		case check.MongoDBGetDiagnosticData:
 			mongoDBChecks[c.Name] = c
 
 		default:
@@ -1007,6 +1091,8 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 		case check.MongoDBGetParameter:
 		case check.MongoDBBuildInfo:
 		case check.MongoDBGetCmdLineOpts:
+		case check.MongoDBReplSetGetStatus:
+		case check.MongoDBGetDiagnosticData:
 		default:
 			s.l.Warnf("Unsupported check type: %s.", c.Type)
 			continue
@@ -1052,7 +1138,7 @@ func (s *Service) Collect(ch chan<- prom.Metric) {
 	s.mAlertsGenerated.Collect(ch)
 }
 
-// check interfaces
+// check interfaces.
 var (
 	_ prom.Collector = (*Service)(nil)
 )
