@@ -695,6 +695,14 @@ var databaseSchema = [][]string{
 		`ALTER TABLE percona_sso_details
 			ADD COLUMN pmm_server_name VARCHAR`,
 	},
+	60: {
+		`ALTER TABLE percona_sso_details
+			DROP COLUMN client_id, 
+			DROP COLUMN client_secret,
+			ADD COLUMN grafana_client_id VARCHAR NOT NULL,
+			ADD COLUMN pmm_managed_client_id VARCHAR NOT NULL,
+			ADD COLUMN pmm_managed_client_secret VARCHAR NOT NULL`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
