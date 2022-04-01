@@ -3,6 +3,7 @@ package telemetry_v2
 import (
 	"context"
 	"database/sql"
+
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"

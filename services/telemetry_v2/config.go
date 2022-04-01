@@ -1,14 +1,15 @@
 package telemetry_v2
 
 import (
-	"aead.dev/minisign"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
 	"time"
+
+	"aead.dev/minisign"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 type ServiceConfig struct {

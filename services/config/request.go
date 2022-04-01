@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/percona/pmm-managed/utils/saasreq"
 	"net/http"
+
+	"github.com/percona/pmm-managed/utils/saasreq"
 )
 
 func (c *Config) configureSaasReqEnrichment() {

@@ -2,6 +2,7 @@ package telemetry_v2
 
 import (
 	"context"
+
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

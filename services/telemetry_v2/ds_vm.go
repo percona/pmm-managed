@@ -2,12 +2,13 @@ package telemetry_v2
 
 import (
 	"context"
+	"time"
+
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 type dsVm struct {

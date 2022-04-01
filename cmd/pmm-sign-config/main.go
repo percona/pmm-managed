@@ -1,13 +1,15 @@
 package main
 
 import (
-	"aead.dev/minisign"
-	"github.com/percona/pmm-managed/utils/logger"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"aead.dev/minisign"
+
+	"github.com/percona/pmm-managed/utils/logger"
 )
 
 func main() {

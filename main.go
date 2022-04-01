@@ -22,9 +22,6 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/percona/pmm-managed/services/config"
-	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"html/template"
 	"log"
 	"net"
@@ -38,6 +35,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
+
+	"github.com/percona/pmm-managed/services/config"
+	"github.com/percona/pmm-managed/services/telemetry_v2"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"

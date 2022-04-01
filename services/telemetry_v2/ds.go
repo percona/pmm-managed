@@ -3,9 +3,10 @@ package telemetry_v2
 import (
 	"context"
 	"database/sql"
+	"time"
+
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {

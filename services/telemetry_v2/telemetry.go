@@ -4,25 +4,29 @@ package telemetry_v2
 import (
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	//nolint:staticcheck
-	"github.com/percona/pmm-managed/utils/saasreq"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net/http"
+
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/percona/pmm-managed/utils/saasreq"
 
 	"bytes"
 	"context"
 	"encoding/hex"
-	"github.com/google/uuid"
-	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm/api/serverpb"
-	"github.com/pkg/errors"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"io/ioutil"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
+	"github.com/percona/pmm/api/serverpb"
+	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/percona/pmm-managed/models"
 
 	//nolint:staticcheck
 	"github.com/sirupsen/logrus"

@@ -18,14 +18,16 @@ package config
 
 import (
 	_ "embed"
-	"github.com/percona/pmm-managed/services/platform"
-	"github.com/percona/pmm-managed/services/telemetry"
-	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"io/ioutil"
+	"os"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"os"
+
+	"github.com/percona/pmm-managed/services/platform"
+	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/telemetry_v2"
 )
 
 const (
