@@ -22,11 +22,15 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/percona/pmm-managed/services/config"
+	"github.com/percona/pmm-managed/services/telemetry_v2"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof" // register /debug/pprof
+	"net/url"
 	"os"
 	"os/signal"
 	"sort"
@@ -154,7 +158,7 @@ type gRPCServerDeps struct {
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
-func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
+func runGRPCServer(ctx context.Context, deps *gRPCServerDeps, cfg platform.Config) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
@@ -221,7 +225,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
 
-	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient)
+	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient, cfg)
 	if err == nil {
 		platformpb.RegisterPlatformServer(gRPCServer, platformService)
 	} else {
@@ -557,6 +561,23 @@ func migrateDB(ctx context.Context, sqlDB *sql.DB, dbName, dbAddress, dbUsername
 }
 
 func main() {
+	if _, err := os.Stat(".env"); err == nil {
+		log.Println("Overriding ENV with .env")
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file: %s", err)
+		}
+	}
+
+	if v, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_WAIT_FOR_DEBUG_SESSION")); err == nil && v {
+		shouldWait := true // will be overridden via debug session
+		//goland:noinspection ALL
+		for shouldWait {
+			log.Println("Waiting for debugging session...")
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
 		panic("pmm-managed version is not set during build.")
@@ -610,18 +631,40 @@ func main() {
 	ctx = logger.Set(ctx, "main")
 	defer l.Info("Done.")
 
-	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
+	cfg := config.NewService()
+	if err := cfg.Load(); err != nil {
+		l.Panicf("Failed to load config: %+v", err)
+	}
+	if err := cfg.Update(func(s *config.Service) error {
+		ds := s.Config.Services.TelemetryV2.DataSources
+		pmmdb := ds.PMMDB_SELECT
+
+		pmmdb.Credentials.Username = *postgresDBUsernameF
+		pmmdb.Credentials.Password = *postgresDBPasswordF
+		pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+		pmmdb.DSN.Host = *postgresAddrF
+		pmmdb.DSN.DB = *postgresDBNameF
+		q := make(url.Values)
+		q.Set("sslmode", "disable")
+		pmmdb.DSN.Params = q.Encode()
+
+		return nil
+	}); err != nil {
+		l.Panicf("Failed to update config: %+v", err)
+	}
+
+	pmmDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close() //nolint:errcheck
+	defer pmmDB.Close() //nolint:errcheck
 
-	migrateDB(ctx, sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
+	migrateDB(ctx, pmmDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
 
-	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
+	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, pmmDB))
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
+	db := reform.NewDB(pmmDB, postgresql.Dialect, reformL)
 
 	// Generate unique PMM Server ID if it's not already set.
 	err = models.SetPMMServerID(db)
@@ -648,7 +691,7 @@ func main() {
 
 	minioService := minio.New()
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	qanClient := getQANClient(ctx, pmmDB, *postgresDBNameF, *qanAPIAddrF)
 
 	agentsRegistry := agents.NewRegistry(db)
 	backupRemovalService := backup.NewRemovalService(db, minioService)
@@ -667,9 +710,14 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
 
-	telemetry, err := telemetry.NewService(db, version.Version)
+	telemetry, err := telemetry.NewService(db, version.Version, cfg.Config.Services.Telemetry)
 	if err != nil {
 		l.Fatalf("Could not create telemetry service: %s", err)
+	}
+
+	telemetryV2, err := telemetry_v2.NewService(db, version.Version, cfg.Config.Services.TelemetryV2)
+	if err != nil {
+		l.Fatalf("Could not create telemetry_v2 service: %s", err)
 	}
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
@@ -718,6 +766,7 @@ func main() {
 		TemplatesService:     templatesService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
+		TelemetryV2Service:   telemetryV2,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -758,7 +807,7 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:        sqlDB,
+		sqlDB:        pmmDB,
 		supervisord:  supervisord,
 		vmdb:         vmdb,
 		vmalert:      vmalert,
@@ -793,7 +842,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(sqlDB)
+	settings, err := models.GetSettings(pmmDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
@@ -867,6 +916,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		telemetryV2.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		schedulerService.Run(ctx)
 	}()
 
@@ -879,33 +934,37 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runGRPCServer(ctx, &gRPCServerDeps{
-			db:                   db,
-			vmdb:                 vmdb,
-			server:               server,
-			agentsRegistry:       agentsRegistry,
-			handler:              agentsHandler,
-			actions:              actionsService,
-			agentsStateUpdater:   agentsStateUpdater,
-			connectionCheck:      connectionCheck,
-			grafanaClient:        grafanaClient,
-			checksService:        checksService,
-			dbaasClient:          dbaasClient,
-			alertmanager:         alertManager,
-			vmalert:              vmalert,
-			settings:             settings,
-			alertsService:        alertsService,
-			templatesService:     templatesService,
-			rulesService:         rulesService,
-			jobsService:          jobsService,
-			versionServiceClient: versionService,
-			schedulerService:     schedulerService,
-			backupService:        backupService,
-			backupRemovalService: backupRemovalService,
-			minioService:         minioService,
-			versionCache:         versionCache,
-			supervisord:          supervisord,
-		})
+		runGRPCServer(
+			ctx,
+			&gRPCServerDeps{
+				db:                   db,
+				vmdb:                 vmdb,
+				server:               server,
+				agentsRegistry:       agentsRegistry,
+				handler:              agentsHandler,
+				actions:              actionsService,
+				agentsStateUpdater:   agentsStateUpdater,
+				connectionCheck:      connectionCheck,
+				grafanaClient:        grafanaClient,
+				checksService:        checksService,
+				dbaasClient:          dbaasClient,
+				alertmanager:         alertManager,
+				vmalert:              vmalert,
+				settings:             settings,
+				alertsService:        alertsService,
+				templatesService:     templatesService,
+				rulesService:         rulesService,
+				jobsService:          jobsService,
+				versionServiceClient: versionService,
+				schedulerService:     schedulerService,
+				backupService:        backupService,
+				backupRemovalService: backupRemovalService,
+				minioService:         minioService,
+				versionCache:         versionCache,
+				supervisord:          supervisord,
+			},
+			cfg.Config.Services.Platform,
+		)
 	}()
 
 	wg.Add(1)

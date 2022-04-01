@@ -32,22 +32,29 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var dialTimeout time.Duration
+var (
+	dialTimeout     time.Duration
+	RequestEnricher func(method string, endpoint string, req *http.Request)
+)
 
 func init() {
 	l := logger.Get(logger.Set(context.Background(), "saasreq init"))
 	dialTimeout = envvars.GetPlatformAPITimeout(l)
 }
 
+type SaasRequestOptions struct {
+	SkipTlsVerification bool
+}
+
 // MakeRequest creates http/https POST request to Percona Platform
-func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader) ([]byte, error) {
-	u, err := url.Parse(endpoint)
+func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader, options *SaasRequestOptions) ([]byte, error) {
+	_, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	tlsConfig := tlsconfig.Get()
-	tlsConfig.ServerName = u.Host
+	tlsConfig.InsecureSkipVerify = options.SkipTlsVerification
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
@@ -61,6 +68,10 @@ func MakeRequest(ctx context.Context, method string, endpoint, accessToken strin
 	h.Add("Content-Type", "application/json")
 	if accessToken != "" {
 		h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	}
+
+	if RequestEnricher != nil {
+		RequestEnricher(method, endpoint, req)
 	}
 
 	client := &http.Client{
