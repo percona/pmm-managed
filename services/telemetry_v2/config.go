@@ -3,6 +3,7 @@ package telemetry_v2
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -151,6 +152,15 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error {
 		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.SendTimeoutStr)
 	}
 	c.Reporting.SendTimeout = sendTimeout
+
+	if d, err := time.ParseDuration(os.Getenv(c.Reporting.IntervalEnv)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		c.Reporting.Interval = d
+	}
+	if d, err := time.ParseDuration(os.Getenv(c.Reporting.RetryBackoffEnv)); err == nil && d > 0 {
+		l.Warnf("Retry backoff changed to %s.", d)
+		c.Reporting.RetryBackoff = d
+	}
 
 	ds := c.DataSources
 
