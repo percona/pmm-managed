@@ -11,22 +11,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type dsVm struct {
+type dataSourceVictoriaMetrics struct {
 	l      *logrus.Entry
-	config DSVM
+	config DataSourceVictoriaMetrics
 	vm     v1.API
 }
 
 // check interfaces
 var (
-	_ TelemetryDataSource = (*dsVm)(nil)
+	_ TelemetryDataSource = (*dataSourceVictoriaMetrics)(nil)
 )
 
-func (d *dsVm) Enabled() bool {
+func (d *dataSourceVictoriaMetrics) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDsVm(config DSVM, l *logrus.Entry) (TelemetryDataSource, error) {
+func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.Entry) (TelemetryDataSource, error) {
 	client, err := api.NewClient(api.Config{
 		Address: config.Address,
 	})
@@ -36,21 +36,21 @@ func NewDsVm(config DSVM, l *logrus.Entry) (TelemetryDataSource, error) {
 	}
 
 	if !config.Enabled {
-		return &dsVm{
+		return &dataSourceVictoriaMetrics{
 			l:      l,
 			config: config,
 			vm:     nil,
 		}, nil
 	}
 
-	return &dsVm{
+	return &dataSourceVictoriaMetrics{
 		l:      l,
 		config: config,
 		vm:     v1.NewAPI(client),
 	}, nil
 }
 
-func (d *dsVm) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
+func (d *dataSourceVictoriaMetrics) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
 
 	localCtx, _ := context.WithTimeout(ctx, d.config.Timeout)
 	result, _, err := d.vm.Query(localCtx, config.Query, time.Now())

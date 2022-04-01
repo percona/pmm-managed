@@ -36,7 +36,7 @@ func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (TelemetryData
 		return nil, err
 	}
 
-	vmDB, err := NewDsVm(*config.DataSources.VM, l)
+	vmDB, err := NewDataSourceVictoriaMetrics(*config.DataSources.VM, l)
 	if err != nil {
 		return nil, err
 	}

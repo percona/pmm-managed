@@ -26,9 +26,9 @@ type ServiceConfig struct {
 	Endpoints    EndpointsConfig   `yaml:"endpoints"`
 	SaasHostname string            `yaml:"saas_hostname"`
 	DataSources  struct {
-		VM           *DSVM          `yaml:"VM"`
-		QANDB_SELECT *DSConfigQAN   `yaml:"QANDB_SELECT"`
-		PMMDB_SELECT *DSConfigPMMDB `yaml:"PMMDB_SELECT"`
+		VM           *DataSourceVictoriaMetrics `yaml:"VM"`
+		QANDB_SELECT *DSConfigQAN               `yaml:"QANDB_SELECT"`
+		PMMDB_SELECT *DSConfigPMMDB             `yaml:"PMMDB_SELECT"`
 	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
 }
@@ -52,7 +52,7 @@ type DSConfigQAN struct {
 	DSN        string        `yaml:"dsn"`
 }
 
-type DSVM struct {
+type DataSourceVictoriaMetrics struct {
 	Enabled    bool          `yaml:"enabled"`
 	Timeout    time.Duration `yaml:"-"`
 	TimeoutStr string        `yaml:"timeout"`
