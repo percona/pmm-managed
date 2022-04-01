@@ -697,8 +697,14 @@ var databaseSchema = [][]string{
 	},
 	60: {
 		`ALTER TABLE percona_sso_details
-			RENAME COLUMN client_id TO pmm_managed_client_id, 
-			RENAME COLUMN client_secret TO pmm_managed_client_secret,
+			RENAME COLUMN client_id TO pmm_managed_client_id`,
+	},
+	61: {
+		`ALTER TABLE percona_sso_details
+			RENAME COLUMN client_secret TO pmm_managed_client_secret`,
+	},
+	62: {
+		`ALTER TABLE percona_sso_details
 			ADD COLUMN grafana_client_id VARCHAR NOT NULL`,
 	},
 }

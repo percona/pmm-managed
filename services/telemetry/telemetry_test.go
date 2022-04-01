@@ -114,10 +114,10 @@ func TestSendV2Request(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	insertSSODetails := &models.PerconaSSODetailsInsert{
-		IssuerURL:    issuerURL,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Scope:        "percona",
+		IssuerURL:              issuerURL,
+		PMMManagedClientID:     clientID,
+		PMMManagedClientSecret: clientSecret,
+		Scope:                  "percona",
 	}
 	err := models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
 	require.NoError(t, err)
