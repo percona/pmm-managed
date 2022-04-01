@@ -25,3 +25,15 @@ env:                                        ## Run `make TARGET` in devcontainer
 
 env-ci:                                     ## Run `make TARGET` in devcontainer (`make env TARGET=help`); TARGET defaults to bash.
 	docker exec -i --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server make $(TARGET)
+
+bench-prepare:
+	go mod tidy
+
+bench-run:
+	n=1 ; while [[ $$n -le 10 ]] ; do \
+		echo $$n ; \
+		((n = n + 1)) ; \
+		go clean --cache; \
+		time go build ./... ;\
+    done
+
