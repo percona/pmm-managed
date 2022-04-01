@@ -224,11 +224,11 @@ type disconnectPMMParams struct {
 }
 
 type ssoDetails struct {
-	GrafanaClientID        string `json:"grafana_client_id"`
-	PMMManagedClientID     string `json:"pmm_managed_client_id"`
-	PMMManagedClientSecret string `json:"pmm_managed_client_secret"`
+	GrafanaClientID        string `json:"grafana_client_id"`         //nolint:tagliatelle
+	PMMManagedClientID     string `json:"pmm_managed_client_id"`     //nolint:tagliatelle
+	PMMManagedClientSecret string `json:"pmm_managed_client_secret"` //nolint:tagliatelle
 	Scope                  string `json:"scope"`
-	IssuerURL              string `json:"issuer_url"`
+	IssuerURL              string `json:"issuer_url"` //nolint:tagliatelle
 }
 
 type connectPMMResponse struct {
