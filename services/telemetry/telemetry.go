@@ -22,13 +22,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
 	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"

@@ -2,8 +2,9 @@ package telemetry
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
