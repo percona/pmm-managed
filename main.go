@@ -653,18 +653,18 @@ func main() {
 		l.Panicf("Failed to update config: %+v", err)
 	}
 
-	pmmDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
+	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer pmmDB.Close() //nolint:errcheck
+	defer sqlDB.Close() //nolint:errcheck
 
-	migrateDB(ctx, pmmDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
+	migrateDB(ctx, sqlDB, *postgresDBNameF, *postgresAddrF, *postgresDBUsernameF, *postgresDBPasswordF)
 
-	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, pmmDB))
+	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
 	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
-	db := reform.NewDB(pmmDB, postgresql.Dialect, reformL)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	// Generate unique PMM Server ID if it's not already set.
 	err = models.SetPMMServerID(db)
@@ -691,7 +691,7 @@ func main() {
 
 	minioService := minio.New()
 
-	qanClient := getQANClient(ctx, pmmDB, *postgresDBNameF, *qanAPIAddrF)
+	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
 	agentsRegistry := agents.NewRegistry(db)
 	backupRemovalService := backup.NewRemovalService(db, minioService)
@@ -807,7 +807,7 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:        pmmDB,
+		sqlDB:        sqlDB,
 		supervisord:  supervisord,
 		vmdb:         vmdb,
 		vmalert:      vmalert,
@@ -842,7 +842,7 @@ func main() {
 		l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 	}
 
-	settings, err := models.GetSettings(pmmDB)
+	settings, err := models.GetSettings(sqlDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
