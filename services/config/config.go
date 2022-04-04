@@ -31,18 +31,20 @@ import (
 )
 
 const (
-	ENV_CONFIG_PATH   = "PERCONA_PMM_CONFIG_PATH"
+	envConfigPath     = "PERCONA_PMM_CONFIG_PATH"
 	defaultConfigPath = "/etc/percona/pmm/pmm-managed.yml"
 )
 
 //go:embed pmm-managed.yaml
 var defaultConfig string
 
+// Service config service.
 type Service struct {
 	l      *logrus.Entry
 	Config Config
 }
 
+// Config application config.
 type Config struct {
 	Services struct {
 		Platform  platform.Config         `yaml:"platform"`
@@ -58,6 +60,7 @@ type Config struct {
 	} `yaml:"extra_headers"` //nolint:tagliatelle
 }
 
+// NewService makes new service.
 func NewService() *Service {
 	l := logrus.WithField("component", "config")
 
@@ -66,14 +69,15 @@ func NewService() *Service {
 	}
 }
 
+// Load initializes config.
 func (s *Service) Load() error {
-	configPath, present := os.LookupEnv(ENV_CONFIG_PATH)
+	configPath, present := os.LookupEnv(envConfigPath)
 	if present {
 		if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
 			return errors.Wrapf(err, "config file [%s] doen't not exit", configPath)
 		}
 	} else {
-		s.l.Debugf("[%s] is not set, using default location [%s]", ENV_CONFIG_PATH, defaultConfigPath)
+		s.l.Debugf("[%s] is not set, using default location [%s]", envConfigPath, defaultConfigPath)
 	}
 
 	var cfg Config
@@ -106,6 +110,7 @@ func (s *Service) Load() error {
 	return nil
 }
 
+// Update provides extension point to update service.
 func (s *Service) Update(updater func(s *Service) error) error {
 	return updater(s)
 }

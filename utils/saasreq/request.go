@@ -43,12 +43,12 @@ func init() {
 	dialTimeout = envvars.GetPlatformAPITimeout(l)
 }
 
-// SaasRequestOptions config
+// SaasRequestOptions config.
 type SaasRequestOptions struct {
 	SkipTLSVerification bool
 }
 
-// MakeRequest creates http/https POST request to Percona Platform
+// MakeRequest creates http/https POST request to Percona Platform.
 func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader, options *SaasRequestOptions) ([]byte, error) {
 	if _, err := url.Parse(endpoint); err != nil {
 		return nil, err
