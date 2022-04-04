@@ -66,7 +66,7 @@ type Service struct {
 }
 
 // LocateTelemetryDataSource retrieves DataSource by name.
-func (s *Service) LocateTelemetryDataSource(name string) (DataSource, error) {
+func (s *Service) LocateTelemetryDataSource(name string) (DataSource, error) { //nolint:ireturn
 	return s.dsRegistry.LocateTelemetryDataSource(name)
 }
 
@@ -207,9 +207,9 @@ func (s *Service) makeMetric() (*pmmv1.ServerMetric, error) {
 
 	_, distMethod, _ := getDistributionMethodAndOS(s.l)
 
-	eventId := uuid.New()
+	eventID := uuid.New()
 	return &pmmv1.ServerMetric{
-		Id:                   eventId[:],
+		Id:                   eventID[:],
 		Time:                 timestamppb.New(time.Now()),
 		PmmServerTelemetryId: serverID,
 		PmmServerVersion:     s.pmmVersion,
