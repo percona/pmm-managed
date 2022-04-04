@@ -134,7 +134,7 @@ func (c *Config) mapByColumn() map[string]ConfigData {
 
 // ReportingConfig reporting config.
 type ReportingConfig struct {
-	SkipTlsVerification bool          `yaml:"skip_tls_verification"` //nolint:tagliatelle
+	SkipTLSVerification bool          `yaml:"skip_tls_verification"` //nolint:tagliatelle
 	SendOnStart         bool          `yaml:"send_on_start"`         //nolint:tagliatelle
 	IntervalStr         string        `yaml:"interval"`
 	IntervalEnv         string        `yaml:"interval_env"` //nolint:tagliatelle

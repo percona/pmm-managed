@@ -323,7 +323,7 @@ func (s *Service) sendRequest(ctx context.Context, req *reporter.ReportRequest) 
 	}
 
 	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte), &saasreq.SaasRequestOptions{
-		SkipTLSVerification: s.config.Reporting.SkipTlsVerification,
+		SkipTLSVerification: s.config.Reporting.SkipTLSVerification,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
