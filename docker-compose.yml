@@ -1,12 +1,5 @@
 ---
 version: "3.7"
-# to FIX "ERROR: could not find an available, non-overlapping IPv4 address pool among the defaults to assign to the network" on VPN
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.10.1.0/24
 services:
   pmm-managed-server:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
@@ -21,12 +14,6 @@ services:
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
       - ENABLE_ALERTING=1
       - ENABLE_BACKUP_MANAGEMENT=1
-
-    extra_hosts:
-      - host.docker.internal:host-gateway
-      - portal.localhost:${PORTAL_HOST:-host-gateway}
-      - check.localhost:${PORTAL_CHECK_HOST:-host-gateway}
-      - pmm.localhost:${PORTAL_PMM_HOST:-host-gateway}
 
     # for delve
     cap_add:
@@ -49,13 +36,7 @@ services:
       - ${PMM_PORT_CH_TCP:-11000}:9000
       - ${PMM_PORT_CH_HTTP:-11123}:8123
     volumes:
-#      - ${DEVCONTAINER_ENV:-/dev/null}:/opt/.env:ro
-#      - ${DEVCONTAINER_ENV:-/dev/null}:${DEVCONTAINER_ENV_MOUNT_PATH:-/tmp/}.env:ro
-#      - ${DEVCONTAINER_CONFIG:-/dev/null}:/opt/.dev.pmm-managed.yaml:ro
-#      - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
       - .:/root/go/src/github.com/percona/pmm-managed
-#      - ./config/telemetry/dev/:/etc/percona/telemetry/:ro
-#      - ../saas:/root/go/src/github.com/percona/saas
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
       - go-modules:/root/go/pkg/mod # Put modules cache into a separate volume
 volumes:
