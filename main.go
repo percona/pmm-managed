@@ -154,10 +154,11 @@ type gRPCServerDeps struct {
 	minioService         *minio.Service
 	versionCache         *versioncache.Service
 	supervisord          *supervisord.Service
+	config               *config.Config
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
-func runGRPCServer(ctx context.Context, deps *gRPCServerDeps, cfg platform.Config) {
+func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
@@ -224,7 +225,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps, cfg platform.Confi
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
 
-	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient, cfg)
+	platformService, err := platform.New(deps.db, deps.supervisord, deps.grafanaClient, deps.config.Services.Platform)
 	if err == nil {
 		platformpb.RegisterPlatformServer(gRPCServer, platformService)
 	} else {
@@ -942,8 +943,8 @@ func main() {
 				minioService:         minioService,
 				versionCache:         versionCache,
 				supervisord:          supervisord,
-			},
-			cfg.Config.Services.Platform)
+				config:               &cfg.Config,
+			})
 	}()
 
 	wg.Add(1)
