@@ -46,7 +46,7 @@ func main() { //nolint:cyclop
 		log.Fatalln(err)
 	}
 
-	configRegEx, e := regexp.Compile("^.+\\.yml$") //nolint:gocritic
+	configRegEx, e := regexp.Compile("^.+\\.yml$") //nolint:gocritic,gosimple
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -60,7 +60,7 @@ func main() { //nolint:cyclop
 			}
 
 			configSignature := minisign.Sign(private, configContent)
-			if err = ioutil.WriteFile(path+".minisig", configSignature, 0644); err != nil {
+			if err = ioutil.WriteFile(path+".minisig", configSignature, 0o644); err != nil {
 				log.Fatal(err)
 			}
 		}

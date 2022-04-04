@@ -595,5 +595,4 @@ func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequ
 	return &platformpb.UserStatusResponse{
 		IsPlatformUser: true,
 	}, nil
-
 }

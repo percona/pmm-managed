@@ -18,21 +18,20 @@
 package telemetry
 
 import (
+	"bytes"
+	"context"
+	"encoding/hex"
+	"io/ioutil"
 	"net/http"
+	"regexp"
+	"strings"
+	"time"
 
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/percona/pmm-managed/utils/saasreq"
-
-	"bytes"
-	"context"
-	"encoding/hex"
-	"io/ioutil"
-	"regexp"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"

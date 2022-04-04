@@ -48,7 +48,6 @@ func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.En
 	client, err := api.NewClient(api.Config{
 		Address: config.Address,
 	})
-
 	if err != nil {
 		return nil, err
 	}

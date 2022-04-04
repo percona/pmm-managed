@@ -41,6 +41,30 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/joho/godotenv"
+	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/api/managementpb"
+	azurev1beta1 "github.com/percona/pmm/api/managementpb/azure"
+	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/percona/pmm/api/platformpb"
+	"github.com/percona/pmm/api/serverpb"
+	"github.com/percona/pmm/utils/sqlmetrics"
+	"github.com/percona/pmm/version"
+	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
+	channelz "google.golang.org/grpc/channelz/service"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/reflection"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
@@ -70,29 +94,6 @@ import (
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm/api/agentpb"
-	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/api/managementpb"
-	azurev1beta1 "github.com/percona/pmm/api/managementpb/azure"
-	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
-	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
-	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
-	"github.com/percona/pmm/api/platformpb"
-	"github.com/percona/pmm/api/serverpb"
-	"github.com/percona/pmm/utils/sqlmetrics"
-	"github.com/percona/pmm/version"
-	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
-	channelz "google.golang.org/grpc/channelz/service"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/reflection"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 )
 
 const (
@@ -638,7 +639,7 @@ func main() {
 
 	pmmdb.Credentials.Username = *postgresDBUsernameF
 	pmmdb.Credentials.Password = *postgresDBPasswordF
-	pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+	pmmdb.DSN.Scheme = "postgres" // TODO: should be configurable
 	pmmdb.DSN.Host = *postgresAddrF
 	pmmdb.DSN.DB = *postgresDBNameF
 	q := make(url.Values)
