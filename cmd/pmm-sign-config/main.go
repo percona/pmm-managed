@@ -28,14 +28,14 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-func main() {
+func main() { //nolint:cyclop
 	logger.SetupGlobalLogger()
 	var signKey, signPub, configPath string
 	if signKey = os.Getenv("PMM_CONFIG_SIGN_KEY"); signKey == "" {
 		signKey = "./.cfg.dev-sign.key"
 	}
 	if signPub = os.Getenv("PMM_CONFIG_SIGN_PUB"); signPub == "" {
-		signPub = "./.cfg.dev-sign.pub" //nolint:ineffassign
+		signPub = "./.cfg.dev-sign.pub" //nolint:ineffassign,wastedassign
 	}
 	if configPath = os.Getenv("PMM_CONFIG_SIGN_PUB"); configPath == "" {
 		configPath = "./config/telemetry/dev"
@@ -46,14 +46,15 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	configRegEx, e := regexp.Compile("^.+\\.yml$")
+	configRegEx, e := regexp.Compile("^.+\\.yml$") //nolint:gocritic
 	if e != nil {
 		log.Fatal(e)
 	}
 
 	e = filepath.Walk(configPath, func(path string, info os.FileInfo, err error) error {
 		if err == nil && configRegEx.MatchString(info.Name()) {
-			configContent, err := ioutil.ReadFile(path) // the file is inside the local directory
+			// the file is inside the local directory
+			configContent, err := ioutil.ReadFile(path) //nolint:gosec
 			if err != nil {
 				log.Fatal(err)
 			}
