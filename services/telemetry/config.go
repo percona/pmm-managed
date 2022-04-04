@@ -150,6 +150,7 @@ type ReportingConfig struct {
 //go:embed config.default.yml
 var defaultConfig string
 
+// Init telemetry config init.
 func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 	c.l = l
 
