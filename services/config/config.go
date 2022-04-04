@@ -60,7 +60,7 @@ type Config struct {
 	} `yaml:"extra_headers"` //nolint:tagliatelle
 }
 
-// NewService makes new service.
+// NewService makes new config service.
 func NewService() *Service {
 	l := logrus.WithField("component", "config")
 
