@@ -19,6 +19,8 @@ package telemetry
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"
@@ -78,4 +80,50 @@ func (r *dataSourceRegistry) LocateTelemetryDataSource(name string) (DataSource,
 type DataSource interface {
 	FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error)
 	Enabled() bool
+}
+
+func fetchMetricsFromDB(ctx context.Context, l *logrus.Entry, timeout time.Duration, db *sql.DB, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
+	localCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	tx, err := db.BeginTx(localCtx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	// to minimize risk of modifying DB
+	defer tx.Rollback() //nolint:errcheck
+
+	rows, err := db.Query("SELECT " + config.Query) //nolint:gosec,rowserrcheck
+	if err != nil {
+		return nil, err
+	}
+
+	var metrics []*pmmv1.ServerMetric_Metric
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	strs := make([]*string, len(columns))
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		values[i] = &strs[i]
+	}
+	cfgColumns := config.mapByColumn()
+	for rows.Next() {
+		if err := rows.Scan(values...); err != nil {
+			l.Error(err)
+			continue
+		}
+
+		for idx, column := range columns {
+			if _, ok := cfgColumns[column]; ok {
+				metrics = append(metrics, &pmmv1.ServerMetric_Metric{
+					Key:   column,
+					Value: *strs[idx],
+				})
+			}
+		}
+	}
+
+	return metrics, nil
 }

@@ -53,17 +53,17 @@ type ServiceConfig struct {
 	Reporting ReportingConfig `yaml:"reporting"`
 }
 
-// FileConfig telemetry config.
+// FileConfig top level telemetry config element.
 type FileConfig struct {
 	Telemetry []Config `yaml:"telemetry"`
 }
 
-// EndpointsConfig telemetry config.
+// EndpointsConfig telemetry endpoint config.
 type EndpointsConfig struct {
 	Report string `yaml:"report"`
 }
 
-// ReportEndpointURL reporting endpoint URL.
+// ReportEndpointURL returns reporting endpoint URL.
 func (c *ServiceConfig) ReportEndpointURL() string {
 	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
 }
