@@ -103,6 +103,10 @@ func (s *Service) Load() error {
 		return err
 	}
 
+	if cfg.Services.Telemetry.Enabled && cfg.Services.TelemetryV2.Enabled {
+		return errors.Errorf("both V1 and V2 telemetry enabled, disable either of them")
+	}
+
 	cfg.configureSaasReqEnrichment()
 
 	s.Config = cfg
