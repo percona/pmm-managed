@@ -27,8 +27,6 @@ import (
 	"sync"
 	"testing"
 
-	//nolint:gosec
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,6 +50,6 @@ func AddToFuzzCorpus(t testing.TB, prefix string, data []byte) {
 	}
 
 	path := filepath.Join(dir, file)
-	err = ioutil.WriteFile(path, data, 0o640)
+	err = ioutil.WriteFile(path, data, 0o640) //nolint:gosec
 	require.NoError(t, err)
 }
