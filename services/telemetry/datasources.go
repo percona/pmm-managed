@@ -65,6 +65,7 @@ func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (DataSourceLoc
 	}, nil
 }
 
+// LocateTelemetryDataSource returns data source by name.
 func (r *dataSourceRegistry) LocateTelemetryDataSource(name string) (DataSource, error) {
 	ds, ok := r.dataSources[DataSourceName(name)]
 	if !ok {
