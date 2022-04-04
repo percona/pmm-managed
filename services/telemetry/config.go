@@ -47,8 +47,8 @@ type ServiceConfig struct {
 	SaasHostname string          `yaml:"saas_hostname"` //nolint:tagliatelle
 	DataSources  struct {
 		VM          *DataSourceVictoriaMetrics `yaml:"VM"`
-		QanDBSelect *DSConfigQAN               `yaml:"QANDB_SELECT"`
-		PmmDBSelect *DSConfigPMMDB             `yaml:"PMMDB_SELECT"`
+		QanDBSelect *DSConfigQAN               `yaml:"QANDB_SELECT"` //nolint:tagliatelle
+		PmmDBSelect *DSConfigPMMDB             `yaml:"PMMDB_SELECT"` //nolint:tagliatelle
 	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
 }
