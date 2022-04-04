@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
@@ -63,7 +62,7 @@ type Service struct {
 	pmmVersion          string
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
-	tDistributionMethod events.DistributionMethod
+	tDistributionMethod pmmv1.DistributionMethod
 }
 
 // LocateTelemetryDataSource retrieves DataSource by name.
@@ -230,7 +229,7 @@ func generateUUID() (string, error) {
 	return cleanUUID, nil
 }
 
-func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, events.DistributionMethod, string) {
+func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, pmmv1.DistributionMethod, string) {
 	b, err := ioutil.ReadFile(distributionInfoFilePath)
 	if err != nil {
 		l.Debugf("Failed to read %s: %s", distributionInfoFilePath, err)
@@ -239,20 +238,20 @@ func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, e
 	b = bytes.ToLower(bytes.TrimSpace(b))
 	switch string(b) {
 	case "ovf":
-		return serverpb.DistributionMethod_OVF, events.DistributionMethod_OVF, "ovf"
+		return serverpb.DistributionMethod_OVF, pmmv1.DistributionMethod_OVF, "ovf"
 	case "ami":
-		return serverpb.DistributionMethod_AMI, events.DistributionMethod_AMI, "ami"
+		return serverpb.DistributionMethod_AMI, pmmv1.DistributionMethod_AMI, "ami"
 	case "azure":
-		return serverpb.DistributionMethod_AZURE, events.DistributionMethod_AZURE, "azure"
+		return serverpb.DistributionMethod_AZURE, pmmv1.DistributionMethod_AZURE, "azure"
 	case "digitalocean":
-		return serverpb.DistributionMethod_DO, events.DistributionMethod_DO, "digitalocean"
+		return serverpb.DistributionMethod_DO, pmmv1.DistributionMethod_DO, "digitalocean"
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
 		if b, err = ioutil.ReadFile(osInfoFilePath); err != nil {
 			l.Debugf("Failed to read %s: %s", osInfoFilePath, err)
 		}
-		return serverpb.DistributionMethod_DOCKER, events.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
+		return serverpb.DistributionMethod_DOCKER, pmmv1.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
 	default:
-		return serverpb.DistributionMethod_DISTRIBUTION_METHOD_INVALID, events.DistributionMethod_DISTRIBUTION_METHOD_INVALID, ""
+		return serverpb.DistributionMethod_DISTRIBUTION_METHOD_INVALID, pmmv1.DistributionMethod_DISTRIBUTION_METHOD_INVALID, ""
 	}
 }
 
