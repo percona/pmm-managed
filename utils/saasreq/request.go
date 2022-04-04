@@ -34,7 +34,7 @@ import (
 
 var (
 	dialTimeout time.Duration
-	// RequestEnricher extension point to modify request
+	// RequestEnricher extension point to modify request.
 	RequestEnricher func(method string, endpoint string, req *http.Request)
 )
 
