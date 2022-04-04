@@ -633,23 +633,17 @@ func main() {
 	if err := cfg.Load(); err != nil {
 		l.Panicf("Failed to load config: %+v", err)
 	}
-	if err := cfg.Update(func(s *config.Service) error {
-		ds := s.Config.Services.Telemetry.DataSources
-		pmmdb := ds.PmmDBSelect
+	ds := cfg.Config.Services.Telemetry.DataSources
+	pmmdb := ds.PmmDBSelect
 
-		pmmdb.Credentials.Username = *postgresDBUsernameF
-		pmmdb.Credentials.Password = *postgresDBPasswordF
-		pmmdb.DSN.Scheme = "postgres" // TODO: should be configurable
-		pmmdb.DSN.Host = *postgresAddrF
-		pmmdb.DSN.DB = *postgresDBNameF
-		q := make(url.Values)
-		q.Set("sslmode", "disable")
-		pmmdb.DSN.Params = q.Encode()
-
-		return nil
-	}); err != nil {
-		l.Panicf("Failed to update config: %+v", err)
-	}
+	pmmdb.Credentials.Username = *postgresDBUsernameF
+	pmmdb.Credentials.Password = *postgresDBPasswordF
+	pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+	pmmdb.DSN.Host = *postgresAddrF
+	pmmdb.DSN.DB = *postgresDBNameF
+	q := make(url.Values)
+	q.Set("sslmode", "disable")
+	pmmdb.DSN.Params = q.Encode()
 
 	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {

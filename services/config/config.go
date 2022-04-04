@@ -109,8 +109,3 @@ func (s *Service) Load() error {
 
 	return nil
 }
-
-// Update provides extension point to update service.
-func (s *Service) Update(updater func(s *Service) error) error {
-	return updater(s)
-}
