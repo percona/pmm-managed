@@ -33,7 +33,8 @@ import (
 )
 
 var (
-	dialTimeout     time.Duration
+	dialTimeout time.Duration
+	// RequestEnricher extension point to modify request
 	RequestEnricher func(method string, endpoint string, req *http.Request)
 )
 
@@ -42,19 +43,19 @@ func init() {
 	dialTimeout = envvars.GetPlatformAPITimeout(l)
 }
 
+// SaasRequestOptions config
 type SaasRequestOptions struct {
-	SkipTlsVerification bool
+	SkipTLSVerification bool
 }
 
 // MakeRequest creates http/https POST request to Percona Platform
 func MakeRequest(ctx context.Context, method string, endpoint, accessToken string, body io.Reader, options *SaasRequestOptions) ([]byte, error) {
-	_, err := url.Parse(endpoint)
-	if err != nil {
+	if _, err := url.Parse(endpoint); err != nil {
 		return nil, err
 	}
 
 	tlsConfig := tlsconfig.Get()
-	tlsConfig.InsecureSkipVerify = options.SkipTlsVerification
+	tlsConfig.InsecureSkipVerify = options.SkipTLSVerification
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()

@@ -28,7 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type dsPmmDbSelect struct {
+type dsPmmDBSelect struct {
 	l      *logrus.Entry
 	config DSConfigPMMDB
 	db     *sql.DB
@@ -36,20 +36,20 @@ type dsPmmDbSelect struct {
 
 // check interfaces
 var (
-	_ TelemetryDataSource = (*dsPmmDbSelect)(nil)
+	_ DataSource = (*dsPmmDBSelect)(nil)
 )
 
-func (d *dsPmmDbSelect) Enabled() bool {
+func (d *dsPmmDBSelect) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSource, error) {
+func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (DataSource, error) {
 	db, err := openPMMDBConnection(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dsPmmDbSelect{
+	return &dsPmmDBSelect{
 		l:      l,
 		config: config,
 		db:     db,
@@ -58,7 +58,7 @@ func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (TelemetryDataSourc
 
 func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
 	if !config.Enabled {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	var user *url.Userinfo
@@ -92,6 +92,6 @@ func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
 	return db, nil
 }
 
-func (d *dsPmmDbSelect) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
+func (d *dsPmmDBSelect) FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
 	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
 }

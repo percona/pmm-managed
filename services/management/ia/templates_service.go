@@ -407,7 +407,7 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 
 	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllAlertRuleTemplates", s.host)
 	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil,
-		&saasreq.SaasRequestOptions{SkipTlsVerification: false})
+		&saasreq.SaasRequestOptions{SkipTLSVerification: false})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

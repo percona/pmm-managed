@@ -27,7 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type dsQanDbSelect struct {
+type dsQanDBSelect struct {
 	l      *logrus.Entry
 	config DSConfigQAN
 	db     *sql.DB
@@ -35,19 +35,19 @@ type dsQanDbSelect struct {
 
 // check interfaces
 var (
-	_ TelemetryDataSource = (*dsQanDbSelect)(nil)
+	_ DataSource = (*dsQanDBSelect)(nil)
 )
 
-func (d *dsQanDbSelect) Enabled() bool {
+func (d *dsQanDBSelect) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (TelemetryDataSource, error) {
+func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (DataSource, error) {
 	db, err := openQANDBConnection(config.DSN, config.Enabled)
 	if err != nil {
 		return nil, err
 	}
-	return &dsQanDbSelect{
+	return &dsQanDBSelect{
 		l:      l,
 		config: config,
 		db:     db,
@@ -56,7 +56,7 @@ func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (TelemetryDataSource,
 
 func openQANDBConnection(dsn string, enabled bool) (*sql.DB, error) {
 	if !enabled {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	db, err := sql.Open("clickhouse", dsn)
@@ -69,6 +69,6 @@ func openQANDBConnection(dsn string, enabled bool) (*sql.DB, error) {
 	return db, nil
 }
 
-func (d *dsQanDbSelect) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
+func (d *dsQanDBSelect) FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
 	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
 }

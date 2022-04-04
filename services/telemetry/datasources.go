@@ -25,24 +25,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type TelemetryDataSourceName string
+// DataSourceName data source name.
+type DataSourceName string
 
-const (
-	DS_VM           = TelemetryDataSourceName("VM")
-	DS_PMMDB_SELECT = TelemetryDataSourceName("PMMDB_SELECT")
-	DS_QANDB_SELECT = TelemetryDataSourceName("QANDB_SELECT")
-)
-
-type TelemetryDataSourceLocator interface {
-	LocateTelemetryDataSource(name string) (TelemetryDataSource, error)
+// DataSourceLocator locates data source by name.
+type DataSourceLocator interface {
+	LocateTelemetryDataSource(name string) (DataSource, error)
 }
 
-type telemetryDataSourceRegistry struct {
+type dataSourceRegistry struct {
 	l           *logrus.Entry
-	dataSources map[TelemetryDataSourceName]TelemetryDataSource
+	dataSources map[DataSourceName]DataSource
 }
 
-func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (TelemetryDataSourceLocator, error) {
+// NewDataSourceRegistry makes new data source registry
+func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (DataSourceLocator, error) {
 	pmmDB, err := NewDsPmmDbSelect(*config.DataSources.PMMDB_SELECT, l)
 	if err != nil {
 		return nil, err
@@ -58,25 +55,26 @@ func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (TelemetryData
 		return nil, err
 	}
 
-	return &telemetryDataSourceRegistry{
+	return &dataSourceRegistry{
 		l: l,
-		dataSources: map[TelemetryDataSourceName]TelemetryDataSource{
-			DS_VM:           vmDB,
-			DS_PMMDB_SELECT: pmmDB,
-			DS_QANDB_SELECT: qanDB,
+		dataSources: map[DataSourceName]DataSource{
+			"VM":           vmDB,
+			"PMMDB_SELECT": pmmDB,
+			"QANDB_SELECT": qanDB,
 		},
 	}, nil
 }
 
-func (r *telemetryDataSourceRegistry) LocateTelemetryDataSource(name string) (TelemetryDataSource, error) {
-	ds, ok := r.dataSources[TelemetryDataSourceName(name)]
+func (r *dataSourceRegistry) LocateTelemetryDataSource(name string) (DataSource, error) {
+	ds, ok := r.dataSources[DataSourceName(name)]
 	if !ok {
-		return nil, errors.Errorf("datasource [%s] is not supported", name)
+		return nil, errors.Errorf("data source [%s] is not supported", name)
 	}
 	return ds, nil
 }
 
-type TelemetryDataSource interface {
-	FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error)
+// DataSource telemetry data source.
+type DataSource interface {
+	FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error)
 	Enabled() bool
 }

@@ -36,14 +36,14 @@ type dataSourceVictoriaMetrics struct {
 
 // check interfaces
 var (
-	_ TelemetryDataSource = (*dataSourceVictoriaMetrics)(nil)
+	_ DataSource = (*dataSourceVictoriaMetrics)(nil)
 )
 
 func (d *dataSourceVictoriaMetrics) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.Entry) (TelemetryDataSource, error) {
+func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.Entry) (DataSource, error) {
 	client, err := api.NewClient(api.Config{
 		Address: config.Address,
 	})
@@ -67,7 +67,7 @@ func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.En
 	}, nil
 }
 
-func (d *dataSourceVictoriaMetrics) FetchMetrics(ctx context.Context, config TelemetryConfig) ([]*pmmv1.ServerMetric_Metric, error) {
+func (d *dataSourceVictoriaMetrics) FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
 	localCtx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -78,7 +78,7 @@ func (d *dataSourceVictoriaMetrics) FetchMetrics(ctx context.Context, config Tel
 
 	var metrics []*pmmv1.ServerMetric_Metric
 
-	for _, v := range result.(model.Vector) {
+	for _, v := range result.(model.Vector) { //nolint:forcetypeassert
 		for _, configItem := range config.Data {
 			if configItem.Label != "" {
 				value, ok := v.Metric[model.LabelName(configItem.Label)]

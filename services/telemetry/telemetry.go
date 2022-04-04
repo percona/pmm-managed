@@ -18,9 +18,9 @@
 package telemetry
 
 import (
-	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	//nolint:staticcheck
 	"net/http"
+
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -44,7 +44,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 
-	//nolint:staticcheck
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 )
@@ -60,20 +59,21 @@ type Service struct {
 	l                   *logrus.Entry
 	start               time.Time
 	config              ServiceConfig
-	dsRegistry          TelemetryDataSourceLocator
+	dsRegistry          DataSourceLocator
 	pmmVersion          string
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
 	tDistributionMethod events.DistributionMethod
 }
 
-func (s *Service) LocateTelemetryDataSource(name string) (TelemetryDataSource, error) {
+// LocateTelemetryDataSource retrieves DataSource by name.
+func (s *Service) LocateTelemetryDataSource(name string) (DataSource, error) {
 	return s.dsRegistry.LocateTelemetryDataSource(name)
 }
 
 // check interfaces
 var (
-	_ TelemetryDataSourceLocator = (*Service)(nil)
+	_ DataSourceLocator = (*Service)(nil)
 )
 
 // NewService creates a new service.
@@ -156,7 +156,7 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 	for _, telemetry := range s.config.telemetry {
 		ds, err := s.LocateTelemetryDataSource(telemetry.Source)
 		if err != nil {
-			s.l.Debugf("failed to lookup telemetry datasource for [%s]:[%s]", telemetry.Source, telemetry.Id)
+			s.l.Debugf("failed to lookup telemetry datasource for [%s]:[%s]", telemetry.Source, telemetry.ID)
 			continue
 		}
 		if !ds.Enabled() {
@@ -165,7 +165,7 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 
 		metrics, err := ds.FetchMetrics(ctx, telemetry)
 		if err != nil {
-			s.l.Debugf("failed to extract metric from datasource for [%s]:[%s]: %v", telemetry.Source, telemetry.Id, err)
+			s.l.Debugf("failed to extract metric from datasource for [%s]:[%s]: %v", telemetry.Source, telemetry.ID, err)
 			continue
 		}
 
@@ -226,7 +226,7 @@ func generateUUID() (string, error) {
 	}
 
 	// Old telemetry IDs have only 32 chars in the table but UUIDs + "-" = 36
-	cleanUUID := strings.Replace(uuid.String(), "-", "", -1)
+	cleanUUID := strings.ReplaceAll(uuid.String(), "-", "")
 	return cleanUUID, nil
 }
 
@@ -325,7 +325,7 @@ func (s *Service) sendRequest(ctx context.Context, req *reporter.ReportRequest) 
 	}
 
 	_, err = saasreq.MakeRequest(ctx, http.MethodPost, s.config.ReportEndpointURL(), accessToken, bytes.NewReader(reqByte), &saasreq.SaasRequestOptions{
-		SkipTlsVerification: s.config.Reporting.SkipTlsVerification,
+		SkipTLSVerification: s.config.Reporting.SkipTlsVerification,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
