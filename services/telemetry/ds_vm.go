@@ -43,6 +43,7 @@ func (d *dataSourceVictoriaMetrics) Enabled() bool {
 	return d.config.Enabled
 }
 
+// NewDataSourceVictoriaMetrics makes new data source for victoria metrics.
 func NewDataSourceVictoriaMetrics(config DataSourceVictoriaMetrics, l *logrus.Entry) (DataSource, error) {
 	client, err := api.NewClient(api.Config{
 		Address: config.Address,

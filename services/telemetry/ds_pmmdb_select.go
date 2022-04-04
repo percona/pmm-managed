@@ -39,11 +39,13 @@ var (
 	_ DataSource = (*dsPmmDBSelect)(nil)
 )
 
+// Enabled flag that determines if data source is enabled.
 func (d *dsPmmDBSelect) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDsPmmDbSelect(config DSConfigPMMDB, l *logrus.Entry) (DataSource, error) {
+// NewDsPmmDBSelect make new PMM DB Select data source.
+func NewDsPmmDBSelect(config DSConfigPMMDB, l *logrus.Entry) (DataSource, error) {
 	db, err := openPMMDBConnection(config)
 	if err != nil {
 		return nil, err
@@ -93,5 +95,5 @@ func openPMMDBConnection(config DSConfigPMMDB) (*sql.DB, error) {
 }
 
 func (d *dsPmmDBSelect) FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
-	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
+	return fetchMetricsFromDB(ctx, d.l, d.config.Timeout, d.db, config)
 }

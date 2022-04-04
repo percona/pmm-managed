@@ -40,12 +40,12 @@ type dataSourceRegistry struct {
 
 // NewDataSourceRegistry makes new data source registry
 func NewDataSourceRegistry(config ServiceConfig, l *logrus.Entry) (DataSourceLocator, error) {
-	pmmDB, err := NewDsPmmDbSelect(*config.DataSources.PmmDBSelect, l)
+	pmmDB, err := NewDsPmmDBSelect(*config.DataSources.PmmDBSelect, l)
 	if err != nil {
 		return nil, err
 	}
 
-	qanDB, err := NewDsQanDbSelect(*config.DataSources.QanDBSelect, l)
+	qanDB, err := NewDsQanDBSelect(*config.DataSources.QanDBSelect, l)
 	if err != nil {
 		return nil, err
 	}

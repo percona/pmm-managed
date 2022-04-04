@@ -21,7 +21,7 @@ import (
 	"context"
 	"database/sql"
 
-	_ "github.com/ClickHouse/clickhouse-go/v2"
+	_ "github.com/ClickHouse/clickhouse-go/v2" //nolint:golint
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -38,11 +38,13 @@ var (
 	_ DataSource = (*dsQanDBSelect)(nil)
 )
 
+// Enabled flag that determines if data source is enabled.
 func (d *dsQanDBSelect) Enabled() bool {
 	return d.config.Enabled
 }
 
-func NewDsQanDbSelect(config DSConfigQAN, l *logrus.Entry) (DataSource, error) {
+// NewDsQanDBSelect make new QAN DB Select data source.
+func NewDsQanDBSelect(config DSConfigQAN, l *logrus.Entry) (DataSource, error) {
 	db, err := openQANDBConnection(config.DSN, config.Enabled)
 	if err != nil {
 		return nil, err
@@ -70,5 +72,5 @@ func openQANDBConnection(dsn string, enabled bool) (*sql.DB, error) {
 }
 
 func (d *dsQanDBSelect) FetchMetrics(ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
-	return fetchMetricsFromDB(d.l, d.config.Timeout, d.db, ctx, config)
+	return fetchMetricsFromDB(ctx, d.l, d.config.Timeout, d.db, config)
 }

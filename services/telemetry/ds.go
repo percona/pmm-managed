@@ -26,7 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx context.Context, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
+func fetchMetricsFromDB(ctx context.Context, l *logrus.Entry, timeout time.Duration, db *sql.DB, config Config) ([]*pmmv1.ServerMetric_Metric, error) {
 	localCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	tx, err := db.BeginTx(localCtx, &sql.TxOptions{})
@@ -36,7 +36,7 @@ func fetchMetricsFromDB(l *logrus.Entry, timeout time.Duration, db *sql.DB, ctx 
 	// to minimize risk of modifying DB
 	defer tx.Rollback() //nolint:errcheck
 
-	rows, err := db.Query("SELECT " + config.Query) //nolint:gosec
+	rows, err := db.Query("SELECT " + config.Query) //nolint:gosec,rowserrcheck
 	if err != nil {
 		return nil, err
 	}
