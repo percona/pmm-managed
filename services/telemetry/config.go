@@ -1,32 +1,131 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Package telemetry provides telemetry functionality.
 package telemetry
 
 import (
+	_ "embed"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
+	"aead.dev/minisign"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
-const (
-	distributionInfoFilePath = "/srv/pmm-distribution"
-	osInfoFilePath           = "/proc/version"
-)
+type ServiceConfig struct {
+	l                          *logrus.Entry
+	Enabled                    bool   `yaml:"enabled"`
+	LoadDefaults               bool   `yaml:"load_defaults"`
+	ConfigLocation             string `yaml:"config_location"`
+	DisableSigningVerification bool   `yaml:"disable_signing_verification"` //TODO: remove this flag after testing
+	Signing                    struct {
+		TrustedPublicKeys       []string             `yaml:"trusted_public_keys"`
+		trustedPublicKeysParsed []minisign.PublicKey `yaml:"-"`
+	} `yaml:"signing"`
+	telemetry    []TelemetryConfig `yaml:"-"`
+	Endpoints    EndpointsConfig   `yaml:"endpoints"`
+	SaasHostname string            `yaml:"saas_hostname"`
+	DataSources  struct {
+		VM           *DataSourceVictoriaMetrics `yaml:"VM"`
+		QANDB_SELECT *DSConfigQAN               `yaml:"QANDB_SELECT"`
+		PMMDB_SELECT *DSConfigPMMDB             `yaml:"PMMDB_SELECT"`
+	} `yaml:"datasources"`
+	Reporting ReportingConfig `yaml:"reporting"`
+}
 
-type Config struct {
-	Enabled      bool            `yaml:"enabled"`
-	Reporting    ReportingConfig `yaml:"reporting"`
-	Endpoints    EndpointsConfig `yaml:"endpoints"`
-	SaasHostname string          `yaml:"saas_hostname"`
-	V1URL        string          `yaml:"v1_url"`
-	V1URLEnv     string          `yaml:"v1_url_env"`
+type FileConfig struct {
+	Telemetry []TelemetryConfig `yaml:"telemetry"`
 }
 
 type EndpointsConfig struct {
 	Report string `yaml:"report"`
 }
 
+func (c *ServiceConfig) ReportEndpointURL() string {
+	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
+}
+
+type DSConfigQAN struct {
+	Enabled    bool          `yaml:"enabled"`
+	Timeout    time.Duration `yaml:"-"`
+	TimeoutStr string        `yaml:"timeout"`
+	DSN        string        `yaml:"dsn"`
+}
+
+type DataSourceVictoriaMetrics struct {
+	Enabled    bool          `yaml:"enabled"`
+	Timeout    time.Duration `yaml:"-"`
+	TimeoutStr string        `yaml:"timeout"`
+	Address    string        `yaml:"address"`
+}
+
+type DSConfigPMMDB struct {
+	Enabled                bool          `yaml:"enabled"`
+	Timeout                time.Duration `yaml:"-"`
+	TimeoutStr             string        `yaml:"timeout"`
+	UseSeparateCredentials bool          `yaml:"use_separate_credentials"`
+	// Credentials used by PMM
+	DSN struct {
+		Scheme string
+		Host   string
+		DB     string
+		Params string
+	} `yaml:"-"`
+	Credentials struct {
+		Username string
+		Password string
+	} `yaml:"-"`
+	SeparateCredentials struct {
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	} `yaml:"separate_credentials"`
+}
+
+type TelemetryConfig struct {
+	Id      string `yaml:"id"`
+	Source  string `yaml:"source"`
+	Query   string `yaml:"query"`
+	Summary string `yaml:"summary"`
+	Data    []TelemetryConfigData
+}
+
+type TelemetryConfigData struct {
+	MetricName string `yaml:"metric_name"`
+	Label      string `yaml:"label"`
+	Value      string `yaml:"value"`
+	Column     string `yaml:"column"`
+}
+
+func (c *TelemetryConfig) MapByColumn() map[string]TelemetryConfigData {
+	result := make(map[string]TelemetryConfigData, len(c.Data))
+	for _, each := range c.Data {
+		result[each.Column] = each
+	}
+	return result
+}
+
 type ReportingConfig struct {
 	SkipTlsVerification bool          `yaml:"skip_tls_verification"`
+	SendOnStart         bool          `yaml:"send_on_start"`
 	IntervalStr         string        `yaml:"interval"`
 	IntervalEnv         string        `yaml:"interval_env"`
 	Interval            time.Duration `yaml:"-"`
@@ -38,7 +137,26 @@ type ReportingConfig struct {
 	RetryCount          int           `yaml:"retry_count"`
 }
 
-func (c *Config) Init() error {
+//go:embed config.default.yml
+var defaultConfig string
+
+func (c *ServiceConfig) Init(l *logrus.Entry) error {
+	c.l = l
+
+	for _, keyText := range c.Signing.TrustedPublicKeys {
+		key := minisign.PublicKey{}
+		if err := key.UnmarshalText([]byte(keyText)); err != nil {
+			return errors.Wrap(err, "cannot parse public key")
+		}
+		c.Signing.trustedPublicKeysParsed = append(c.Signing.trustedPublicKeysParsed, key)
+	}
+
+	telemetry, err := c.loadConfig(c.ConfigLocation)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load telemetry config from [%s]", c.ConfigLocation)
+	}
+	c.telemetry = telemetry
+
 	reportingInterval, err := time.ParseDuration(c.Reporting.IntervalStr)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.IntervalStr)
@@ -57,9 +175,128 @@ func (c *Config) Init() error {
 	}
 	c.Reporting.SendTimeout = sendTimeout
 
+	if d, err := time.ParseDuration(os.Getenv(c.Reporting.IntervalEnv)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		c.Reporting.Interval = d
+	}
+	if d, err := time.ParseDuration(os.Getenv(c.Reporting.RetryBackoffEnv)); err == nil && d > 0 {
+		l.Warnf("Retry backoff changed to %s.", d)
+		c.Reporting.RetryBackoff = d
+	}
+
+	ds := c.DataSources
+
+	vmdb := ds.VM
+	if vmdb.Enabled {
+		if vmdb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(vmdb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
+			}
+			vmdb.Timeout = timeout
+		}
+	}
+
+	qandb := ds.QANDB_SELECT
+	if qandb.Enabled {
+		if qandb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(qandb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
+			}
+			qandb.Timeout = timeout
+		}
+	}
+
+	pmmdb := ds.PMMDB_SELECT
+	if pmmdb.Enabled {
+		if pmmdb.TimeoutStr != "" {
+			timeout, err := time.ParseDuration(pmmdb.TimeoutStr)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
+			}
+			pmmdb.Timeout = timeout
+		}
+	}
+
 	return nil
 }
 
-func (c *Config) ReportEndpointURL() string {
-	return fmt.Sprintf(c.Endpoints.Report, c.SaasHostname)
+func (c *ServiceConfig) loadConfig(location string) ([]TelemetryConfig, error) {
+	matches, err := filepath.Glob(location)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	fileCfgs := make([]FileConfig, len(matches))
+	var fileCfg FileConfig
+	for _, match := range matches {
+		buf, err := ioutil.ReadFile(match)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
+		}
+		if !c.DisableSigningVerification {
+			bufSign, err := ioutil.ReadFile(match + ".minisig")
+			if err != nil {
+				return nil, errors.Wrapf(err, "error while reading config [%s]", match)
+			}
+			valid := false
+			for _, publicKey := range c.Signing.trustedPublicKeysParsed {
+				if ok := minisign.Verify(publicKey, buf, bufSign); ok {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return nil, errors.Errorf("signature verification failed for [%s]", match)
+			}
+		}
+		if err := yaml.Unmarshal(buf, &fileCfg); err != nil {
+			return nil, errors.Wrapf(err, "cannot unmashal config [%s]", match)
+		}
+		fileCfgs = append(fileCfgs, fileCfg)
+	}
+
+	if c.LoadDefaults {
+		defaultConfigBytes := []byte(defaultConfig)
+		if err := yaml.Unmarshal(defaultConfigBytes, &fileCfg); err != nil {
+			return nil, errors.Wrap(err, "cannot unmashal default config")
+		}
+		fileCfgs = append(fileCfgs, fileCfg)
+	}
+
+	if err := c.validateConfig(fileCfgs); err != nil {
+		c.l.Errorf(err.Error())
+	}
+
+	return c.merge(fileCfgs), nil
+}
+
+func (c *ServiceConfig) merge(cfgs []FileConfig) []TelemetryConfig {
+	var result []TelemetryConfig
+	ids := make(map[string]bool)
+	for _, cfg := range cfgs {
+		for _, each := range cfg.Telemetry {
+			_, exist := ids[each.Id]
+			if !exist {
+				ids[each.Id] = true
+				result = append(result, each)
+			}
+		}
+	}
+	return result
+}
+
+func (c *ServiceConfig) validateConfig(cfgs []FileConfig) error {
+	ids := make(map[string]bool)
+	for _, cfg := range cfgs {
+		for _, each := range cfg.Telemetry {
+			_, exist := ids[each.Id]
+			if exist {
+				return errors.Errorf("telemetry config ID duplication: %s", each.Id)
+			}
+			ids[each.Id] = true
+		}
+	}
+	return nil
 }

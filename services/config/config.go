@@ -27,7 +27,6 @@ import (
 
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/telemetry"
-	"github.com/percona/pmm-managed/services/telemetry_v2"
 )
 
 const (
@@ -45,9 +44,8 @@ type Service struct {
 
 type Config struct {
 	Services struct {
-		Platform    platform.Config            `yaml:"platform"`
-		Telemetry   telemetry.Config           `yaml:"telemetry"`
-		TelemetryV2 telemetry_v2.ServiceConfig `yaml:"telemetry_v2"`
+		Platform  platform.Config         `yaml:"platform"`
+		Telemetry telemetry.ServiceConfig `yaml:"telemetry"`
 	} `yaml:"services"`
 	ExtraHeaders struct {
 		Enabled   bool `yaml:"enabled"`
@@ -96,15 +94,8 @@ func (s *Service) Load() error {
 	}
 
 	cfg.Services.Platform.Init()
-	if err := cfg.Services.Telemetry.Init(); err != nil {
+	if err := cfg.Services.Telemetry.Init(s.l); err != nil {
 		return err
-	}
-	if err := cfg.Services.TelemetryV2.Init(s.l); err != nil {
-		return err
-	}
-
-	if cfg.Services.Telemetry.Enabled && cfg.Services.TelemetryV2.Enabled {
-		return errors.Errorf("both V1 and V2 telemetry enabled, disable either of them")
 	}
 
 	cfg.configureSaasReqEnrichment()

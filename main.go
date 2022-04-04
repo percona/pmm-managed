@@ -39,7 +39,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/percona/pmm-managed/services/config"
-	"github.com/percona/pmm-managed/services/telemetry_v2"
+	"github.com/percona/pmm-managed/services/telemetry"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
@@ -90,7 +90,6 @@ import (
 	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
-	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/services/versioncache"
 	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/services/vmalert"
@@ -638,7 +637,7 @@ func main() {
 		l.Panicf("Failed to load config: %+v", err)
 	}
 	if err := cfg.Update(func(s *config.Service) error {
-		ds := s.Config.Services.TelemetryV2.DataSources
+		ds := s.Config.Services.Telemetry.DataSources
 		pmmdb := ds.PMMDB_SELECT
 
 		pmmdb.Credentials.Username = *postgresDBUsernameF
@@ -717,11 +716,6 @@ func main() {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}
 
-	telemetryV2, err := telemetry_v2.NewService(db, version.Version, cfg.Config.Services.TelemetryV2)
-	if err != nil {
-		l.Fatalf("Could not create telemetry_v2 service: %s", err)
-	}
-
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
@@ -768,7 +762,6 @@ func main() {
 		TemplatesService:     templatesService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
-		TelemetryV2Service:   telemetryV2,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
@@ -918,12 +911,6 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		telemetryV2.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		schedulerService.Run(ctx)
 	}()
 
@@ -936,8 +923,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runGRPCServer(
-			ctx,
+		runGRPCServer(ctx,
 			&gRPCServerDeps{
 				db:                   db,
 				vmdb:                 vmdb,
@@ -965,8 +951,7 @@ func main() {
 				versionCache:         versionCache,
 				supervisord:          supervisord,
 			},
-			cfg.Config.Services.Platform,
-		)
+			cfg.Config.Services.Platform)
 	}()
 
 	wg.Add(1)

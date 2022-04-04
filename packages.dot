@@ -5,6 +5,7 @@ digraph packages {
 	"/" -> "/services/alertmanager";
 	"/" -> "/services/backup";
 	"/" -> "/services/checks";
+	"/" -> "/services/config";
 	"/" -> "/services/dbaas";
 	"/" -> "/services/grafana";
 	"/" -> "/services/inventory";
@@ -47,7 +48,6 @@ digraph packages {
 	"/services/qan" -> "/models";
 	"/services/server" -> "/models";
 	"/services/supervisord" -> "/models";
-	"/services/telemetry" -> "/models";
 	"/services/victoriametrics" -> "/models";
 	"/services/vmalert" -> "/models";
 }

@@ -27,7 +27,6 @@ linters:
     - goimports
     - govet
     - ineffassign
-    - nolintlint
     - staticcheck
 
 issues:
