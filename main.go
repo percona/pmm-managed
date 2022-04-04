@@ -36,15 +36,40 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
-
-	"github.com/percona/pmm-managed/services/config"
-	"github.com/percona/pmm-managed/services/telemetry"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/joho/godotenv"
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
+	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
+	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/backup"
+	"github.com/percona/pmm-managed/services/checks"
+	"github.com/percona/pmm-managed/services/config"
+	"github.com/percona/pmm-managed/services/dbaas"
+	"github.com/percona/pmm-managed/services/grafana"
+	"github.com/percona/pmm-managed/services/inventory"
+	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
+	"github.com/percona/pmm-managed/services/management"
+	managementbackup "github.com/percona/pmm-managed/services/management/backup"
+	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
+	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
+	"github.com/percona/pmm-managed/services/management/ia"
+	"github.com/percona/pmm-managed/services/minio"
+	"github.com/percona/pmm-managed/services/platform"
+	"github.com/percona/pmm-managed/services/qan"
+	"github.com/percona/pmm-managed/services/scheduler"
+	"github.com/percona/pmm-managed/services/server"
+	"github.com/percona/pmm-managed/services/supervisord"
+	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/versioncache"
+	"github.com/percona/pmm-managed/services/victoriametrics"
+	"github.com/percona/pmm-managed/services/vmalert"
+	"github.com/percona/pmm-managed/utils/clean"
+	"github.com/percona/pmm-managed/utils/interceptors"
+	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
@@ -68,34 +93,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
-	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
-	"github.com/percona/pmm-managed/services/alertmanager"
-	"github.com/percona/pmm-managed/services/backup"
-	"github.com/percona/pmm-managed/services/checks"
-	"github.com/percona/pmm-managed/services/dbaas"
-	"github.com/percona/pmm-managed/services/grafana"
-	"github.com/percona/pmm-managed/services/inventory"
-	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
-	"github.com/percona/pmm-managed/services/management"
-	managementbackup "github.com/percona/pmm-managed/services/management/backup"
-	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
-	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
-	"github.com/percona/pmm-managed/services/management/ia"
-	"github.com/percona/pmm-managed/services/minio"
-	"github.com/percona/pmm-managed/services/platform"
-	"github.com/percona/pmm-managed/services/qan"
-	"github.com/percona/pmm-managed/services/scheduler"
-	"github.com/percona/pmm-managed/services/server"
-	"github.com/percona/pmm-managed/services/supervisord"
-	"github.com/percona/pmm-managed/services/versioncache"
-	"github.com/percona/pmm-managed/services/victoriametrics"
-	"github.com/percona/pmm-managed/services/vmalert"
-	"github.com/percona/pmm-managed/utils/clean"
-	"github.com/percona/pmm-managed/utils/interceptors"
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
 const (
@@ -642,7 +639,7 @@ func main() {
 
 		pmmdb.Credentials.Username = *postgresDBUsernameF
 		pmmdb.Credentials.Password = *postgresDBPasswordF
-		pmmdb.DSN.Scheme = "postgres" //TODO: should be configurable
+		pmmdb.DSN.Scheme = "postgres" // TODO: should be configurable
 		pmmdb.DSN.Host = *postgresAddrF
 		pmmdb.DSN.DB = *postgresDBNameF
 		q := make(url.Values)
