@@ -18,7 +18,7 @@
 package telemetry
 
 import (
-	_ "embed"
+	_ "embed" //nolint:golint
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -46,9 +46,9 @@ type ServiceConfig struct {
 	Endpoints    EndpointsConfig `yaml:"endpoints"`
 	SaasHostname string          `yaml:"saas_hostname"` //nolint:tagliatelle
 	DataSources  struct {
-		VM           *DataSourceVictoriaMetrics `yaml:"VM"`
-		QANDB_SELECT *DSConfigQAN               `yaml:"QANDB_SELECT"`
-		PMMDB_SELECT *DSConfigPMMDB             `yaml:"PMMDB_SELECT"`
+		VM          *DataSourceVictoriaMetrics `yaml:"VM"`
+		QanDBSelect *DSConfigQAN               `yaml:"QANDB_SELECT"`
+		PmmDBSelect *DSConfigPMMDB             `yaml:"PMMDB_SELECT"`
 	} `yaml:"datasources"`
 	Reporting ReportingConfig `yaml:"reporting"`
 }
@@ -207,23 +207,23 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 		}
 	}
 
-	qandb := ds.QANDB_SELECT
+	qandb := ds.QanDBSelect
 	if qandb.Enabled {
 		if qandb.TimeoutStr != "" {
 			timeout, err := time.ParseDuration(qandb.TimeoutStr)
 			if err != nil {
-				return errors.Wrapf(err, "failed to parse duration [%s]", ds.QANDB_SELECT.Timeout)
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.QanDBSelect.Timeout)
 			}
 			qandb.Timeout = timeout
 		}
 	}
 
-	pmmdb := ds.PMMDB_SELECT
+	pmmdb := ds.PmmDBSelect
 	if pmmdb.Enabled {
 		if pmmdb.TimeoutStr != "" {
 			timeout, err := time.ParseDuration(pmmdb.TimeoutStr)
 			if err != nil {
-				return errors.Wrapf(err, "failed to parse duration [%s]", ds.PMMDB_SELECT.Timeout)
+				return errors.Wrapf(err, "failed to parse duration [%s]", ds.PmmDBSelect.Timeout)
 			}
 			pmmdb.Timeout = timeout
 		}

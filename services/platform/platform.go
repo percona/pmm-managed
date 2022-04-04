@@ -90,7 +90,7 @@ func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaCli
 			Timeout: timeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: c.SkipTlsVerification,
+					InsecureSkipVerify: c.SkipTLSVerification, //nolint:gosec
 				},
 			},
 		},

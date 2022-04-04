@@ -638,7 +638,7 @@ func main() {
 	}
 	if err := cfg.Update(func(s *config.Service) error {
 		ds := s.Config.Services.Telemetry.DataSources
-		pmmdb := ds.PMMDB_SELECT
+		pmmdb := ds.PmmDBSelect
 
 		pmmdb.Credentials.Username = *postgresDBUsernameF
 		pmmdb.Credentials.Password = *postgresDBPasswordF

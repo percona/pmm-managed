@@ -16,9 +16,11 @@
 
 package platform
 
+// Config platform config.
 type Config struct {
-	SkipTlsVerification bool `yaml:"skip_tls_verification"`
+	SkipTLSVerification bool `yaml:"skip_tls_verification"`
 }
 
+// Init platform config init.
 func (c *Config) Init() {
 }

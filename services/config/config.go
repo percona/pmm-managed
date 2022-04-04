@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package config provides configuration facility.
 package config
 
 import (
@@ -54,7 +55,7 @@ type Config struct {
 			Endpoint string            `yaml:"endpoint"`
 			Headers  map[string]string `yaml:"headers"`
 		} `yaml:"endpoints"`
-	} `yaml:"extra_headers"`
+	} `yaml:"extra_headers"` //nolint:tagliatelle
 }
 
 func NewService() *Service {
