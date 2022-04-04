@@ -352,12 +352,14 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("access token acquired")
 
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
 		return nil, errGetSSODetailsFailed
 	}
+	s.l.Info("sso details acquired")
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
 
@@ -366,6 +368,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		s.l.Errorf("Failed to build SearchOrganizationTickets request: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("request made")
 
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
@@ -375,15 +378,18 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("request sent")
 	defer resp.Body.Close() //nolint:errcheck
 
 	decoder := json.NewDecoder(resp.Body)
 	if resp.StatusCode != http.StatusOK {
+		s.l.Info("request failed")
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("SearchOrganizationRequest failed to decode error message: %s", err)
 			return nil, errInternalServer
 		}
+		s.l.Info("decode success but req failed")
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
@@ -395,6 +401,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("pmm decode success")
 
 	response := &platformpb.SearchOrganizationTicketsResponse{}
 	for _, t := range platformResponse.Tickets {
@@ -404,6 +411,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 			return nil, errInternalServer
 		}
 		response.Tickets = append(response.Tickets, ticket)
+		s.l.Info("ticket conversion")
 	}
 
 	return response, nil
@@ -461,12 +469,14 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		s.l.Errorf("SearchOrganizationEntitlements request failed: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("access token acquired")
 
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
 		return nil, errGetSSODetailsFailed
 	}
+	s.l.Info("SSO Details aqcuired")
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/entitlements:search", s.host, ssoDetails.OrganizationID)
 
@@ -475,6 +485,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		s.l.Errorf("Failed to build SearchOrganizationEntitlements request: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("request made")
 
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
@@ -484,15 +495,18 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		s.l.Errorf("SearchOrganizationEntitlements request failed: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("request sent")
 	defer resp.Body.Close() //nolint:errcheck
 
 	decoder := json.NewDecoder(resp.Body)
 	if resp.StatusCode != http.StatusOK {
+		s.l.Info("request failed")
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Failed to decode error message: %s", err)
 			return nil, errInternalServer
 		}
+		s.l.Info("decode success but req failed")
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
@@ -504,6 +518,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
 		return nil, errInternalServer
 	}
+	s.l.Info("pmm decode success")
 
 	response := &platformpb.SearchOrganizationEntitlementsResponse{}
 	for _, e := range platformResp.Entitlement {
@@ -513,6 +528,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 			return nil, errInternalServer
 		}
 		response.Entitlements = append(response.Entitlements, entitlement)
+		s.l.Info("entitlement conversion")
 	}
 
 	return response, nil
