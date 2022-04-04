@@ -60,7 +60,7 @@ func main() { //nolint:cyclop
 			}
 
 			configSignature := minisign.Sign(private, configContent)
-			//TODO: review if we can use 0600 or less
+			// TODO: review if we can use 0600 or less
 			if err = ioutil.WriteFile(path+".minisig", configSignature, 0o644); err != nil { //nolint:gosec
 				log.Fatal(err)
 			}
