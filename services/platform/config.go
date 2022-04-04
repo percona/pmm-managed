@@ -18,7 +18,7 @@ package platform
 
 // Config platform config.
 type Config struct {
-	SkipTLSVerification bool `yaml:"skip_tls_verification"`
+	SkipTLSVerification bool `yaml:"skip_tls_verification"` //nolint:tagliatelle
 }
 
 // Init platform config init.
