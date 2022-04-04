@@ -49,10 +49,10 @@ services:
       - ${PMM_PORT_CH_TCP:-11000}:9000
       - ${PMM_PORT_CH_HTTP:-11123}:8123
     volumes:
-      - ${DEVCONTAINER_ENV:-/dev/null}:/opt/.env:ro
-      - ${DEVCONTAINER_ENV:-/dev/null}:${DEVCONTAINER_ENV_MOUNT_PATH:-/tmp/}.env:ro
-      - ${DEVCONTAINER_CONFIG:-/dev/null}:/opt/.dev.pmm-managed.yaml:ro
-      - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
+#      - ${DEVCONTAINER_ENV:-/dev/null}:/opt/.env:ro
+#      - ${DEVCONTAINER_ENV:-/dev/null}:${DEVCONTAINER_ENV_MOUNT_PATH:-/tmp/}.env:ro
+#      - ${DEVCONTAINER_CONFIG:-/dev/null}:/opt/.dev.pmm-managed.yaml:ro
+#      - .devcontainer/nginx/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
       - .:/root/go/src/github.com/percona/pmm-managed
 #      - ./config/telemetry/dev/:/etc/percona/telemetry/:ro
 #      - ../saas:/root/go/src/github.com/percona/saas
