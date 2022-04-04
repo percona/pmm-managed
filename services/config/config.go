@@ -103,8 +103,6 @@ func (s *Service) Load() error {
 		return err
 	}
 
-	cfg.configureSaasReqEnrichment()
-
 	s.Config = cfg
 
 	return nil
