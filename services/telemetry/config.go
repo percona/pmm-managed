@@ -239,7 +239,7 @@ func (c *ServiceConfig) loadConfig(location string) ([]Config, error) { //nolint
 		return nil, errors.WithStack(err)
 	}
 
-	var fileConfigs []FileConfig
+	var fileConfigs []FileConfig //nolint:prealloc
 	var fileCfg FileConfig
 	for _, match := range matches {
 		buf, err := ioutil.ReadFile(match) //nolint:gosec
