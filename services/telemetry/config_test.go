@@ -17,10 +17,10 @@
 package telemetry
 
 import (
+	"github.com/sirupsen/logrus/hooks/test"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -50,10 +50,10 @@ datasources:
   PMMDB_SELECT:
     enabled: true
     timeout: 2s
-    credentials:
+    use_separate_credentials: true
+    separate_credentials:
       username: pmm-managed
       password: pmm-managed
-
 reporting:
   skip_tls_verification: true
   send_on_start: true
@@ -66,12 +66,22 @@ reporting:
 	var actual ServiceConfig
 	err := yaml.Unmarshal([]byte(input), &actual)
 	require.Nil(t, err)
-	assert.Equal(t, actual, &ServiceConfig{
+	expected := ServiceConfig{
 		Enabled:      true,
 		LoadDefaults: true,
 		SaasHostname: "check.localhost",
 		Endpoints: EndpointsConfig{
 			Report: "https://%s/v1/telemetry/Report",
+		},
+		Reporting: ReportingConfig{
+			SkipTLSVerification: true,
+			SendOnStart:         true,
+			Interval:            time.Second * 10,
+			IntervalEnv:         "PERCONA_TEST_TELEMETRY_INTERVAL",
+			RetryBackoff:        time.Second * 1,
+			RetryBackoffEnv:     "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF",
+			RetryCount:          2,
+			SendTimeout:         time.Second * 10,
 		},
 		DataSources: struct {
 			VM          *DataSourceVictoriaMetrics `yaml:"VM"`
@@ -89,18 +99,20 @@ reporting:
 				DSN:     "tcp://127.0.0.1:9000?database=pmm&block_size=10000&pool_size=2",
 			},
 			PmmDBSelect: &DSConfigPMMDB{
-				Enabled: true,
-				Timeout: time.Second * 2,
-				Credentials: struct {
-					Username string
-					Password string
+				Enabled:                true,
+				Timeout:                time.Second * 2,
+				UseSeparateCredentials: true,
+				SeparateCredentials: struct {
+					Username string `yaml:"username"`
+					Password string `yaml:"password"`
 				}{
 					Username: "pmm-managed",
 					Password: "pmm-managed",
 				},
 			},
 		},
-	})
+	}
+	assert.Equal(t, actual, expected)
 	logger, _ := test.NewNullLogger()
 	err = actual.Init(logger.WithField("test", t.Name()))
 	require.Nil(t, err)
