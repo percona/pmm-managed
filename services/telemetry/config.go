@@ -20,9 +20,10 @@ package telemetry
 import (
 	_ "embed" //nolint:golint
 	"fmt"
-	"github.com/percona/pmm-managed/utils/envvars"
 	"os"
 	"time"
+
+	"github.com/percona/pmm-managed/utils/envvars"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

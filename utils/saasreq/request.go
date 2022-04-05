@@ -32,9 +32,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var (
-	dialTimeout time.Duration
-)
+var dialTimeout time.Duration
 
 func init() {
 	l := logger.Get(logger.Set(context.Background(), "saasreq init"))
