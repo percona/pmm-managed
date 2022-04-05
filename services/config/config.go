@@ -50,14 +50,6 @@ type Config struct {
 		Platform  platform.Config         `yaml:"platform"`
 		Telemetry telemetry.ServiceConfig `yaml:"telemetry"`
 	} `yaml:"services"`
-	ExtraHeaders struct {
-		Enabled   bool `yaml:"enabled"`
-		Endpoints []struct {
-			Method   string            `yaml:"method"`
-			Endpoint string            `yaml:"endpoint"`
-			Headers  map[string]string `yaml:"headers"`
-		} `yaml:"endpoints"`
-	} `yaml:"extra_headers"` //nolint:tagliatelle
 }
 
 // NewService makes new config service.
