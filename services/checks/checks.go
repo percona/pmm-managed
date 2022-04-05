@@ -1030,7 +1030,6 @@ func (s *Service) groupChecksByDB(checks map[string]check.Check) (mySQLChecks, p
 				s.l.Warnf("Unknown check family %s, skip it.", c.Family)
 			}
 		}
-
 	}
 
 	return
