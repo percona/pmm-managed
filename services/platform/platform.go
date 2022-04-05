@@ -176,6 +176,8 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 			GrafanaClientID:        ssoDetails.GrafanaClientID,
 			IssuerURL:              ssoDetails.IssuerURL,
 			Scope:                  ssoDetails.Scope,
+			OrganizationID:         ssoDetails.OrganizationID,
+			PMMServerName:          ssoDetails.PMMServerName,
 		}); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}

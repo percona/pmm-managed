@@ -707,10 +707,6 @@ var databaseSchema = [][]string{
 		`ALTER TABLE percona_sso_details
 			ADD COLUMN grafana_client_id VARCHAR NOT NULL`,
 	},
-	63: {
-		`ALTER TABLE percona_sso_details
-			ALTER COLUMN organization_id SET NOT NULL`,
-	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

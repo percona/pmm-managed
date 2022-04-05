@@ -104,11 +104,6 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	accessToken.ExpiresAt = timeBeforeRequest.Add(time.Duration(accessToken.ExpiresIn) * time.Second)
 	sso.AccessToken = accessToken
 
-	// TODO delete before merging
-	if sso.OrganizationID == "" {
-		fmt.Println("PMM DB: orgID about to be deleted  %+v", sso)
-	}
-
 	if err := q.UpdateColumns(sso, "access_token"); err != nil {
 		return nil, err
 	}
