@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"time"
 
 	"github.com/pkg/errors"
@@ -367,6 +368,10 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, errInternalServer
 	}
 
+	// TODO remove before merging
+	requestDump, err := httputil.DumpRequest(r, true)
+	s.l.Infof("Request Dump %+v  err: %+v", requestDump, err)
+
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
 
@@ -475,6 +480,10 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		s.l.Errorf("Failed to build SearchOrganizationEntitlements request: %s", err)
 		return nil, errInternalServer
 	}
+
+	// TODO remove before merging
+	requestDump, err := httputil.DumpRequest(r, true)
+	s.l.Infof("Request Dump %+v  err: %+v", requestDump, err)
 
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
