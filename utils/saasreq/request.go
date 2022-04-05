@@ -34,8 +34,6 @@ import (
 
 var (
 	dialTimeout time.Duration
-	// RequestEnricher extension point to modify request.
-	RequestEnricher func(method string, endpoint string, req *http.Request)
 )
 
 func init() {
@@ -69,10 +67,6 @@ func MakeRequest(ctx context.Context, method string, endpoint, accessToken strin
 	h.Add("Content-Type", "application/json")
 	if accessToken != "" {
 		h.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	}
-
-	if RequestEnricher != nil {
-		RequestEnricher(method, endpoint, req)
 	}
 
 	client := &http.Client{
