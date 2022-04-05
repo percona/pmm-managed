@@ -120,7 +120,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	if err != nil {
 		return nil, err // this is already a status error
 	}
-	s.l.Debug("Connect Response: %+v", connectResp)
+	s.l.Debugf("Connect Response: %+v", connectResp)
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 		PMMManagedClientID:     connectResp.SSODetails.PMMManagedClientID,
