@@ -20,6 +20,7 @@ package telemetry
 import (
 	_ "embed" //nolint:golint
 	"fmt"
+	"github.com/percona/pmm-managed/utils/envvars"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -70,25 +71,22 @@ func (c *ServiceConfig) ReportEndpointURL() string {
 
 // DSConfigQAN telemetry config.
 type DSConfigQAN struct {
-	Enabled    bool          `yaml:"enabled"`
-	Timeout    time.Duration `yaml:"-"`
-	TimeoutStr string        `yaml:"timeout"`
-	DSN        string        `yaml:"dsn"`
+	Enabled bool          `yaml:"enabled"`
+	Timeout time.Duration `yaml:"timeout"`
+	DSN     string        `yaml:"dsn"`
 }
 
 // DataSourceVictoriaMetrics telemetry config.
 type DataSourceVictoriaMetrics struct {
-	Enabled    bool          `yaml:"enabled"`
-	Timeout    time.Duration `yaml:"-"`
-	TimeoutStr string        `yaml:"timeout"`
-	Address    string        `yaml:"address"`
+	Enabled bool          `yaml:"enabled"`
+	Timeout time.Duration `yaml:"timeout"`
+	Address string        `yaml:"address"`
 }
 
 // DSConfigPMMDB telemetry config.
 type DSConfigPMMDB struct {
 	Enabled                bool          `yaml:"enabled"`
-	Timeout                time.Duration `yaml:"-"`
-	TimeoutStr             string        `yaml:"timeout"`
+	Timeout                time.Duration `yaml:"timeout"`
 	UseSeparateCredentials bool          `yaml:"use_separate_credentials"` //nolint:tagliatelle
 	// Credentials used by PMM
 	DSN struct {
@@ -136,15 +134,12 @@ func (c *Config) mapByColumn() map[string]ConfigData {
 type ReportingConfig struct {
 	SkipTLSVerification bool          `yaml:"skip_tls_verification"` //nolint:tagliatelle
 	SendOnStart         bool          `yaml:"send_on_start"`         //nolint:tagliatelle
-	IntervalStr         string        `yaml:"interval"`
-	IntervalEnv         string        `yaml:"interval_env"` //nolint:tagliatelle
-	Interval            time.Duration `yaml:"-"`
-	RetryBackoffStr     string        `yaml:"retry_backoff"`     //nolint:tagliatelle
+	IntervalEnv         string        `yaml:"interval_env"`          //nolint:tagliatelle
+	Interval            time.Duration `yaml:"interval"`
 	RetryBackoffEnv     string        `yaml:"retry_backoff_env"` //nolint:tagliatelle
-	RetryBackoff        time.Duration `yaml:"-"`
-	SendTimeoutStr      string        `yaml:"send_timeout"` //nolint:tagliatelle
-	SendTimeout         time.Duration `yaml:"-"`
-	RetryCount          int           `yaml:"retry_count"` //nolint:tagliatelle
+	RetryBackoff        time.Duration `yaml:"retry_backoff"`     //nolint:tagliatelle
+	SendTimeout         time.Duration `yaml:"send_timeout"`      //nolint:tagliatelle
+	RetryCount          int           `yaml:"retry_count"`       //nolint:tagliatelle
 }
 
 //go:embed config.default.yml
@@ -168,24 +163,6 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 	}
 	c.telemetry = telemetry
 
-	reportingInterval, err := time.ParseDuration(c.Reporting.IntervalStr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.IntervalStr)
-	}
-	c.Reporting.Interval = reportingInterval
-
-	retryBackoff, err := time.ParseDuration(c.Reporting.RetryBackoffStr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.RetryBackoffStr)
-	}
-	c.Reporting.RetryBackoff = retryBackoff
-
-	sendTimeout, err := time.ParseDuration(c.Reporting.SendTimeoutStr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse duration [%s]", c.Reporting.SendTimeoutStr)
-	}
-	c.Reporting.SendTimeout = sendTimeout
-
 	if d, err := time.ParseDuration(os.Getenv(c.Reporting.IntervalEnv)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
 		c.Reporting.Interval = d
@@ -195,39 +172,10 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 		c.Reporting.RetryBackoff = d
 	}
 
-	ds := c.DataSources
-
-	vmdb := ds.VM
-	if vmdb.Enabled {
-		if vmdb.TimeoutStr != "" {
-			timeout, err := time.ParseDuration(vmdb.TimeoutStr)
-			if err != nil {
-				return errors.Wrapf(err, "failed to parse duration [%s]", ds.VM.Timeout)
-			}
-			vmdb.Timeout = timeout
-		}
-	}
-
-	qandb := ds.QanDBSelect
-	if qandb.Enabled {
-		if qandb.TimeoutStr != "" {
-			timeout, err := time.ParseDuration(qandb.TimeoutStr)
-			if err != nil {
-				return errors.Wrapf(err, "failed to parse duration [%s]", ds.QanDBSelect.Timeout)
-			}
-			qandb.Timeout = timeout
-		}
-	}
-
-	pmmdb := ds.PmmDBSelect
-	if pmmdb.Enabled {
-		if pmmdb.TimeoutStr != "" {
-			timeout, err := time.ParseDuration(pmmdb.TimeoutStr)
-			if err != nil {
-				return errors.Wrapf(err, "failed to parse duration [%s]", ds.PmmDBSelect.Timeout)
-			}
-			pmmdb.Timeout = timeout
-		}
+	if c.SaasHostname == "" {
+		host, err := envvars.GetSAASHost()
+		c.SaasHostname = host
+		return errors.Wrap(err, "failed to get SaaSHost")
 	}
 
 	return nil
