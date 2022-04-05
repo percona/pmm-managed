@@ -4,11 +4,6 @@ services:
   telemetry:
     enabled: true
     load_defaults: true
-    config_location: /etc/percona/telemetry/*.yml
-    disable_signing_verification: false
-    signing:
-      trusted_public_keys:
-        - RWToO+zBnSKDsXC2k64DZ23kwgRW52+BtHfYtFM1NC8MoNL7LxxgoyKn # TODO: must be removed after config is signed with legit key
     datasources:
       VM:
         enabled: true
