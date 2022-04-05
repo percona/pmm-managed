@@ -46,6 +46,7 @@ const rollbackFailed = "Failed to rollback:"
 var (
 	errInternalServer      = status.Error(codes.Internal, "Internal server error")
 	errGetSSODetailsFailed = status.Error(codes.Aborted, "Failed to fetch SSO details.")
+	errOrgIDNotFound       = status.Error(codes.Aborted, "Org ID not found, please check your connection with Percona Platform.")
 )
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.
@@ -119,6 +120,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	if err != nil {
 		return nil, err // this is already a status error
 	}
+	s.l.Debug("Connect Response: %+v", connectResp)
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 		PMMManagedClientID:     connectResp.SSODetails.PMMManagedClientID,
@@ -360,6 +362,10 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, errGetSSODetailsFailed
 	}
 
+	if ssoDetails.OrganizationID == "" {
+		return nil, errOrgIDNotFound
+	}
+
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
@@ -474,6 +480,9 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		return nil, errGetSSODetailsFailed
 	}
 
+	if ssoDetails.OrganizationID == "" {
+		return nil, errOrgIDNotFound
+	}
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/entitlements:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
@@ -485,6 +494,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
 
+	// TODO remove before merging
 	requestDump, err := httputil.DumpRequestOut(r, true)
 	s.l.Infof("Request Dump %q  err: %+v", requestDump, err)
 	s.l.Infof("Request URL %+v ", r.URL)
