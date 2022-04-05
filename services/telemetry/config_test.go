@@ -17,9 +17,10 @@
 package telemetry
 
 import (
-	"github.com/sirupsen/logrus/hooks/test"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
