@@ -48,6 +48,7 @@ digraph packages {
 	"/services/qan" -> "/models";
 	"/services/server" -> "/models";
 	"/services/supervisord" -> "/models";
+	"/services/telemetry" -> "/models";
 	"/services/victoriametrics" -> "/models";
 	"/services/vmalert" -> "/models";
 }
