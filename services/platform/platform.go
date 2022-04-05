@@ -368,12 +368,13 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, errInternalServer
 	}
 
-	// TODO remove before merging
-	requestDump, err := httputil.DumpRequest(r, true)
-	s.l.Infof("Request Dump %+v  err: %+v", requestDump, err)
-
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
+
+	// TODO remove before merging
+	requestDump, err := httputil.DumpRequestOut(r, true)
+	s.l.Infof("Request Dump %q  err: %+v", requestDump, err)
+	s.l.Infof("Request URL %+v ", r.URL)
 
 	resp, err := s.client.Do(r)
 	if err != nil {
@@ -481,12 +482,12 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		return nil, errInternalServer
 	}
 
-	// TODO remove before merging
-	requestDump, err := httputil.DumpRequest(r, true)
-	s.l.Infof("Request Dump %+v  err: %+v", requestDump, err)
-
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
+
+	requestDump, err := httputil.DumpRequestOut(r, true)
+	s.l.Infof("Request Dump %q  err: %+v", requestDump, err)
+	s.l.Infof("Request URL %+v ", r.URL)
 
 	resp, err := s.client.Do(r)
 	if err != nil {
