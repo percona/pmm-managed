@@ -21,12 +21,9 @@ import (
 	_ "embed" //nolint:golint
 	"fmt"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 
-	"aead.dev/minisign"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -34,15 +31,9 @@ import (
 
 // ServiceConfig telemetry config.
 type ServiceConfig struct {
-	l                          *logrus.Entry
-	Enabled                    bool   `yaml:"enabled"`
-	LoadDefaults               bool   `yaml:"load_defaults"`                //nolint:tagliatelle
-	ConfigLocation             string `yaml:"config_location"`              //nolint:tagliatelle
-	DisableSigningVerification bool   `yaml:"disable_signing_verification"` //nolint:tagliatelle
-	Signing                    struct {
-		TrustedPublicKeys       []string             `yaml:"trusted_public_keys"` //nolint:tagliatelle
-		trustedPublicKeysParsed []minisign.PublicKey `yaml:"-"`
-	} `yaml:"signing"`
+	l            *logrus.Entry
+	Enabled      bool            `yaml:"enabled"`
+	LoadDefaults bool            `yaml:"load_defaults"` //nolint:tagliatelle
 	telemetry    []Config        `yaml:"-"`
 	Endpoints    EndpointsConfig `yaml:"endpoints"`
 	SaasHostname string          `yaml:"saas_hostname"` //nolint:tagliatelle
@@ -149,17 +140,9 @@ var defaultConfig string
 func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 	c.l = l
 
-	for _, keyText := range c.Signing.TrustedPublicKeys {
-		key := minisign.PublicKey{}
-		if err := key.UnmarshalText([]byte(keyText)); err != nil {
-			return errors.Wrap(err, "cannot parse public key")
-		}
-		c.Signing.trustedPublicKeysParsed = append(c.Signing.trustedPublicKeysParsed, key)
-	}
-
-	telemetry, err := c.loadConfig(c.ConfigLocation)
+	telemetry, err := c.loadConfig()
 	if err != nil {
-		return errors.Wrapf(err, "failed to load telemetry config from [%s]", c.ConfigLocation)
+		return errors.Wrap(err, "failed to load telemetry config")
 	}
 	c.telemetry = telemetry
 
@@ -181,40 +164,9 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 	return nil
 }
 
-func (c *ServiceConfig) loadConfig(location string) ([]Config, error) { //nolint:cyclop
-	matches, err := filepath.Glob(location)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
+func (c *ServiceConfig) loadConfig() ([]Config, error) { //nolint:cyclop
 	var fileConfigs []FileConfig //nolint:prealloc
 	var fileCfg FileConfig
-	for _, match := range matches {
-		buf, err := ioutil.ReadFile(match) //nolint:gosec
-		if err != nil {
-			return nil, errors.Wrapf(err, "error while reading config [%s]", match)
-		}
-		if !c.DisableSigningVerification {
-			bufSign, err := ioutil.ReadFile(match + ".minisig") //nolint:gosec
-			if err != nil {
-				return nil, errors.Wrapf(err, "error while reading config [%s]", match)
-			}
-			valid := false
-			for _, publicKey := range c.Signing.trustedPublicKeysParsed {
-				if ok := minisign.Verify(publicKey, buf, bufSign); ok {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				return nil, errors.Errorf("signature verification failed for [%s]", match)
-			}
-		}
-		if err := yaml.Unmarshal(buf, &fileCfg); err != nil {
-			return nil, errors.Wrapf(err, "cannot unmashal config [%s]", match)
-		}
-		fileConfigs = append(fileConfigs, fileCfg)
-	}
 
 	if c.LoadDefaults {
 		defaultConfigBytes := []byte(defaultConfig)

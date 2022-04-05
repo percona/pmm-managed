@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"aead.dev/minisign"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,12 +13,6 @@ func TestServiceConfigUnmarshal(t *testing.T) {
 	input := `
 enabled: true
 load_defaults: true
-config_location: /etc/percona/telemetry/*.yml
-disable_signing_verification: true
-signing:
-  trusted_public_keys:
-    - one
-    - two
 # priority is as follows, from the highest priority
 #   1. this config value
 #   2. PERCONA_TEST_SAAS_HOST env variable
@@ -57,16 +50,8 @@ reporting:
 	err := yaml.Unmarshal([]byte(input), &actual)
 	require.Nil(t, err)
 	assert.Equal(t, actual, &ServiceConfig{
-		Enabled:                    true,
-		LoadDefaults:               true,
-		ConfigLocation:             "/etc/percona/telemetry/*.yml",
-		DisableSigningVerification: true,
-		Signing: struct {
-			TrustedPublicKeys       []string             `yaml:"trusted_public_keys"` //nolint:tagliatelle
-			trustedPublicKeysParsed []minisign.PublicKey `yaml:"-"`
-		}{
-			TrustedPublicKeys: []string{"one", "two"},
-		},
+		Enabled:      true,
+		LoadDefaults: true,
 		SaasHostname: "check.localhost",
 		Endpoints: EndpointsConfig{
 			Report: "https://%s/v1/telemetry/Report",
