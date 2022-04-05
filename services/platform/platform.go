@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"time"
 
 	"github.com/pkg/errors"
@@ -120,7 +119,6 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	if err != nil {
 		return nil, err // this is already a status error
 	}
-	s.l.Debugf("Connect Response: %+v", connectResp)
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 		PMMManagedClientID:     connectResp.SSODetails.PMMManagedClientID,
@@ -379,11 +377,6 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
 
-	// TODO remove before merging
-	requestDump, err := httputil.DumpRequestOut(r, true)
-	s.l.Infof("Request Dump %q  err: %+v", requestDump, err)
-	s.l.Infof("Request URL %+v ", r.URL)
-
 	resp, err := s.client.Do(r)
 	if err != nil {
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
@@ -495,11 +488,6 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 
 	h := r.Header
 	h.Add("Authorization", fmt.Sprintf("Bearer %s", userAccessToken))
-
-	// TODO remove before merging
-	requestDump, err := httputil.DumpRequestOut(r, true)
-	s.l.Infof("Request Dump %q  err: %+v", requestDump, err)
-	s.l.Infof("Request URL %+v ", r.URL)
 
 	resp, err := s.client.Do(r)
 	if err != nil {
