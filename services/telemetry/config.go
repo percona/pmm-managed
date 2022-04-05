@@ -158,7 +158,9 @@ func (c *ServiceConfig) Init(l *logrus.Entry) error { //nolint:gocognit
 	if c.SaasHostname == "" {
 		host, err := envvars.GetSAASHost()
 		c.SaasHostname = host
-		return errors.Wrap(err, "failed to get SaaSHost")
+		if err != nil {
+			return errors.Wrap(err, "failed to get SaaSHost")
+		}
 	}
 
 	return nil
