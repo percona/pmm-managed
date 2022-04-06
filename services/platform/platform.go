@@ -208,7 +208,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
-		if !errors.Is(err, reform.ErrNoRows) {
+		if !errors.Is(err, models.ErrNotConnectedToPortal) {
 			return errors.Wrap(err, "failed to get SSO details")
 		}
 	}
