@@ -46,7 +46,6 @@ const rollbackFailed = "Failed to rollback:"
 var (
 	errInternalServer      = status.Error(codes.Internal, "Internal server error")
 	errGetSSODetailsFailed = status.Error(codes.Aborted, "Failed to fetch SSO details.")
-	errOrgIDNotFound       = status.Error(codes.Aborted, "Org ID not found, please check your connection with Percona Platform.")
 )
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.
@@ -370,10 +369,6 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, errGetSSODetailsFailed
 	}
 
-	if ssoDetails.OrganizationID == "" {
-		return nil, errOrgIDNotFound
-	}
-
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
@@ -483,9 +478,6 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		return nil, errGetSSODetailsFailed
 	}
 
-	if ssoDetails.OrganizationID == "" {
-		return nil, errOrgIDNotFound
-	}
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/entitlements:search", s.host, ssoDetails.OrganizationID)
 
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)

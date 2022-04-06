@@ -692,7 +692,7 @@ var databaseSchema = [][]string{
 			WHERE 'mongo_db_tls_options' is not null AND jsonb_typeof(mongo_db_tls_options->'stats_collections') = 'string'`,
 	},
 	59: {
-		`DELETE FROM percona_sso_details WHERE organization_id = ''`,
+		`DELETE FROM percona_sso_details WHERE organization_id IS NULL`,
 	},
 	60: {
 		`ALTER TABLE percona_sso_details
