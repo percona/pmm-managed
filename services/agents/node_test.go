@@ -79,24 +79,18 @@ func TestWebConfig(t *testing.T) {
 
 		require.Equal(t, expected.Env, actual.Env)
 		content, exist := actual.TextFiles["webConfigPlaceholder"]
-		if !exist {
-			t.Error("Expected 'webConfigPlaceholder' in text files")
-		}
+		require.True(t, exist, "Expected 'webConfigPlaceholder' in text files")
+		require.Equal(t, "basic_auth_users:\n    pmm: $2a$10$aEzrJVLfZFOrZUDlYUKrJOcS3aGcA9v0hQLPb8pWTB4i.XR3G4anO\n", content)
 
 		var cfg WebConfig
 		err := yaml.Unmarshal([]byte(content), &cfg)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		require.NoError(t, err)
 		require.NotEmpty(t, cfg.BasicAuthUsers.Pmm, "WebConfig file should contain a secret for 'pmm' user")
 
 		buff := []byte(cfg.BasicAuthUsers.Pmm)
 
 		err = bcrypt.CompareHashAndPassword(buff, []byte(exporter.AgentID))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	})
 }
 
