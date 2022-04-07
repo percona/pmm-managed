@@ -20,6 +20,7 @@ package platform
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -70,7 +71,7 @@ type grafanaClient interface {
 }
 
 // New returns platform Service.
-func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient) (*Service, error) {
+func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient, c Config) (*Service, error) {
 	l := logrus.WithField("component", "platform")
 
 	host, err := envvars.GetSAASHost()
@@ -81,11 +82,18 @@ func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaCli
 	timeout := envvars.GetPlatformAPITimeout(l)
 
 	s := Service{
-		host:          host,
-		db:            db,
-		l:             l,
-		supervisord:   supervisord,
-		client:        http.Client{Timeout: timeout},
+		host:        host,
+		db:          db,
+		l:           l,
+		supervisord: supervisord,
+		client: http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: c.SkipTLSVerification, //nolint:gosec
+				},
+			},
+		},
 		grafanaClient: grafanaClient,
 	}
 
@@ -120,12 +128,13 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-		ClientID:       connectResp.SSODetails.ClientID,
-		ClientSecret:   connectResp.SSODetails.ClientSecret,
-		IssuerURL:      connectResp.SSODetails.IssuerURL,
-		Scope:          connectResp.SSODetails.Scope,
-		OrganizationID: connectResp.OrganizationID,
-		PMMServerName:  req.ServerName,
+		PMMManagedClientID:     connectResp.SSODetails.PMMManagedClientID,
+		PMMManagedClientSecret: connectResp.SSODetails.PMMManagedClientSecret,
+		GrafanaClientID:        connectResp.SSODetails.GrafanaClientID,
+		IssuerURL:              connectResp.SSODetails.IssuerURL,
+		Scope:                  connectResp.SSODetails.Scope,
+		OrganizationID:         connectResp.OrganizationID,
+		PMMServerName:          req.ServerName,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
@@ -167,10 +176,13 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	})
 	if err != nil {
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-			ClientID:     ssoDetails.ClientID,
-			ClientSecret: ssoDetails.ClientSecret,
-			IssuerURL:    ssoDetails.IssuerURL,
-			Scope:        ssoDetails.Scope,
+			PMMManagedClientID:     ssoDetails.PMMManagedClientID,
+			PMMManagedClientSecret: ssoDetails.PMMManagedClientSecret,
+			GrafanaClientID:        ssoDetails.GrafanaClientID,
+			IssuerURL:              ssoDetails.IssuerURL,
+			Scope:                  ssoDetails.Scope,
+			OrganizationID:         ssoDetails.OrganizationID,
+			PMMServerName:          ssoDetails.PMMServerName,
 		}); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
@@ -196,7 +208,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
-		if !errors.Is(err, reform.ErrNoRows) {
+		if !errors.Is(err, models.ErrNotConnectedToPortal) {
 			return errors.Wrap(err, "failed to get SSO details")
 		}
 	}
@@ -222,10 +234,11 @@ type disconnectPMMParams struct {
 }
 
 type ssoDetails struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Scope        string `json:"scope"`
-	IssuerURL    string `json:"issuer_url"`
+	GrafanaClientID        string `json:"grafana_client_id"`         //nolint:tagliatelle
+	PMMManagedClientID     string `json:"pmm_managed_client_id"`     //nolint:tagliatelle
+	PMMManagedClientSecret string `json:"pmm_managed_client_secret"` //nolint:tagliatelle
+	Scope                  string `json:"scope"`
+	IssuerURL              string `json:"issuer_url"` //nolint:tagliatelle
 }
 
 type connectPMMResponse struct {
@@ -587,5 +600,4 @@ func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequ
 	return &platformpb.UserStatusResponse{
 		IsPlatformUser: true,
 	}, nil
-
 }
