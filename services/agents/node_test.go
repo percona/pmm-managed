@@ -54,7 +54,7 @@ func TestWebConfig(t *testing.T) {
 		require.Equal(t, expected.TextFiles, actual.TextFiles)
 	})
 
-	t.Run("v2.27.0", func(t *testing.T) {
+	t.Run("v2.27.1", func(t *testing.T) {
 		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
