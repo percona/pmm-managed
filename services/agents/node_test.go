@@ -80,7 +80,7 @@ func TestWebConfig(t *testing.T) {
 		require.Equal(t, expected.Env, actual.Env)
 		content, exist := actual.TextFiles["webConfigPlaceholder"]
 		require.True(t, exist, "Expected 'webConfigPlaceholder' in text files")
-		require.Equal(t, "basic_auth_users:\n    pmm: $2a$10$aEzrJVLfZFOrZUDlYUKrJOcS3aGcA9v0hQLPb8pWTB4i.XR3G4anO\n", content)
+		require.Equal(t, "basic_auth_users:\n    pmm: agent-id\n", content)
 
 		var cfg WebConfig
 		err := yaml.Unmarshal([]byte(content), &cfg)
