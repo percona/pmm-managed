@@ -19,14 +19,11 @@ package agents
 import (
 	"testing"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/yaml.v3"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 func TestWebConfig(t *testing.T) {
@@ -80,25 +77,8 @@ func TestWebConfig(t *testing.T) {
 		require.Equal(t, expected.Env, actual.Env)
 		content, exist := actual.TextFiles["webConfigPlaceholder"]
 		require.True(t, exist, "Expected 'webConfigPlaceholder' in text files")
-		require.Equal(t, "basic_auth_users:\n    pmm: $2a$10$aEzrJVLfZFOrZUDlYUKrJOcS3aGcA9v0hQLPb8pWTB4i.XR3G4anO\n", content)
-
-		var cfg WebConfig
-		err := yaml.Unmarshal([]byte(content), &cfg)
-		require.NoError(t, err)
-		require.NotEmpty(t, cfg.BasicAuthUsers.Pmm, "WebConfig file should contain a secret for 'pmm' user")
-
-		buff := []byte(cfg.BasicAuthUsers.Pmm)
-
-		err = bcrypt.CompareHashAndPassword(buff, []byte(exporter.AgentID))
-		require.NoError(t, err)
+		require.Equal(t, "basic_auth_users:\n    pmm: agent-id\n", content)
 	})
-}
-
-// expected yaml is plain collection with usernames, so define 'pmm' user as a struct field.
-type WebConfig struct {
-	BasicAuthUsers struct {
-		Pmm string `yaml:"pmm"`
-	} `yaml:"basic_auth_users"`
 }
 
 func TestNodeExporterConfig(t *testing.T) {

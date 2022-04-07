@@ -638,16 +638,22 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 	return &tdp
 }
 
-func (s *Agent) buildWebConfigFile() string {
-	password := s.GetAgentPassword()
-	salt := getPasswordSalt(s)
-
+// HashPassword func to calculate password hash
+var HashPassword = func(password, salt string) string {
 	buf, err := bcrypt.GenerateFromPasswordAndSalt([]byte(password), bcrypt.DefaultCost, []byte(salt))
 	if err != nil {
 		log.Fatal(err, "cannot calculate hash for password")
 	}
+	return string(buf)
+}
 
-	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", string(buf))
+func (s *Agent) buildWebConfigFile() string {
+	password := s.GetAgentPassword()
+	salt := getPasswordSalt(s)
+
+	buf := HashPassword(password, salt)
+
+	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", buf)
 }
 
 func getPasswordSalt(s *Agent) string {
