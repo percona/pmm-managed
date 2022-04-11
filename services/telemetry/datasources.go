@@ -132,7 +132,7 @@ func fetchMetricsFromDB(ctx context.Context, l *logrus.Entry, timeout time.Durat
 				}
 			}
 		}
-		if len(metric) > 0 {
+		if len(metric) != 0 {
 			metrics = append(metrics, metric)
 		}
 	}
