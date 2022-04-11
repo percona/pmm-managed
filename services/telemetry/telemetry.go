@@ -164,7 +164,7 @@ telemetryLoop:
 		// fetch metrics from DS
 		metricFetchStartTime := time.Now()
 		metrics, err := ds.FetchMetrics(ctx, telemetry)
-		metricFetchTook := time.Now().Sub(metricFetchStartTime)
+		metricFetchTook := time.Since(metricFetchStartTime)
 		s.l.Debugf("fetching [%s] took [%s]", telemetry.ID, metricFetchTook)
 		totalTime += metricFetchTook
 		if err != nil {
@@ -192,7 +192,7 @@ telemetryLoop:
 
 func (s *Service) makeMetric(ctx context.Context) (*pmmv1.ServerMetric, error) {
 	var settings *models.Settings
-	useServerId := false
+	useServerID := false
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
 		if settings, e = models.GetSettings(tx); e != nil {
@@ -204,7 +204,7 @@ func (s *Service) makeMetric(ctx context.Context) (*pmmv1.ServerMetric, error) {
 		}
 
 		if _, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
-			useServerId = true
+			useServerID = true
 		} else if settings.Telemetry.UUID == "" {
 			settings.Telemetry.UUID, e = generateUUID()
 			if e != nil {
@@ -219,7 +219,7 @@ func (s *Service) makeMetric(ctx context.Context) (*pmmv1.ServerMetric, error) {
 	}
 
 	var serverIDToUse string
-	if useServerId {
+	if useServerID {
 		serverIDToUse = strings.ReplaceAll(settings.PMMServerID, "-", "")
 	} else {
 		serverIDToUse = settings.Telemetry.UUID
