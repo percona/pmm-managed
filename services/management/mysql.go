@@ -39,15 +39,17 @@ type MySQLService struct {
 	state agentsStateUpdater
 	cc    connectionChecker
 	vc    versionCache
+	pfd   defaultsFileParser
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker, vc versionCache) *MySQLService {
+func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker, vc versionCache, pfd defaultsFileParser) *MySQLService {
 	return &MySQLService{
 		db:    db,
 		state: state,
 		cc:    cc,
 		vc:    vc,
+		pfd:   pfd,
 	}
 }
 
@@ -78,6 +80,18 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		if err != nil {
 			return err
 		}
+
+		if len(req.DefaultsFile) != 0 {
+			username, password, err := s.pfd.ParseDefaultsFile(req.GetPmmAgentId(), req.GetDefaultsFile(), models.MySQLServiceType)
+			if err != nil {
+				return err
+			}
+
+			// set username and password from parsed defaults file by agent
+			req.Username = username
+			req.Password = password
+		}
+
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
 			NodeID:         nodeID,
