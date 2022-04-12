@@ -22,11 +22,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mysqlAndPXBVersions struct {
+	mysql, pxb string
+}
+
 func TestMysqlAndXtrabackupCompatible(t *testing.T) {
 	t.Parallel()
 
-	// {MySQL, PXB}
-	compatible := [][2]string{
+	compatible := []mysqlAndPXBVersions{
 		// MySQL [5.5; 5.8), PXB [2.4.18; 5.2)
 		{"5.5", "2.4.18"},
 		{"5.5", "2.4.20"},
@@ -61,16 +64,20 @@ func TestMysqlAndXtrabackupCompatible(t *testing.T) {
 
 		// MySQL [8.0.22; 9.0), PXB [8.0.22; 9.0)
 		{"8.0.22", "8.0.22"},
+		{"8.0.22", "8.0.22-15.0"},
 		{"8.0.22", "8.0.50"},
 		{"8.0.22", "8.99.99"},
+		{"8.0.22-13", "8.0.22"},
+		{"8.0.22-13", "8.0.22-15.0"},
+		{"8.0.22-13", "8.0.50"},
+		{"8.0.22-13", "8.99.99"},
 		{"8.0.28", "8.0.28"},
 		{"8.0.28", "8.0.50"},
 		{"8.0.28", "8.99.99"},
 		{"8.99.99", "8.99.99"},
 	}
 
-	// {MySQL, PXB}
-	incompatible := [][2]string{
+	incompatible := []mysqlAndPXBVersions{
 		// MySQL [5.5; 5.8), PXB [2.4.18; 2.5)
 		{"5.4", "2.4.17"},
 		{"5.4", "2.4.18"},
@@ -121,6 +128,7 @@ func TestMysqlAndXtrabackupCompatible(t *testing.T) {
 		{"8.0.22", "8.0.21"},
 		{"8.0.22", "9.0"},
 		//
+		{"8.0.28", "8.0.22-15.0"},
 		{"8.0.28", "8.0.27"},
 		{"8.0.28", "9.0"},
 		//
@@ -135,15 +143,15 @@ func TestMysqlAndXtrabackupCompatible(t *testing.T) {
 	}
 
 	for _, ver := range compatible {
-		actual, err := mysqlAndXtrabackupCompatible(ver[0], ver[1])
+		actual, err := mysqlAndXtrabackupCompatible(ver.mysql, ver.pxb)
 		assert.NoError(t, err)
-		assert.True(t, actual, "mysql version %q, xtrabackup version %q", ver[0], ver[1])
+		assert.True(t, actual, "mysql version %q, xtrabackup version %q", ver.mysql, ver.pxb)
 	}
 
 	for _, ver := range incompatible {
-		actual, err := mysqlAndXtrabackupCompatible(ver[0], ver[1])
+		actual, err := mysqlAndXtrabackupCompatible(ver.mysql, ver.pxb)
 		assert.NoError(t, err)
-		assert.False(t, actual, "mysql version %q, xtrabackup version %q", ver[0], ver[1])
+		assert.False(t, actual, "mysql version %q, xtrabackup version %q", ver.mysql, ver.pxb)
 	}
 
 	_, err := mysqlAndXtrabackupCompatible("eight", "8.0.6")
