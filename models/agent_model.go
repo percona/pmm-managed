@@ -17,6 +17,7 @@
 package models
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"log"
@@ -24,6 +25,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -647,13 +649,26 @@ var HashPassword = func(password, salt string) string {
 	return string(buf)
 }
 
+const webConfigTemplate = `basic_auth_users:
+    pmm: {{ . }}
+`
+
 func (s *Agent) buildWebConfigFile() string {
 	password := s.GetAgentPassword()
 	salt := getPasswordSalt(s)
 
-	buf := HashPassword(password, salt)
+	hashedPassword := HashPassword(password, salt)
 
-	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", buf)
+	var configBuffer bytes.Buffer
+	if tmpl, err := template.New("webConfig").Parse(webConfigTemplate); err != nil {
+		log.Fatalln(err)
+	} else if err = tmpl.Execute(&configBuffer, hashedPassword); err != nil {
+		log.Fatalln(err)
+	}
+
+	config := configBuffer.String()
+
+	return config
 }
 
 func getPasswordSalt(s *Agent) string {

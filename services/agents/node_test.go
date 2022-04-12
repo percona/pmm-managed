@@ -57,6 +57,7 @@ func TestWebConfig(t *testing.T) {
 
 	t.Run("v2.28.0", func(t *testing.T) {
 		t.Parallel()
+
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
