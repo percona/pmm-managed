@@ -19,6 +19,7 @@ package saasreq
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -47,6 +48,7 @@ func MakeRequest(ctx context.Context, method string, endpoint, accessToken strin
 	}
 
 	tlsConfig := tlsconfig.Get()
+	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.ServerName = u.Host
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
@@ -65,7 +67,9 @@ func MakeRequest(ctx context.Context, method string, endpoint, accessToken strin
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
 	res, err := client.Do(req)

@@ -18,6 +18,7 @@ package models
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -75,7 +76,13 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 	h.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	timeBeforeRequest := time.Now()
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

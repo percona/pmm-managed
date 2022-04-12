@@ -19,6 +19,7 @@ package vmalert
 
 import (
 	"context"
+	"crypto/tls"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -64,6 +65,9 @@ func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) 
 		MaxIdleConns:          1,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	}
 	if logrus.GetLevel() >= logrus.TraceLevel {
 		t = irt.WithLogger(t, logrus.WithField("component", "vmalert/client").Tracef)
