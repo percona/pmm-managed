@@ -29,17 +29,18 @@ import (
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
-var v2_26_99 = version.MustParse("2.26.99")
+// The node exporter prior 2.28 use exporter_shared and gets basic auth config from env.
+// Starting with pmm 2.28, the exporter uses Prometheus Web Toolkit and needs a config file
+// with the basic auth users.
+var v2_27_99 = version.MustParse("2.27.99")
 
 func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
 	files := exporter.Files()
 
-	// The node exporter prior 2.26 use exporter_shared and gets basic auth config from env.
-	// Starting with pmm 2.27, the exporter uses Prometheus Web Toolkit and needs a config file
-	// with the basic auth users.
-	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
+	if pmmAgentVersion.Less(v2_27_99) {
 		delete(files, "webConfigPlaceholder")
 	}
+
 	if len(files) == 0 {
 		return nil
 	}
@@ -48,8 +49,7 @@ func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) m
 }
 
 func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed) []string {
-	// basic auth via env for older exporters
-	if pmmAgentVersion.Less(v2_26_99) { // <= 2.27
+	if pmmAgentVersion.Less(v2_27_99) {
 		return []string{fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword())}
 	}
 
