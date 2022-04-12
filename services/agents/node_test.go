@@ -55,14 +55,14 @@ func TestWebConfig(t *testing.T) {
 		require.Equal(t, expected.TextFiles, actual.TextFiles)
 	})
 
-	t.Run("v2.27.1", func(t *testing.T) {
+	t.Run("v2.28.0", func(t *testing.T) {
 		t.Parallel()
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:   "agent-id",
 			AgentType: models.NodeExporterType,
 		}
-		agentVersion := version.MustParse("2.27.1")
+		agentVersion := version.MustParse("2.28.0")
 
 		actual := nodeExporterConfig(node, exporter, agentVersion)
 		expected := &agentpb.SetStateRequest_AgentProcess{
