@@ -14,12 +14,12 @@ go 1.17
 
 require (
 	github.com/AlekSi/pointer v1.2.0
-	github.com/Azure/azure-sdk-for-go v63.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v63.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.25
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/ClickHouse/clickhouse-go/v2 v2.0.12
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
-	github.com/aws/aws-sdk-go v1.43.36
+	github.com/aws/aws-sdk-go v1.43.37
 	github.com/brianvoe/gofakeit/v6 v6.15.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-co-op/gocron v1.13.0
