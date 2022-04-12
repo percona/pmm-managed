@@ -295,7 +295,7 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 		return nil, services.ErrSTTDisabled
 	}
 
-	filters := &services.FilterParams{
+	filters := &services.AlertFilterParams{
 		IsCheck:   true,
 		ServiceID: serviceID,
 	}
@@ -331,7 +331,7 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 
 // ToggleCheckAlert toggles the silence state of the check with the provided alertID.
 func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence bool) error {
-	filters := &services.FilterParams{
+	filters := &services.AlertFilterParams{
 		IsCheck: true,
 		AlertID: alertID,
 	}

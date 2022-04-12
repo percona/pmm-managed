@@ -363,7 +363,88 @@ func TestListFailedServices(t *testing.T) {
 }
 
 func TestListSecurityChecks(t *testing.T) {
-	t.Run("normal", func(t *testing.T) {
+	t.Parallel()
+	filteredChecks := []struct {
+		name           string
+		allChecks      map[string]check.Check
+		expectedChecks []*managementpb.SecurityCheck
+		filters        []*managementpb.Filter
+	}{
+		{
+			name: "check category EQUALS performance",
+			allChecks: map[string]check.Check{
+				"one":   {Name: "one", Category: "performance"},
+				"two":   {Name: "two", Category: "security"},
+				"three": {Name: "three", Category: "performance"},
+			},
+			expectedChecks: []*managementpb.SecurityCheck{
+				{
+					Name:     "one",
+					Category: "performance",
+				}, {
+					Name:     "three",
+					Category: "performance",
+				},
+			},
+			filters: []*managementpb.Filter{
+				{
+					Key:   "category",
+					Op:    managementpb.Operation_EQUALS,
+					Value: &managementpb.Filter_StringValue{StringValue: "performance"},
+				},
+			},
+		},
+		{
+			name: "check category IN [performance, security]",
+			allChecks: map[string]check.Check{
+				"one":   {Name: "one", Category: "performance"},
+				"two":   {Name: "two", Category: "security"},
+				"three": {Name: "three", Category: "performance"},
+				"four":  {Name: "four", Category: "configuration"},
+			},
+			expectedChecks: []*managementpb.SecurityCheck{
+				{
+					Name:     "one",
+					Category: "performance",
+				}, {
+					Name:     "two",
+					Category: "security",
+				}, {
+					Name:     "three",
+					Category: "performance",
+				},
+			},
+			filters: []*managementpb.Filter{
+				{
+					Key: "category",
+					Op:  managementpb.Operation_IN,
+					Value: &managementpb.Filter_StringValues{
+						StringValues: &managementpb.StringValues{
+							Values: []string{"performance", "security"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var checksService mockChecksService
+	for _, test := range filteredChecks {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			checksService.On("GetDisabledChecks", mock.Anything).Return([]string{}, nil)
+			checksService.On("GetChecks").Return(test.allChecks, nil)
+			s := NewChecksAPIService(&checksService)
+			resp, err := s.ListSecurityChecks(context.Background(), &managementpb.ListSecurityChecksRequest{
+				FilterParams: &managementpb.FilterParams{Filters: test.filters},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			assert.ElementsMatch(t, test.expectedChecks, resp.Checks)
+		})
+	}
+
+	t.Run("no filtering", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("GetDisabledChecks", mock.Anything).Return([]string{"two"}, nil)
 		checksService.On("GetChecks", mock.Anything).

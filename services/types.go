@@ -53,8 +53,8 @@ type CheckResultSummary struct {
 	NoticeCount   uint32
 }
 
-// FilterParams provides fields needed to filter alerts from AlertManager.
-type FilterParams struct {
+// AlertFilterParams provides fields needed to filter alerts from AlertManager.
+type AlertFilterParams struct {
 	// IsIA specifies if only Integrated Alerts should be matched.
 	IsIA bool
 	// IsCheck specifies if only Checks/Advisors alerts should be matched.

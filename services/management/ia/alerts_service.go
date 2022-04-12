@@ -71,7 +71,7 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
-	filter := &services.FilterParams{
+	filter := &services.AlertFilterParams{
 		IsIA: true,
 	}
 	alerts, err := s.alertManager.GetAlerts(ctx, filter)
@@ -226,7 +226,7 @@ func (s *AlertsService) ToggleAlerts(ctx context.Context, req *iav1beta1.ToggleA
 	var err error
 	var alerts []*ammodels.GettableAlert
 
-	filters := &services.FilterParams{
+	filters := &services.AlertFilterParams{
 		IsIA: true,
 	}
 	if len(req.AlertIds) == 0 {

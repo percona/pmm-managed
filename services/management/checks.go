@@ -212,24 +212,73 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 		m[c] = struct{}{}
 	}
 
-	checks, err := s.checksService.GetChecks()
+	results, err := s.checksService.GetChecks()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get available checks list")
 	}
 
-	res := make([]*managementpb.SecurityCheck, 0, len(checks))
-	for _, c := range checks {
-		_, disabled := m[c.Name]
-		res = append(res, &managementpb.SecurityCheck{
-			Name:        c.Name,
-			Disabled:    disabled,
-			Summary:     c.Summary,
-			Description: c.Description,
-			Interval:    convertInterval(c.Interval),
-		})
+	checks := make([]*managementpb.SecurityCheck, 0, len(results))
+	if req != nil && req.FilterParams != nil {
+		for _, filter := range req.FilterParams.Filters {
+			switch filter.Key {
+			// we only support filtering by category for now.
+			// later, other "keys" can be supported by "AND-ing" the filters i.e., the response from each filter
+			// can be passed to the next.
+			case "category":
+				checks = filterByCategory(results, m, filter.Value)
+			}
+		}
+	} else {
+		for _, c := range results {
+			_, disabled := m[c.Name]
+			checks = append(checks, &managementpb.SecurityCheck{
+				Name:        c.Name,
+				Disabled:    disabled,
+				Summary:     c.Summary,
+				Description: c.Description,
+				Interval:    convertInterval(c.Interval),
+				Category:    c.Category,
+			})
+		}
 	}
 
-	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
+	res := &managementpb.ListSecurityChecksResponse{Checks: checks}
+	if req != nil && req.FilterParams != nil {
+		res.FilterParams = req.FilterParams
+	}
+	return res, nil
+}
+
+func filterByCategory(checks map[string]check.Check, disabledChecks map[string]struct{}, value interface{}) []*managementpb.SecurityCheck {
+	var categories []string
+	res := make([]*managementpb.SecurityCheck, 0, len(checks))
+
+	switch value.(type) {
+	case *managementpb.Filter_StringValue:
+		categories = append(categories, value.(*managementpb.Filter_StringValue).StringValue)
+	case *managementpb.Filter_StringValues:
+		categories = value.(*managementpb.Filter_StringValues).StringValues.Values
+	default:
+		return res
+	}
+
+	for _, ch := range checks {
+		for _, category := range categories {
+			_, disabled := disabledChecks[ch.Name]
+
+			if category == ch.Category {
+				res = append(res, &managementpb.SecurityCheck{
+					Name:        ch.Name,
+					Disabled:    disabled,
+					Summary:     ch.Summary,
+					Description: ch.Description,
+					Interval:    convertInterval(ch.Interval),
+					Category:    ch.Category,
+				})
+			}
+		}
+	}
+	return res
 }
 
 // ChangeSecurityChecks enables/disables Security Thread Tool checks by names or changes its execution interval.

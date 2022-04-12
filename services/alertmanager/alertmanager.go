@@ -738,7 +738,7 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 }
 
 // GetAlerts returns alerts available in alertmanager.
-func (svc *Service) GetAlerts(ctx context.Context, fp *services.FilterParams) ([]*ammodels.GettableAlert, error) {
+func (svc *Service) GetAlerts(ctx context.Context, fp *services.AlertFilterParams) ([]*ammodels.GettableAlert, error) {
 	alertParams := alert.NewGetAlertsParams()
 	alertParams.Context = ctx
 
@@ -767,7 +767,7 @@ func (svc *Service) GetAlerts(ctx context.Context, fp *services.FilterParams) ([
 }
 
 // FindAlertsByID searches alerts by IDs in alertmanager.
-func (svc *Service) FindAlertsByID(ctx context.Context, params *services.FilterParams, ids []string) ([]*ammodels.GettableAlert, error) {
+func (svc *Service) FindAlertsByID(ctx context.Context, params *services.AlertFilterParams, ids []string) ([]*ammodels.GettableAlert, error) {
 	alerts, err := svc.GetAlerts(ctx, params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")

@@ -18,11 +18,11 @@ type mockAlertManager struct {
 }
 
 // FindAlertsByID provides a mock function with given fields: ctx, params, ids
-func (_m *mockAlertManager) FindAlertsByID(ctx context.Context, params *services.FilterParams, ids []string) ([]*ammodels.GettableAlert, error) {
+func (_m *mockAlertManager) FindAlertsByID(ctx context.Context, params *services.AlertFilterParams, ids []string) ([]*ammodels.GettableAlert, error) {
 	ret := _m.Called(ctx, params, ids)
 
 	var r0 []*ammodels.GettableAlert
-	if rf, ok := ret.Get(0).(func(context.Context, *services.FilterParams, []string) []*ammodels.GettableAlert); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *services.AlertFilterParams, []string) []*ammodels.GettableAlert); ok {
 		r0 = rf(ctx, params, ids)
 	} else {
 		if ret.Get(0) != nil {
@@ -31,7 +31,7 @@ func (_m *mockAlertManager) FindAlertsByID(ctx context.Context, params *services
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *services.FilterParams, []string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *services.AlertFilterParams, []string) error); ok {
 		r1 = rf(ctx, params, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -41,11 +41,11 @@ func (_m *mockAlertManager) FindAlertsByID(ctx context.Context, params *services
 }
 
 // GetAlerts provides a mock function with given fields: ctx, params
-func (_m *mockAlertManager) GetAlerts(ctx context.Context, params *services.FilterParams) ([]*ammodels.GettableAlert, error) {
+func (_m *mockAlertManager) GetAlerts(ctx context.Context, params *services.AlertFilterParams) ([]*ammodels.GettableAlert, error) {
 	ret := _m.Called(ctx, params)
 
 	var r0 []*ammodels.GettableAlert
-	if rf, ok := ret.Get(0).(func(context.Context, *services.FilterParams) []*ammodels.GettableAlert); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *services.AlertFilterParams) []*ammodels.GettableAlert); ok {
 		r0 = rf(ctx, params)
 	} else {
 		if ret.Get(0) != nil {
@@ -54,7 +54,7 @@ func (_m *mockAlertManager) GetAlerts(ctx context.Context, params *services.Filt
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *services.FilterParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *services.AlertFilterParams) error); ok {
 		r1 = rf(ctx, params)
 	} else {
 		r1 = ret.Error(1)

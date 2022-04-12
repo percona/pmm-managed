@@ -18,11 +18,11 @@ type mockAlertmanagerService struct {
 }
 
 // GetAlerts provides a mock function with given fields: ctx, params
-func (_m *mockAlertmanagerService) GetAlerts(ctx context.Context, params *services.FilterParams) ([]*ammodels.GettableAlert, error) {
+func (_m *mockAlertmanagerService) GetAlerts(ctx context.Context, params *services.AlertFilterParams) ([]*ammodels.GettableAlert, error) {
 	ret := _m.Called(ctx, params)
 
 	var r0 []*ammodels.GettableAlert
-	if rf, ok := ret.Get(0).(func(context.Context, *services.FilterParams) []*ammodels.GettableAlert); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *services.AlertFilterParams) []*ammodels.GettableAlert); ok {
 		r0 = rf(ctx, params)
 	} else {
 		if ret.Get(0) != nil {
@@ -31,7 +31,7 @@ func (_m *mockAlertmanagerService) GetAlerts(ctx context.Context, params *servic
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *services.FilterParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *services.AlertFilterParams) error); ok {
 		r1 = rf(ctx, params)
 	} else {
 		r1 = ret.Error(1)
