@@ -219,13 +219,16 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 
 	checks := make([]*managementpb.SecurityCheck, 0, len(results))
 	if req != nil && req.FilterParams != nil {
-		for _, filter := range req.FilterParams.Filters {
-			switch filter.Key {
+		if req.FilterParams.Category != nil {
 			// we only support filtering by category for now.
 			// later, other "keys" can be supported by "AND-ing" the filters i.e., the response from each filter
 			// can be passed to the next.
-			case "category":
-				checks = filterByCategory(results, m, filter.Value)
+			filterValues := req.FilterParams.Category.Value
+			switch filterValues.(type) {
+			case *managementpb.InFilter_StringValues:
+				checks = filterByCategory(results, m, filterValues.(*managementpb.InFilter_StringValues).StringValues.Values)
+			default:
+				return nil, errors.New("no valid 'string_values' for category filter")
 			}
 		}
 	} else {
@@ -242,31 +245,17 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 		}
 	}
 
-	res := &managementpb.ListSecurityChecksResponse{Checks: checks}
-	if req != nil && req.FilterParams != nil {
-		res.FilterParams = req.FilterParams
-	}
-	return res, nil
+	return &managementpb.ListSecurityChecksResponse{Checks: checks}, nil
 }
 
-func filterByCategory(checks map[string]check.Check, disabledChecks map[string]struct{}, value interface{}) []*managementpb.SecurityCheck {
-	var categories []string
+func filterByCategory(checks map[string]check.Check, disabledChecks map[string]struct{}, categories []string) []*managementpb.SecurityCheck {
 	res := make([]*managementpb.SecurityCheck, 0, len(checks))
 
-	switch value.(type) {
-	case *managementpb.Filter_StringValue:
-		categories = append(categories, value.(*managementpb.Filter_StringValue).StringValue)
-	case *managementpb.Filter_StringValues:
-		categories = value.(*managementpb.Filter_StringValues).StringValues.Values
-	default:
-		return res
-	}
-
-	for _, ch := range checks {
-		for _, category := range categories {
-			_, disabled := disabledChecks[ch.Name]
-
-			if category == ch.Category {
+	var disabled bool
+	for _, category := range categories {
+		for _, ch := range checks {
+			if ch.Category == category {
+				_, disabled = disabledChecks[ch.Name]
 				res = append(res, &managementpb.SecurityCheck{
 					Name:        ch.Name,
 					Disabled:    disabled,

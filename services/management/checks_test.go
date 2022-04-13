@@ -368,31 +368,27 @@ func TestListSecurityChecks(t *testing.T) {
 		name           string
 		allChecks      map[string]check.Check
 		expectedChecks []*managementpb.SecurityCheck
-		filters        []*managementpb.Filter
+		filters        *managementpb.ListSecurityChecksRequest_FilterParams
+		errStr         string
 	}{
 		{
-			name: "check category EQUALS performance",
+			name: "no check matches filtered category",
 			allChecks: map[string]check.Check{
 				"one":   {Name: "one", Category: "performance"},
 				"two":   {Name: "two", Category: "security"},
 				"three": {Name: "three", Category: "performance"},
 			},
-			expectedChecks: []*managementpb.SecurityCheck{
-				{
-					Name:     "one",
-					Category: "performance",
-				}, {
-					Name:     "three",
-					Category: "performance",
+			expectedChecks: []*managementpb.SecurityCheck{},
+			filters: &managementpb.ListSecurityChecksRequest_FilterParams{
+				Category: &managementpb.InFilter{
+					Value: &managementpb.InFilter_StringValues{
+						StringValues: &managementpb.StringValues{
+							Values: []string{"configuration"},
+						},
+					},
 				},
 			},
-			filters: []*managementpb.Filter{
-				{
-					Key:   "category",
-					Op:    managementpb.Operation_EQUALS,
-					Value: &managementpb.Filter_StringValue{StringValue: "performance"},
-				},
-			},
+			errStr: "",
 		},
 		{
 			name: "check category IN [performance, security]",
@@ -414,33 +410,54 @@ func TestListSecurityChecks(t *testing.T) {
 					Category: "performance",
 				},
 			},
-			filters: []*managementpb.Filter{
-				{
-					Key: "category",
-					Op:  managementpb.Operation_IN,
-					Value: &managementpb.Filter_StringValues{
+			filters: &managementpb.ListSecurityChecksRequest_FilterParams{
+				Category: &managementpb.InFilter{
+					Value: &managementpb.InFilter_StringValues{
 						StringValues: &managementpb.StringValues{
 							Values: []string{"performance", "security"},
 						},
 					},
 				},
 			},
+			errStr: "",
+		},
+		{
+			name: "invalid category filters returns error",
+			allChecks: map[string]check.Check{
+				"one": {Name: "one", Category: "performance"},
+				"two": {Name: "two", Category: "security"},
+			},
+			expectedChecks: nil,
+			filters: &managementpb.ListSecurityChecksRequest_FilterParams{
+				Category: &managementpb.InFilter{
+					Value: &managementpb.InFilter_IntValues{
+						IntValues: &managementpb.IntValues{
+							Values: []int32{3, 4},
+						},
+					},
+				},
+			},
+			errStr: "no valid 'string_values' for category filter",
 		},
 	}
 
-	var checksService mockChecksService
 	for _, test := range filteredChecks {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+			var checksService mockChecksService
 			checksService.On("GetDisabledChecks", mock.Anything).Return([]string{}, nil)
 			checksService.On("GetChecks").Return(test.allChecks, nil)
 			s := NewChecksAPIService(&checksService)
 			resp, err := s.ListSecurityChecks(context.Background(), &managementpb.ListSecurityChecksRequest{
-				FilterParams: &managementpb.FilterParams{Filters: test.filters},
+				FilterParams: test.filters,
 			})
-			require.NoError(t, err)
-			require.NotNil(t, resp)
-			assert.ElementsMatch(t, test.expectedChecks, resp.Checks)
+			if test.errStr != "" {
+				assert.EqualError(t, err, test.errStr)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.ElementsMatch(t, test.expectedChecks, resp.Checks)
+			}
 		})
 	}
 
