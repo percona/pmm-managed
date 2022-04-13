@@ -32,12 +32,6 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func agentFiles(agent *models.Agent) map[string]string {
-	files := agent.Files()
-	files["webConfigPlaceholder"] = "tls config content"
-	return files
-}
-
 func TestAgent(t *testing.T) {
 	t.Run("UnifiedLabels", func(t *testing.T) {
 		agent := &models.Agent{
@@ -182,10 +176,8 @@ func TestAgent(t *testing.T) {
 			expectedFiles := map[string]string{
 				"caFilePlaceholder":             "cert",
 				"certificateKeyFilePlaceholder": "key",
-				"webConfigPlaceholder":          "tls config content",
 			}
-
-			assert.Equal(t, expectedFiles, agentFiles(agent))
+			assert.Equal(t, expectedFiles, agent.Files())
 		})
 
 		t.Run("MongoDB Auth Database", func(t *testing.T) {
@@ -200,9 +192,8 @@ func TestAgent(t *testing.T) {
 			expectedFiles := map[string]string{
 				"caFilePlaceholder":             "cert",
 				"certificateKeyFilePlaceholder": "key",
-				"webConfigPlaceholder":          "tls config content",
 			}
-			assert.Equal(t, expectedFiles, agentFiles(agent))
+			assert.Equal(t, expectedFiles, agent.Files())
 		})
 	})
 
