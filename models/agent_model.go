@@ -46,7 +46,6 @@ const (
 	certificateFilePlaceholder    = "certificateFilePlaceholder"
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
-	webConfigFilePlaceholder      = "webConfigPlaceholder"
 	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
 	AgentStatusUnknown = "UNKNOWN"
 )
@@ -570,10 +569,6 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 // Files returns files map required to connect to DB.
 func (s Agent) Files() map[string]string {
 	switch s.AgentType {
-	case NodeExporterType:
-		return map[string]string{
-			webConfigFilePlaceholder: s.buildWebConfigFile(),
-		}
 	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
 		if s.MySQLOptions != nil {
 			return map[string]string{
@@ -653,7 +648,7 @@ const webConfigTemplate = `basic_auth_users:
     pmm: {{ . }}
 `
 
-func (s *Agent) buildWebConfigFile() string {
+func (s *Agent) BuildWebConfigFile() string {
 	password := s.GetAgentPassword()
 	salt := getPasswordSalt(s)
 

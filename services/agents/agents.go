@@ -17,7 +17,9 @@
 package agents
 
 import (
+	"fmt"
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/api/agentpb"
 
 	"github.com/percona/pmm/version"
 
@@ -60,4 +62,23 @@ func pathsBase(agentVersion *version.Parsed, tdpLeft, tdpRight string) string {
 	}
 
 	return tdpLeft + " .paths_base " + tdpRight
+}
+
+// ensureAuthParams updates agent start parameters to contain prometheus webconfig.
+func ensureAuthParams(exporter *models.Agent, params *agentpb.SetStateRequest_AgentProcess, agentVersion *version.Parsed, minAuthVersion *version.Parsed) {
+	if params.Env == nil {
+		params.Env = []string{}
+	}
+
+	if agentVersion.Less(minAuthVersion) {
+		params.Env = append(params.Env, fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()))
+	} else {
+		if params.TextFiles == nil {
+			params.TextFiles = make(map[string]string)
+		}
+
+		params.TextFiles["webConfigPlaceholder"] = exporter.BuildWebConfigFile()
+		// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
+		params.Args = append(params.Args, "--web.config="+params.TemplateLeftDelim+" .TextFiles.webConfigPlaceholder "+params.TemplateRightDelim)
+	}
 }

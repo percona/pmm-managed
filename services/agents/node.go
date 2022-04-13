@@ -17,7 +17,6 @@
 package agents
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/AlekSi/pointer"
@@ -33,28 +32,6 @@ import (
 // Starting with pmm 2.28, the exporter uses Prometheus Web Toolkit and needs a config file
 // with the basic auth users.
 var v2_27_99 = version.MustParse("2.27.99")
-
-func getExporterFiles(exporter *models.Agent, pmmAgentVersion *version.Parsed) map[string]string {
-	files := exporter.Files()
-
-	if pmmAgentVersion.Less(v2_27_99) {
-		delete(files, "webConfigPlaceholder")
-	}
-
-	if len(files) == 0 {
-		return nil
-	}
-
-	return files
-}
-
-func getExporterEnv(exporter *models.Agent, pmmAgentVersion *version.Parsed) []string {
-	if pmmAgentVersion.Less(v2_27_99) {
-		return []string{fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword())}
-	}
-
-	return []string{}
-}
 
 func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := models.TemplateDelimsPair(
@@ -155,22 +132,14 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 
 	sort.Strings(args)
 
-	env := getExporterEnv(exporter, agentVersion)
-	files := getExporterFiles(exporter, agentVersion)
-
-	for k := range files {
-		if k == "webConfigPlaceholder" {
-			// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
-			args = append(args, "--web.config="+tdp.Left+" .TextFiles.webConfigPlaceholder "+tdp.Right)
-		}
-	}
-
-	return &agentpb.SetStateRequest_AgentProcess{
+	params := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_NODE_EXPORTER,
 		TemplateLeftDelim:  tdp.Left,
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
-		Env:                env,
-		TextFiles:          files,
 	}
+
+	ensureAuthParams(exporter, params, agentVersion, v2_27_99)
+
+	return params
 }
