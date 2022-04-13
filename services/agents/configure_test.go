@@ -23,7 +23,10 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// TestMain entry point for all tests execution. Used for tests global configuration.
 func TestMain(m *testing.M) {
+	// replace hash func with stub because of high cyclomatic complexity
+	// of bcrypt's internals. This allows much faster -race test runs.
 	models.HashPassword = func(password, salt string) string {
 		return password
 	}
