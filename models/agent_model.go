@@ -17,6 +17,7 @@
 package models
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"log"
@@ -24,6 +25,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -44,7 +46,6 @@ const (
 	certificateFilePlaceholder    = "certificateFilePlaceholder"
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
-	webConfigFilePlaceholder      = "webConfigPlaceholder"
 	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
 	AgentStatusUnknown = "UNKNOWN"
 )
@@ -568,10 +569,6 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 // Files returns files map required to connect to DB.
 func (s Agent) Files() map[string]string {
 	switch s.AgentType {
-	case NodeExporterType:
-		return map[string]string{
-			webConfigFilePlaceholder: s.buildWebConfigFile(),
-		}
 	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
 		if s.MySQLOptions != nil {
 			return map[string]string{
@@ -647,7 +644,7 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 	return &tdp
 }
 
-// HashPassword func to calculate password hash
+// HashPassword func to calculate password hash. Public and overridable for testing purposes.
 var HashPassword = func(password, salt string) string {
 	buf, err := bcrypt.GenerateFromPasswordAndSalt([]byte(password), bcrypt.DefaultCost, []byte(salt))
 	if err != nil {
@@ -656,13 +653,26 @@ var HashPassword = func(password, salt string) string {
 	return string(buf)
 }
 
-func (s *Agent) buildWebConfigFile() string {
+const webConfigTemplate = `basic_auth_users:
+    pmm: {{ . }}
+`
+
+func (s *Agent) BuildWebConfigFile() string {
 	password := s.GetAgentPassword()
 	salt := getPasswordSalt(s)
 
-	buf := HashPassword(password, salt)
+	hashedPassword := HashPassword(password, salt)
 
-	return fmt.Sprintf("basic_auth_users:\n    pmm: %s\n", buf)
+	var configBuffer bytes.Buffer
+	if tmpl, err := template.New("webConfig").Parse(webConfigTemplate); err != nil {
+		log.Fatalln(err)
+	} else if err = tmpl.Execute(&configBuffer, hashedPassword); err != nil {
+		log.Fatalln(err)
+	}
+
+	config := configBuffer.String()
+
+	return config
 }
 
 func getPasswordSalt(s *Agent) string {
