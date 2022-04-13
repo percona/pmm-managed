@@ -18,6 +18,7 @@ package agents
 
 import (
 	"fmt"
+
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 

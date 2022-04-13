@@ -648,6 +648,7 @@ const webConfigTemplate = `basic_auth_users:
     pmm: {{ . }}
 `
 
+// BuildWebConfigFile builds prometheus-compatible basic auth configuration.
 func (s *Agent) BuildWebConfigFile() string {
 	password := s.GetAgentPassword()
 	salt := getPasswordSalt(s)
