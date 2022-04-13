@@ -580,16 +580,7 @@ func (s Agent) Files() map[string]string {
 		return nil
 	case ProxySQLExporterType:
 		return nil
-	case MongoDBExporterType:
-		files := map[string]string{
-			webConfigFilePlaceholder: s.buildWebConfigFile(),
-		}
-		if s.MongoDBOptions != nil {
-			files[caFilePlaceholder] = s.MongoDBOptions.TLSCa
-			files[certificateKeyFilePlaceholder] = s.MongoDBOptions.TLSCertificateKey
-		}
-		return files
-	case QANMongoDBProfilerAgentType:
+	case QANMongoDBProfilerAgentType, MongoDBExporterType:
 		if s.MongoDBOptions != nil {
 			return map[string]string{
 				caFilePlaceholder:             s.MongoDBOptions.TLSCa,
