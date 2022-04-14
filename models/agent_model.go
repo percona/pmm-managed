@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"fmt"
-	"log"
+	"github.com/pkg/errors"
 	"net"
 	"net/url"
 	"strconv"
@@ -636,12 +636,12 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 }
 
 // HashPassword func to calculate password hash. Public and overridable for testing purposes.
-var HashPassword = func(password, salt string) string {
+var HashPassword = func(password, salt string) (string, error) {
 	buf, err := bcrypt.GenerateFromPasswordAndSalt([]byte(password), bcrypt.DefaultCost, []byte(salt))
 	if err != nil {
-		log.Fatal(err, "cannot calculate hash for password")
+		return "", err
 	}
-	return string(buf)
+	return string(buf), nil
 }
 
 const webConfigTemplate = `basic_auth_users:
@@ -649,22 +649,25 @@ const webConfigTemplate = `basic_auth_users:
 `
 
 // BuildWebConfigFile builds prometheus-compatible basic auth configuration.
-func (s *Agent) BuildWebConfigFile() string {
+func (s *Agent) BuildWebConfigFile() (string, error) {
 	password := s.GetAgentPassword()
 	salt := getPasswordSalt(s)
 
-	hashedPassword := HashPassword(password, salt)
+	hashedPassword, err := HashPassword(password, salt)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to hash password")
+	}
 
 	var configBuffer bytes.Buffer
 	if tmpl, err := template.New("webConfig").Parse(webConfigTemplate); err != nil {
-		log.Fatalln(err)
+		return "", errors.Wrap(err, "Failed to parse webconfig template")
 	} else if err = tmpl.Execute(&configBuffer, hashedPassword); err != nil {
-		log.Fatalln(err)
+		return "", errors.Wrap(err, "Failed to execute webconfig template")
 	}
 
 	config := configBuffer.String()
 
-	return config
+	return config, nil
 }
 
 func getPasswordSalt(s *Agent) string {

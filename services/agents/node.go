@@ -33,7 +33,7 @@ import (
 // with the basic auth users.
 var v2_27_99 = version.MustParse("2.27.99")
 
-func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion *version.Parsed) (*agentpb.SetStateRequest_AgentProcess, error) {
 	tdp := models.TemplateDelimsPair(
 		pointer.GetString(exporter.MetricsPath),
 	)
@@ -139,7 +139,9 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 		Args:               args,
 	}
 
-	ensureAuthParams(exporter, params, agentVersion, v2_27_99)
+	if err := ensureAuthParams(exporter, params, agentVersion, v2_27_99); err != nil {
+		return nil, err
+	}
 
-	return params
+	return params, nil
 }

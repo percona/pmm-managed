@@ -66,7 +66,7 @@ func pathsBase(agentVersion *version.Parsed, tdpLeft, tdpRight string) string {
 }
 
 // ensureAuthParams updates agent start parameters to contain prometheus webconfig.
-func ensureAuthParams(exporter *models.Agent, params *agentpb.SetStateRequest_AgentProcess, agentVersion *version.Parsed, minAuthVersion *version.Parsed) {
+func ensureAuthParams(exporter *models.Agent, params *agentpb.SetStateRequest_AgentProcess, agentVersion *version.Parsed, minAuthVersion *version.Parsed) error {
 	if params.Env == nil {
 		params.Env = []string{}
 	}
@@ -78,8 +78,14 @@ func ensureAuthParams(exporter *models.Agent, params *agentpb.SetStateRequest_Ag
 			params.TextFiles = make(map[string]string)
 		}
 
-		params.TextFiles["webConfigPlaceholder"] = exporter.BuildWebConfigFile()
+		wcf, err := exporter.BuildWebConfigFile()
+		if err != nil {
+			return err
+		}
+		params.TextFiles["webConfigPlaceholder"] = wcf
 		// see https://github.com/prometheus/exporter-toolkit/tree/v0.1.0/https
 		params.Args = append(params.Args, "--web.config="+params.TemplateLeftDelim+" .TextFiles.webConfigPlaceholder "+params.TemplateRightDelim)
 	}
+
+	return nil
 }
