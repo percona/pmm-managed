@@ -46,7 +46,7 @@ var (
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
 	pmmAgentVersion *version.Parsed,
-) *agentpb.SetStateRequest_AgentProcess {
+) (*agentpb.SetStateRequest_AgentProcess, error) {
 	tdp := exporter.TemplateDelimiters(service)
 
 	var args []string
@@ -105,9 +105,11 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		res.RedactWords = redactWords(exporter)
 	}
 
-	ensureAuthParams(exporter, res, pmmAgentVersion, v2_27_99)
+	if err := ensureAuthParams(exporter, res, pmmAgentVersion, v2_27_99); err != nil {
+		return nil, err
+	}
 
-	return res
+	return res, nil
 }
 
 func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
