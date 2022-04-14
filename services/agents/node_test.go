@@ -27,7 +27,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func TestWebConfig(t *testing.T) {
+func TestAuthWebConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("v2.26.1", func(t *testing.T) {
@@ -44,9 +44,6 @@ func TestWebConfig(t *testing.T) {
 		require.NoError(t, err, "Unable to build node exporter config")
 
 		expected := &agentpb.SetStateRequest_AgentProcess{
-			Type:               inventorypb.AgentType_NODE_EXPORTER,
-			TemplateLeftDelim:  "{{",
-			TemplateRightDelim: "}}",
 			Env: []string{
 				"HTTP_AUTH=pmm:agent-id",
 			},
@@ -71,23 +68,20 @@ func TestWebConfig(t *testing.T) {
 		require.NoError(t, err, "Unable to build node exporter config")
 
 		expected := &agentpb.SetStateRequest_AgentProcess{
-			Type:               inventorypb.AgentType_NODE_EXPORTER,
-			TemplateLeftDelim:  "{{",
-			TemplateRightDelim: "}}",
-			Args: []string{
-				"--web.listen-address=:{{ .listen_port }}",
+			Env: []string(nil),
+			TextFiles: map[string]string{
+				"webConfigPlaceholder": "basic_auth_users:\n    pmm: agent-id\n",
 			},
-			Env: []string{},
 		}
 
 		require.Equal(t, expected.Env, actual.Env)
-		content, exist := actual.TextFiles["webConfigPlaceholder"]
-		require.True(t, exist, "Expected 'webConfigPlaceholder' in text files")
-		require.Equal(t, "basic_auth_users:\n    pmm: agent-id\n", content)
+		require.Equal(t, expected.TextFiles, actual.TextFiles)
 	})
 }
 
 func TestNodeExporterConfig(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Linux", func(t *testing.T) {
 		t.Parallel()
 

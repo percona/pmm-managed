@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"net/url"
 	"strconv"
@@ -32,6 +31,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 	"github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/reform.v1"
 )
