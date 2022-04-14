@@ -40,7 +40,9 @@ func TestWebConfig(t *testing.T) {
 		}
 		agentVersion := version.MustParse("2.26.1")
 
-		actual := nodeExporterConfig(node, exporter, agentVersion)
+		actual, err := nodeExporterConfig(node, exporter, agentVersion)
+		require.NoError(t, err, "Unable to build node exporter config")
+
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -65,7 +67,9 @@ func TestWebConfig(t *testing.T) {
 		}
 		agentVersion := version.MustParse("2.28.0")
 
-		actual := nodeExporterConfig(node, exporter, agentVersion)
+		actual, err := nodeExporterConfig(node, exporter, agentVersion)
+		require.NoError(t, err, "Unable to build node exporter config")
+
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -94,7 +98,9 @@ func TestNodeExporterConfig(t *testing.T) {
 		}
 		agentVersion := version.MustParse("2.15.1")
 
-		actual := nodeExporterConfig(node, exporter, agentVersion)
+		actual, err := nodeExporterConfig(node, exporter, agentVersion)
+		require.NoError(t, err, "Unable to build node exporter config")
+
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -185,7 +191,9 @@ func TestNodeExporterConfig(t *testing.T) {
 		}
 		agentVersion := version.MustParse("2.15.1")
 
-		actual := nodeExporterConfig(node, exporter, agentVersion)
+		actual, err := nodeExporterConfig(node, exporter, agentVersion)
+		require.NoError(t, err, "Unable to build node exporter config")
+
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
@@ -267,7 +275,9 @@ func TestNodeExporterConfig(t *testing.T) {
 		}
 		agentVersion := version.MustParse("2.15.1")
 
-		actual := nodeExporterConfig(node, exporter, agentVersion)
+		actual, err := nodeExporterConfig(node, exporter, agentVersion)
+		require.NoError(t, err, "Unable to build node exporter config")
+
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_NODE_EXPORTER,
 			TemplateLeftDelim:  "{{",
