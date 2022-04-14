@@ -955,6 +955,6 @@ func parseLoggerConfig(level string, debug, trace bool) (logrus.Level, bool) {
 		}
 	}
 
-	// warning level default by issue PMM-7326
-	return logrus.WarnLevel, false
+	// info level by default for pmm-managed by issue PMM-5668
+	return logrus.InfoLevel, false
 }
