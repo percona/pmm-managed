@@ -171,44 +171,74 @@ func TestOperatorVersionGetting(t *testing.T) {
 	})
 	response := &VersionServiceResponse{
 		Versions: []Version{
+			// 0
 			{
 				ProductVersion: onePointSix,
 				Product:        pxcOperator,
 			},
+			// 1
 			{
 				ProductVersion: onePointSeven,
 				Product:        pxcOperator,
 			},
+			// 2
 			{
 				ProductVersion: onePointEight,
 				Product:        pxcOperator,
 			},
-
+			// 3
 			{
 				ProductVersion: onePointSix,
 				Product:        psmdbOperator,
 			},
+			// 4
 			{
 				ProductVersion: onePointSeven,
 				Product:        psmdbOperator,
 			},
+			// 5
 			{
 				ProductVersion: onePointEight,
 				Product:        psmdbOperator,
 			},
-
+			// 6
 			{
 				ProductVersion: twoPointEighteen,
 				Product:        "pmm-server",
 				Matrix: matrix{
 					PXCOperator: map[string]componentVersion{
-						onePointEight: {},
-						onePointSeven: {},
+						onePointEight: {
+							ImagePath: "imagePath" + onePointEight,
+							ImageHash: "imageHash" + onePointEight,
+							Status:    statusRecommended,
+							Critical:  true,
+						},
+						onePointSeven: {
+							ImagePath: "imagePath" + onePointSeven,
+							ImageHash: "imageHash" + onePointSeven,
+							Status:    statusAvailable,
+							Critical:  true,
+						},
 					},
 					PSMDBOperator: map[string]componentVersion{
-						onePointNine:  {},
-						onePointEight: {},
-						onePointSeven: {},
+						onePointNine: {
+							ImagePath: "imagePath" + onePointNine,
+							ImageHash: "imageHash" + onePointNine,
+							Status:    statusRecommended,
+							Critical:  true,
+						},
+						onePointEight: {
+							ImagePath: "imagePath" + onePointEight,
+							ImageHash: "imageHash" + onePointEight,
+							Status:    statusAvailable,
+							Critical:  true,
+						},
+						onePointSeven: {
+							ImagePath: "imagePath" + onePointSeven,
+							ImageHash: "imageHash" + onePointSeven,
+							Status:    statusAvailable,
+							Critical:  true,
+						},
 					},
 				},
 			},
@@ -216,6 +246,22 @@ func TestOperatorVersionGetting(t *testing.T) {
 	}
 	c, cleanup := newFakeVersionService(response, "5897", "pmm-server", psmdbOperator, pxcOperator)
 	t.Cleanup(func() { cleanup(t) })
+	t.Run("Get Recommended", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		version, componenetVersion, err := c.RecommendedComponentVersion(ctx, "pmm-server", pxcOperator)
+		assert.NotEmpty(t, version)
+		assert.NoError(t, err)
+		assert.Equal(t, response.Versions[6].Matrix.PXCOperator[onePointEight], *componenetVersion)
+	})
+	t.Run("Get Recommended - Invalid component", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		version, componenetVersion, err := c.RecommendedComponentVersion(ctx, "pmm-server", pxcOperator+"invalid")
+		assert.Empty(t, version)
+		assert.Error(t, err)
+		assert.Nil(t, componenetVersion)
+	})
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()

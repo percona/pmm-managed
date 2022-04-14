@@ -87,6 +87,8 @@ type versionService interface {
 	// NextOperatorVersion returns operator versions that is a direct successor of currently installed one.
 	// Compatibility with PMM is not taken into account.
 	NextOperatorVersion(ctx context.Context, operatorType, installedVersion string) (nextOperatorVersion *goversion.Version, err error)
+	// RecommendedComponentVersion returns the latest recommended version for a product's component.
+	RecommendedComponentVersion(ctx context.Context, product, component string) (string, *componentVersion, error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

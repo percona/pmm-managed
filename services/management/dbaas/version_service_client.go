@@ -37,9 +37,17 @@ import (
 const (
 	psmdbOperator = "psmdb-operator"
 	pxcOperator   = "pxc-operator"
+
+	statusRecommended = "recommended"
+	statusAvailable   = "available"
 )
 
-var errNoVersionsFound = errors.New("no versions to compare current version with found")
+var (
+	errNoVersionsFound            = errors.New("no versions to compare current version with found")
+	errEmptyMatrix                = errors.New("versions matrix is empty")
+	errRecommendedVersionNotFound = errors.New("cannot find a recommended version for the specified component")
+	errNotImplementedYet          = errors.New("version info not implemented yet for this component")
+)
 
 // componentVersion contains info about exact component version.
 type componentVersion struct {
@@ -158,6 +166,38 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
+func (c *VersionServiceClient) RecommendedComponentVersion(ctx context.Context, product, component string) (string, *componentVersion, error) {
+	m, err := c.Matrix(ctx, componentsParams{
+		product: product,
+	})
+	if err != nil {
+		return "", nil, errors.Wrap(err, "cannot get versions matrix for recommended component version")
+	}
+
+	if len(m.Versions) == 0 {
+		return "", nil, errEmptyMatrix
+	}
+
+	var componentVersions map[string]componentVersion
+
+	last := m.Versions[len(m.Versions)-1]
+	switch product {
+	case psmdbOperator:
+		componentVersions = last.Matrix.PSMDBOperator
+	case pxcOperator:
+		componentVersions = last.Matrix.Pxc
+	default:
+		return "", nil, errors.Wrapf(errNotImplementedYet, " %s: ", component)
+	}
+
+	latestVersion, lastComponentversion, err := latestRecommended(componentVersions)
+	if err != nil {
+		return "", nil, errRecommendedVersionNotFound
+	}
+
+	return latestVersion, lastComponentversion, nil
+}
+
 // IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolean telling
 // if given database version is supported by given operator version, error is nil in that case.
 func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
@@ -206,6 +246,32 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 		}
 	}
 	return false, nil
+}
+
+func latestRecommended(m map[string]componentVersion) (string, *componentVersion, error) {
+	if len(m) == 0 {
+		return "", nil, errNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
+	var latestRecommendedComponent componentVersion
+	var found bool
+
+	for version, component := range m {
+		parsedVersion, err := goversion.NewVersion(version)
+		if err != nil {
+			continue
+		}
+		if parsedVersion.GreaterThan(latest) && component.Status == statusRecommended {
+			latest = parsedVersion
+			latestRecommendedComponent = component
+			found = true
+		}
+	}
+	if !found {
+		return "", nil, errNoVersionsFound
+	}
+
+	return latest.String(), &latestRecommendedComponent, nil
 }
 
 func latest(m map[string]componentVersion) (*goversion.Version, error) {
