@@ -1,6 +1,6 @@
 module github.com/percona/pmm-managed
 
-go 1.17
+go 1.18
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
