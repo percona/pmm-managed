@@ -18,6 +18,7 @@ package agents
 
 import (
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/models"
@@ -50,16 +51,22 @@ func (p *ParseDefaultsFile) ParseDefaultsFile(pmmAgentID string, filePath string
 		return "", "", err
 	}
 
-	return resp.(*agentpb.ParseDefaultsFileResponse).GetUsername(), resp.(*agentpb.ParseDefaultsFileResponse).GetPassword(), nil
+	parserResponse := resp.(*agentpb.ParseDefaultsFileResponse)
+	if len(parserResponse.GetError()) != 0 {
+		return "", "", errors.New(parserResponse.GetError())
+	}
+
+	return parserResponse.GetUsername(), parserResponse.GetPassword(), nil
 }
 
-func createRequest(filePath string, serviceType models.ServiceType) (*agentpb.ParseDefaultsFileRequest, error) {
+func createRequest(configPath string, serviceType models.ServiceType) (*agentpb.ParseDefaultsFileRequest, error) {
 	var request *agentpb.ParseDefaultsFileRequest
 
 	switch serviceType {
 	case models.MySQLServiceType:
 		request = &agentpb.ParseDefaultsFileRequest{
-			PathToFile: filePath,
+			ServiceType: inventorypb.ServiceType_MYSQL_SERVICE,
+			ConfigPath:  configPath,
 		}
 	default:
 		return nil, errors.Errorf("unhandled service type %s", serviceType)

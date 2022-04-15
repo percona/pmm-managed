@@ -18,6 +18,9 @@ package management
 
 import (
 	"context"
+	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -84,7 +87,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		if len(req.DefaultsFile) != 0 {
 			username, password, err := s.pfd.ParseDefaultsFile(req.GetPmmAgentId(), req.GetDefaultsFile(), models.MySQLServiceType)
 			if err != nil {
-				return err
+				return status.Error(codes.FailedPrecondition, fmt.Sprintf("Defaults file error: %s.", err))
 			}
 
 			// set username and password from parsed defaults file by agent
