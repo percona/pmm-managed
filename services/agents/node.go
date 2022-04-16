@@ -134,7 +134,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent, agentVersion 
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
+			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 		},
 	}
 }
