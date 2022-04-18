@@ -673,6 +673,8 @@ github.com/percona-platform/saas v0.0.0-20220326163809-90f261fe195c h1:laB9JpVYI
 github.com/percona-platform/saas v0.0.0-20220326163809-90f261fe195c/go.mod h1:gFUwaFp6Ugu5qsBwiOVJYbDlzgZ77tmXdXGO7tG5xVI=
 github.com/percona/pmm v0.0.0-20220412185044-22188887bf75 h1:WE69a/1PQye7gsyTecWajMdDb8+kl0Uiu0K5nZlgeLQ=
 github.com/percona/pmm v0.0.0-20220412185044-22188887bf75/go.mod h1:stX2hCHtTjCsIhcvZXuu7VoaCiU+DYHwHxzANI/7Ps0=
+github.com/percona/pmm v0.0.0-20220418114108-f0ec0724b1f0 h1:Cdz5ETwyoEHhblphUVQ1sDkuaSABf1Vo+WtdmUrfK48=
+github.com/percona/pmm v0.0.0-20220418114108-f0ec0724b1f0/go.mod h1:stX2hCHtTjCsIhcvZXuu7VoaCiU+DYHwHxzANI/7Ps0=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=

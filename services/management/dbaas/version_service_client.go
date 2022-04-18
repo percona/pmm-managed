@@ -183,7 +183,7 @@ func (c *VersionServiceClient) RecommendedComponentVersion(ctx context.Context, 
 	last := m.Versions[len(m.Versions)-1]
 	switch product {
 	case psmdbOperator:
-		componentVersions = last.Matrix.PSMDBOperator
+		componentVersions = last.Matrix.Mongod
 	case pxcOperator:
 		componentVersions = last.Matrix.Pxc
 	default:
