@@ -217,6 +217,7 @@ func (s *Service) Run(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		s.CollectChecks(ctx)
 		s.runChecksLoop(ctx)
 	}()
 
@@ -377,7 +378,9 @@ func (s *Service) StartChecks(checkNames []string) error {
 	}
 
 	go func() {
-		if err := s.run(context.Background(), "", checkNames); err != nil {
+		ctx := context.Background()
+		s.CollectChecks(ctx)
+		if err := s.run(ctx, "", checkNames); err != nil {
 			s.l.Errorf("Failed to execute STT checks: %+v.", err)
 		}
 	}()
@@ -389,8 +392,6 @@ func (s *Service) run(ctx context.Context, intervalGroup check.Interval, checkNa
 	if err := intervalGroup.Validate(); err != nil {
 		return errors.WithStack(err)
 	}
-
-	s.CollectChecks(ctx)
 
 	if err := s.executeChecks(ctx, intervalGroup, checkNames); err != nil {
 		return errors.WithStack(err)
