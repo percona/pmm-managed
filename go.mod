@@ -1,6 +1,6 @@
 module github.com/percona/pmm-managed
 
-go 1.17
+go 1.18
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
@@ -130,7 +130,7 @@ require (
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200824052919-0d455de96546 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
-	go.mongodb.org/mongo-driver v1.8.4 // indirect
+	go.mongodb.org/mongo-driver v1.9.0 // indirect
 	go.opentelemetry.io/otel v1.4.1 // indirect
 	go.opentelemetry.io/otel/trace v1.4.1 // indirect
 	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000 // indirect
