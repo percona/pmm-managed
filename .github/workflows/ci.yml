@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version:
-          - 1.17.x
+          - 1.18.x
         os: [ubuntu-latest]
         may-fail: [false]
 
@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2
+        uses: percona-platform/checkout@v3
 
       - name: Enable Go build cache
         uses: percona-platform/cache@v2
@@ -135,7 +135,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.17.x]
+        go-version: [1.18.x]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -152,7 +152,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2
+        uses: percona-platform/checkout@v3
         with:
           lfs: true
 
