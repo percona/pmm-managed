@@ -129,6 +129,7 @@ func TestPXCClusterService(t *testing.T) {
 						MemoryBytes: 256,
 					},
 					DiskSize: 1024 * 1024 * 1024,
+					Image:    "image_name",
 				},
 				Proxysql: &controllerv1beta1.PXCClusterParams_ProxySQL{
 					ComputeResources: &controllerv1beta1.ComputeResources{
@@ -139,6 +140,7 @@ func TestPXCClusterService(t *testing.T) {
 				},
 				VersionServiceUrl: versionService.GetVersionServiceURL(),
 			},
+			Expose: true,
 		}
 
 		dbaasClient.On("CreatePXCCluster", ctx, &mockReq).Return(&controllerv1beta1.CreatePXCClusterResponse{}, nil)
@@ -154,6 +156,7 @@ func TestPXCClusterService(t *testing.T) {
 						MemoryBytes: 256,
 					},
 					DiskSize: 1024 * 1024 * 1024,
+					Image:    "image_name",
 				},
 				Proxysql: &dbaasv1beta1.PXCClusterParams_ProxySQL{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
@@ -163,6 +166,7 @@ func TestPXCClusterService(t *testing.T) {
 					DiskSize: 1024 * 1024 * 1024,
 				},
 			},
+			Expose: true,
 		}
 
 		_, err := s.CreatePXCCluster(ctx, &in)

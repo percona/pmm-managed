@@ -72,7 +72,9 @@ const psmdbKubeconfTest = `
 const psmdbKubernetesClusterNameTest = "test-k8s-cluster-name"
 
 func TestPSMDBClusterService(t *testing.T) {
-	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient, grafanaClient *mockGrafanaClient, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient,
+		grafanaClient *mockGrafanaClient, versionServiceClient *mockVersionService, teardown func(t *testing.T),
+	) {
 		t.Helper()
 
 		ctx = logger.Set(context.Background(), t.Name())
@@ -82,6 +84,7 @@ func TestPSMDBClusterService(t *testing.T) {
 		db = reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		dbaasClient = &mockDbaasClient{}
 		grafanaClient = &mockGrafanaClient{}
+		versionServiceClient = &mockVersionService{}
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
@@ -92,7 +95,7 @@ func TestPSMDBClusterService(t *testing.T) {
 		return
 	}
 
-	ctx, db, dbaasClient, grafanaClient, teardown := setup(t)
+	ctx, db, dbaasClient, grafanaClient, versionServiceMock, teardown := setup(t)
 	defer teardown(t)
 
 	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, NewVersionServiceClient(versionServiceURL))
@@ -103,7 +106,18 @@ func TestPSMDBClusterService(t *testing.T) {
 		},
 		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}, nil)
+
+	versionService := NewVersionServiceClient(versionServiceURL)
 	dbaasClient.On("InstallPSMDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPSMDBOperatorResponse{}, nil)
+	versionServiceMock.On("GetVersionServiceURL").Return(versionService.GetVersionServiceURL())
+	versionServiceMock.On("RecommendedComponentVersion", mock.Anything, mock.Anything, mock.Anything).
+		Return("1.2.3",
+			&componentVersion{
+				ImagePath: "path",
+				ImageHash: "hash",
+				Status:    "recommended",
+				Critical:  false,
+			}, nil)
 
 	registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
 		KubernetesClusterName: psmdbKubernetesClusterNameTest,
@@ -111,11 +125,10 @@ func TestPSMDBClusterService(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, registerKubernetesClusterResponse)
-	versionService := NewVersionServiceClient(versionServiceURL)
 
 	//nolint:dupl
 	t.Run("BasicCreatePSMDBClusters", func(t *testing.T) {
-		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)
+		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionServiceMock)
 		mockReq := controllerv1beta1.CreatePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: psmdbKubeconfTest,
@@ -130,6 +143,7 @@ func TestPSMDBClusterService(t *testing.T) {
 					},
 					DiskSize: 1024 * 1024 * 1024,
 				},
+				Image:             "path",
 				VersionServiceUrl: versionService.GetVersionServiceURL(),
 			},
 		}

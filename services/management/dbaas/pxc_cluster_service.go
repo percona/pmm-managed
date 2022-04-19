@@ -156,6 +156,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 		},
 		Expose: req.Expose,
 	}
+
 	if req.Params.Proxysql != nil {
 		in.Params.Proxysql = &dbaascontrollerv1beta1.PXCClusterParams_ProxySQL{
 			Image:            req.Params.Proxysql.Image,

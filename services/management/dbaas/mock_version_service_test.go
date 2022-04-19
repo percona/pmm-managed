@@ -168,3 +168,33 @@ func (_m *mockVersionService) NextOperatorVersion(ctx context.Context, operatorT
 
 	return r0, r1
 }
+
+// RecommendedComponentVersion provides a mock function with given fields: ctx, product, component
+func (_m *mockVersionService) RecommendedComponentVersion(ctx context.Context, product string, component string) (string, *componentVersion, error) {
+	ret := _m.Called(ctx, product, component)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+		r0 = rf(ctx, product, component)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 *componentVersion
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) *componentVersion); ok {
+		r1 = rf(ctx, product, component)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*componentVersion)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
+		r2 = rf(ctx, product, component)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}

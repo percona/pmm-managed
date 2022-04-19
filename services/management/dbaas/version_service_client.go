@@ -34,9 +34,23 @@ import (
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
+type ComponentName string
+
 const (
 	psmdbOperator = "psmdb-operator"
 	pxcOperator   = "pxc-operator"
+
+	// Components
+	ComponentMongod        ComponentName = "mongod"
+	ComponentPxc           ComponentName = "pxc"
+	ComponentPmm           ComponentName = "pmm"
+	ComponentProxysql      ComponentName = "proxysql"
+	ComponentHaproxy       ComponentName = "haproxy"
+	ComponentBackup        ComponentName = "backup"
+	ComponentOperator      ComponentName = "operator"
+	ComponentLogCollector  ComponentName = "logcollector"
+	ComponentPXCOperator   ComponentName = "pxc-operator"
+	ComponentPSMDBOperator ComponentName = "psmdb-operator"
 
 	statusRecommended = "recommended"
 	statusAvailable   = "available"
@@ -181,11 +195,15 @@ func (c *VersionServiceClient) RecommendedComponentVersion(ctx context.Context, 
 	var componentVersions map[string]componentVersion
 
 	last := m.Versions[len(m.Versions)-1]
-	switch product {
-	case psmdbOperator:
+	switch component {
+	case string(ComponentMongod):
 		componentVersions = last.Matrix.Mongod
-	case pxcOperator:
+	case string(ComponentPxc):
 		componentVersions = last.Matrix.Pxc
+	case string(ComponentPXCOperator):
+		componentVersions = last.Matrix.PXCOperator
+	case string(ComponentPSMDBOperator):
+		componentVersions = last.Matrix.PSMDBOperator
 	default:
 		return "", nil, errors.Wrapf(errNotImplementedYet, " %s: ", component)
 	}
