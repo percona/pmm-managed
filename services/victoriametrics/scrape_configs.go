@@ -43,8 +43,6 @@ func scrapeTimeout(interval time.Duration) config.Duration {
 	switch {
 	case interval <= 2*time.Second:
 		return config.Duration(time.Second)
-	case interval <= 10*time.Second:
-		return config.Duration(interval - time.Second)
 	default:
 		return config.Duration(float64(interval) * 0.9)
 	}
@@ -418,7 +416,7 @@ func scrapeConfigsForMongoDBExporter(s *models.MetricsResolutions, params *scrap
 func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
 	hrOptions := []string{
 		"exporter",
-		"custom_query",
+		"custom_query.hr",
 		"standard.go",
 		"standard.process",
 	}
@@ -428,11 +426,33 @@ func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scra
 		return nil, err
 	}
 
-	// MR and LR is not supported by postgres_exporter, so skipping them.
+	mrOptions := []string{
+		"custom_query.mr",
+	}
+	mrOptions = collectors.FilterOutCollectors("", mrOptions, params.agent.DisabledCollectors)
+	mr, err := scrapeConfigForStandardExporter("mr", s.MR, params, mrOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	lrOptions := []string{
+		"custom_query.lr",
+	}
+	lrOptions = collectors.FilterOutCollectors("", lrOptions, params.agent.DisabledCollectors)
+	lr, err := scrapeConfigForStandardExporter("lr", s.LR, params, lrOptions)
+	if err != nil {
+		return nil, err
+	}
 
 	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
+	}
+	if mr != nil {
+		r = append(r, mr)
+	}
+	if lr != nil {
+		r = append(r, lr)
 	}
 	return r, nil
 }
