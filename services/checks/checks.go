@@ -217,7 +217,6 @@ func (s *Service) Run(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.CollectChecks(ctx)
 		s.runChecksLoop(ctx)
 	}()
 
@@ -350,8 +349,8 @@ func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence 
 	return err
 }
 
-// runChecksGroup downloads and executes STT checks in synchronous way.
-// If intervalGroup is empty.
+// runChecksGroup downloads and executes checks that should run in the interval specified by intervalGroup.
+// All checks are executed if intervalGroup is empty.
 func (s *Service) runChecksGroup(ctx context.Context, intervalGroup check.Interval) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -362,6 +361,7 @@ func (s *Service) runChecksGroup(ctx context.Context, intervalGroup check.Interv
 		return services.ErrSTTDisabled
 	}
 
+	s.CollectChecks(ctx)
 	return s.run(ctx, intervalGroup, nil)
 }
 
