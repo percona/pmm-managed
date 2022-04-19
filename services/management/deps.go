@@ -98,5 +98,5 @@ type versionCache interface {
 // defaultsFileParser is a subset of methods of agents.ParseDefaultsFile.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type defaultsFileParser interface {
-	ParseDefaultsFile(pmmAgentID string, filePath string, serviceType models.ServiceType) (string, string, error)
+	ParseDefaultsFile(ctx context.Context, pmmAgentID, filePath string, serviceType models.ServiceType) (*models.ParseDefaultsFileResult, error)
 }

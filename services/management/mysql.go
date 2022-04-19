@@ -19,12 +19,12 @@ package management
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -85,14 +85,26 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		}
 
 		if len(req.DefaultsFile) != 0 {
-			username, password, err := s.pfd.ParseDefaultsFile(req.GetPmmAgentId(), req.GetDefaultsFile(), models.MySQLServiceType)
+			result, err := s.pfd.ParseDefaultsFile(ctx, req.GetPmmAgentId(), req.GetDefaultsFile(), models.MySQLServiceType)
 			if err != nil {
 				return status.Error(codes.FailedPrecondition, fmt.Sprintf("Defaults file error: %s.", err))
 			}
 
 			// set username and password from parsed defaults file by agent
-			req.Username = username
-			req.Password = password
+			if len(result.Username) != 0 {
+				req.Username = result.Username
+			}
+			if len(result.Password) != 0 {
+				req.Password = result.Password
+			}
+
+			if len(result.Host) != 0 {
+				req.Address = result.Host
+			}
+
+			if result.Port > 0 {
+				req.Port = result.Port
+			}
 		}
 
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
