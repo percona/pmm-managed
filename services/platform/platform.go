@@ -47,18 +47,6 @@ var (
 	errGetSSODetailsFailed = status.Error(codes.Aborted, "Failed to fetch SSO details.")
 )
 
-// supervisordService is a subset of methods of supervisord.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type supervisordService interface {
-	UpdateConfiguration(settings *models.Settings, ssoDetails *models.PerconaSSODetails) error
-}
-
-// type checksService is a subset of methods of checks.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type checksService interface {
-	CollectChecks(ctx context.Context)
-}
-
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
 	db            *reform.DB
@@ -70,10 +58,6 @@ type Service struct {
 	checksService checksService
 
 	platformpb.UnimplementedPlatformServer
-}
-
-type grafanaClient interface {
-	GetCurrentUserAccessToken(ctx context.Context) (string, error)
 }
 
 // New returns platform Service.

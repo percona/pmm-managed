@@ -349,7 +349,7 @@ func (s *Service) ToggleCheckAlert(ctx context.Context, alertID string, silence 
 	return err
 }
 
-// runChecksGroup downloads and executes checks that should run in the interval specified by intervalGroup.
+// runChecksGroup downloads and executes Advisors checks that should run in the interval specified by intervalGroup.
 // All checks are executed if intervalGroup is empty.
 func (s *Service) runChecksGroup(ctx context.Context, intervalGroup check.Interval) error {
 	settings, err := models.GetSettings(s.db)
