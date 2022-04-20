@@ -405,22 +405,22 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
-	clickhouseDatabase, ok := os.LookupEnv("PMM_CLICKHOUSE_DATABASE")
+	clickhouseDatabase, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_DATABASE")
 	if !ok {
 		clickhouseDatabase = defaultClickhouseDatabase
 	}
 
-	clickhouseAddr, ok := os.LookupEnv("PMM_CLICKHOUSE_ADDR")
+	clickhouseAddr, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_ADDR")
 	if !ok {
 		clickhouseAddr = defaultClickhouseAddr
 	}
 
-	clickhousePoolSize, ok := os.LookupEnv("PMM_CLICKHOUSE_POOL_SIZE")
+	clickhousePoolSize, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_POOL_SIZE")
 	if !ok {
 		clickhousePoolSize = ""
 	}
 
-	clickhouseBlockSize, ok := os.LookupEnv("PMM_CLICKHOUSE_BLOCK_SIZE")
+	clickhouseBlockSize, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_BLOCK_SIZE")
 	if !ok {
 		clickhouseBlockSize = ""
 	}
@@ -711,10 +711,10 @@ command =
 	/usr/sbin/percona-qan-api2
 		--data-retention={{ .DataRetentionDays }}
 environment =
-	PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
-	PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
-	{{- if .ClickhousePoolSize }}PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }}{{- end}}
-	{{- if .ClickhouseBlockSize }}PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
+	PERCONA_TEST_PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
+	PERCONA_TEST_PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}"
+	{{- if .ClickhousePoolSize }}PERCONA_TEST_PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }}{{- end}}
+	{{- if .ClickhouseBlockSize }}PERCONA_TEST_PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
 user = pmm
 autorestart = true
 autostart = true
@@ -756,7 +756,7 @@ command =
 environment=GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
         {{- end}}
 environment =
-    PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
+	PERCONA_TEST_PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
 	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 user = grafana
 directory = /usr/share/grafana
