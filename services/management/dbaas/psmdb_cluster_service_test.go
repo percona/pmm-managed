@@ -169,6 +169,23 @@ func TestPSMDBClusterService(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("BasicCreatePSMDBClusters", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionServiceMock)
+		// Use mock.Anything instead of a mocked up request because since we are passing ONLY the
+		// Kubernetes cluster name, the name and the expose parameter, the Create method will create
+		// the other parameters and since they are pointers created on the fly, there is no way to
+		// make them match the expected parameters.
+		dbaasClient.On("CreatePSMDBCluster", ctx, mock.Anything).Return(&controllerv1beta1.CreatePSMDBClusterResponse{}, nil)
+
+		in := dbaasv1beta1.CreatePSMDBClusterRequest{
+			KubernetesClusterName: psmdbKubernetesClusterNameTest,
+			Name:                  "fourth-psmdb-test",
+		}
+
+		_, err := s.CreatePSMDBCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
 	//nolint:dupl
 	t.Run("BasicUpdatePSMDBCluster", func(t *testing.T) {
 		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, versionService)

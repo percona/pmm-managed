@@ -109,7 +109,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 		return nil, errInvalidClusterName
 	}
 
-	if err := s.fixCreateRequestWithDefaults(ctx, req); err != nil {
+	if err := s.fillDefaults(ctx, req); err != nil {
 		return nil, errors.Wrap(err, "cannot create pxc cluster")
 	}
 
@@ -203,7 +203,7 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 	return &dbaasv1beta1.CreatePXCClusterResponse{}, nil
 }
 
-func (s PXCClustersService) fixCreateRequestWithDefaults(ctx context.Context, req *dbaasv1beta1.CreatePXCClusterRequest) error {
+func (s PXCClustersService) fillDefaults(ctx context.Context, req *dbaasv1beta1.CreatePXCClusterRequest) error {
 	if req.Name != "" {
 		r, _ := regexp.Compile("^[a-z]([-a-z0-9]*[a-z0-9])?$")
 		if !r.MatchString(req.Name) {
@@ -239,16 +239,8 @@ func (s PXCClustersService) fixCreateRequestWithDefaults(ctx context.Context, re
 		req.Params.Pxc.ComputeResources.MemoryBytes = pxcDefaultMemoryBytes
 	}
 
-	if !req.Expose {
-		// clean up just in case the request has HAProxy or ProxySql but enabled is false.
-		// This was we can skip setting the defaults in the ifs below.
-		req.Params.Haproxy = nil
-		req.Params.Proxysql = nil
-	}
-
-	// If expose is enabled we need HAProxy or ProxySQL.
 	// If none of them was specified, use HAProxy by default.
-	if req.Expose && req.Params.Proxysql == nil && req.Params.Haproxy == nil {
+	if req.Params.Proxysql == nil && req.Params.Haproxy == nil {
 		req.Params.Haproxy = &dbaasv1beta1.PXCClusterParams_HAProxy{
 			ComputeResources: &dbaasv1beta1.ComputeResources{
 				CpuM:        proxyDefaultCpuM,

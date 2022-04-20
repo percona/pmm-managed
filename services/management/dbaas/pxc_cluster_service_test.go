@@ -72,7 +72,8 @@ const pxcKubeconfigTest = `
 const pxcKubernetesClusterNameTest = "test-k8s-cluster-name"
 
 func TestPXCClusterService(t *testing.T) {
-	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient, grafanaClient *mockGrafanaClient, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient,
+		grafanaClient *mockGrafanaClient, versionServiceClient *mockVersionService, teardown func(t *testing.T)) {
 		t.Helper()
 
 		ctx = logger.Set(context.Background(), t.Name())
@@ -82,6 +83,7 @@ func TestPXCClusterService(t *testing.T) {
 		db = reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		dbaasClient = &mockDbaasClient{}
 		grafanaClient = &mockGrafanaClient{}
+		versionServiceClient = &mockVersionService{}
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
@@ -91,7 +93,7 @@ func TestPXCClusterService(t *testing.T) {
 		return
 	}
 
-	ctx, db, dbaasClient, grafanaClient, teardown := setup(t)
+	ctx, db, dbaasClient, grafanaClient, versionServiceMock, teardown := setup(t)
 	defer teardown(t)
 	versionService := NewVersionServiceClient(versionServiceURL)
 
@@ -114,7 +116,7 @@ func TestPXCClusterService(t *testing.T) {
 	assert.NotNil(t, registerKubernetesClusterResponse)
 
 	//nolint:dupl
-	t.Run("BasicCreatePXCClusters", func(t *testing.T) {
+	t.Run("BasicCreatePXCClustersExpose", func(t *testing.T) {
 		s := NewPXCClusterService(db, dbaasClient, grafanaClient, versionService)
 		mockReq := controllerv1beta1.CreatePXCClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -169,6 +171,95 @@ func TestPXCClusterService(t *testing.T) {
 			Expose: true,
 		}
 
+		_, err := s.CreatePXCCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
+	t.Run("BasicCreatePXCClustersNoExpose", func(t *testing.T) {
+		s := NewPXCClusterService(db, dbaasClient, grafanaClient, versionService)
+		mockReq := controllerv1beta1.CreatePXCClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: pxcKubeconfigTest,
+			},
+			Name: "fourth-pxc-test",
+			Params: &controllerv1beta1.PXCClusterParams{
+				ClusterSize: 5,
+				Pxc: &controllerv1beta1.PXCClusterParams_PXC{
+					ComputeResources: &controllerv1beta1.ComputeResources{
+						CpuM:        3,
+						MemoryBytes: 256,
+					},
+					DiskSize: 1024 * 1024 * 1024,
+					Image:    "image_name",
+				},
+				// Since expose is false, there shouldn't be any HAProxy not ProxySQL
+				Proxysql: &controllerv1beta1.PXCClusterParams_ProxySQL{
+					ComputeResources: &controllerv1beta1.ComputeResources{
+						CpuM:        2,
+						MemoryBytes: 124,
+					},
+					DiskSize: 1024 * 1024 * 1024,
+				},
+				VersionServiceUrl: versionService.GetVersionServiceURL(),
+			},
+			Expose: false,
+		}
+
+		dbaasClient.On("CreatePXCCluster", ctx, &mockReq).Return(&controllerv1beta1.CreatePXCClusterResponse{}, nil)
+
+		in := dbaasv1beta1.CreatePXCClusterRequest{
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			Name:                  "fourth-pxc-test",
+			Params: &dbaasv1beta1.PXCClusterParams{
+				ClusterSize: 5,
+				Pxc: &dbaasv1beta1.PXCClusterParams_PXC{
+					ComputeResources: &dbaasv1beta1.ComputeResources{
+						CpuM:        3,
+						MemoryBytes: 256,
+					},
+					DiskSize: 1024 * 1024 * 1024,
+					Image:    "image_name",
+				},
+				// The following ProxySQL should be ignored since Expose=false
+				Proxysql: &dbaasv1beta1.PXCClusterParams_ProxySQL{
+					ComputeResources: &dbaasv1beta1.ComputeResources{
+						CpuM:        2,
+						MemoryBytes: 124,
+					},
+					DiskSize: 1024 * 1024 * 1024,
+				},
+			},
+			Expose: false,
+		}
+
+		_, err := s.CreatePXCCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
+	t.Run("CreatePXCClustersDefaults", func(t *testing.T) {
+		versionServiceMock.On("GetVersionServiceURL").Return(versionService.GetVersionServiceURL())
+		versionServiceMock.On("RecommendedComponentVersion", mock.Anything, mock.Anything, mock.Anything).
+			Return("1.2.3",
+				&componentVersion{
+					ImagePath: "path",
+					ImageHash: "hash",
+					Status:    "recommended",
+					Critical:  false,
+				}, nil)
+
+		// Use mock.Anything instead of a mocked up request because since we are passing ONLY the
+		// Kubernetes cluster name, the name and the expose parameter, the Create method will create
+		// the other parameters and since they are pointers created on the fly, there is no way to
+		// make the match the expected parameters.
+		dbaasClient.On("CreatePXCCluster", ctx, mock.Anything).Return(&controllerv1beta1.CreatePXCClusterResponse{}, nil)
+
+		in := dbaasv1beta1.CreatePXCClusterRequest{
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			Name:                  "fifth-pxc-test",
+			Expose:                true,
+		}
+
+		s := NewPXCClusterService(db, dbaasClient, grafanaClient, versionServiceMock)
 		_, err := s.CreatePXCCluster(ctx, &in)
 		assert.NoError(t, err)
 	})

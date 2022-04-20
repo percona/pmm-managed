@@ -114,7 +114,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	if err := s.fixCreateRequestWithDefaults(ctx, req); err != nil {
+	if err := s.fillDefaults(ctx, req); err != nil {
 		return nil, errors.Wrap(err, "cannot create PSMDB cluster")
 	}
 
@@ -174,7 +174,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 	return &dbaasv1beta1.CreatePSMDBClusterResponse{}, nil
 }
 
-func (s PSMDBClusterService) fixCreateRequestWithDefaults(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) error {
+func (s PSMDBClusterService) fillDefaults(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) error {
 	if req.Name != "" {
 		r, _ := regexp.Compile("^[a-z]([-a-z0-9]*[a-z0-9])?$")
 		if !r.MatchString(req.Name) {
