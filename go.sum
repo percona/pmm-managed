@@ -462,6 +462,8 @@ github.com/percona-platform/saas v0.0.0-20220326163809-90f261fe195c h1:laB9JpVYI
 github.com/percona-platform/saas v0.0.0-20220326163809-90f261fe195c/go.mod h1:gFUwaFp6Ugu5qsBwiOVJYbDlzgZ77tmXdXGO7tG5xVI=
 github.com/percona/pmm v0.0.0-20220418101857-7c8201461efd h1:2V+yWa8f81b8nKPNnbvH6oddoIOCxbrXn85XEtjnew8=
 github.com/percona/pmm v0.0.0-20220418101857-7c8201461efd/go.mod h1:T1LlFmiSJQxKX18/lfBfmfj4VuGm2ktUnHlHlJeeQbY=
+github.com/percona/pmm v0.0.0-20220420144257-0197cb3bfd87 h1:CrfSCit0yVa4KFOqrfV769ApeidPfZuS36OlYrCpN84=
+github.com/percona/pmm v0.0.0-20220420144257-0197cb3bfd87/go.mod h1:T1LlFmiSJQxKX18/lfBfmfj4VuGm2ktUnHlHlJeeQbY=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=

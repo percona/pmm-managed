@@ -36,7 +36,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.23
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
 	github.com/percona-platform/saas v0.0.0-20220326163809-90f261fe195c
-	github.com/percona/pmm v0.0.0-20220418101857-7c8201461efd
+	github.com/percona/pmm v0.0.0-20220420144257-0197cb3bfd87
 	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -56,6 +56,11 @@ require (
 	gopkg.in/reform.v1 v1.5.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
+
+//
+//replace (
+//	github.com/percona/pmm => ../pmm
+//)
 
 require (
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
