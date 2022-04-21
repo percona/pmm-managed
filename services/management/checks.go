@@ -223,11 +223,9 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 			// we only support filtering by category for now.
 			// later, other "keys" can be supported by "AND-ing" the filters i.e., the response from each filter
 			// can be passed to the next.
-			filterValues := req.FilterParams.Category.Value
-			switch filterValues.(type) {
-			case *managementpb.InFilter_StringValues:
-				checks = filterByCategory(results, m, filterValues.(*managementpb.InFilter_StringValues).StringValues.Values)
-			default:
+			if filterValues, ok := req.FilterParams.Category.Value.(*managementpb.InFilter_StringValues); ok {
+				checks = filterByCategory(results, m, filterValues.StringValues.Values)
+			} else {
 				return nil, errors.New("no valid 'string_values' for category filter")
 			}
 		}

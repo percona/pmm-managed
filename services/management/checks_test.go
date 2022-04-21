@@ -443,7 +443,6 @@ func TestListSecurityChecks(t *testing.T) {
 
 	for _, test := range filteredChecks {
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 			var checksService mockChecksService
 			checksService.On("GetDisabledChecks", mock.Anything).Return([]string{}, nil)
 			checksService.On("GetChecks").Return(test.allChecks, nil)
