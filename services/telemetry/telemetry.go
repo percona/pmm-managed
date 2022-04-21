@@ -27,23 +27,19 @@ import (
 	"strings"
 	"time"
 
-	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-
-	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/percona/pmm-managed/utils/saasreq"
-
 	"github.com/google/uuid"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-
-	"github.com/sirupsen/logrus"
-	"gopkg.in/reform.v1"
+	"github.com/percona/pmm-managed/utils/saasreq"
 )
 
 const (
@@ -146,12 +142,12 @@ func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 }
 
 func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, error) {
-	current, err := s.makeMetric()
-	if err != nil {
-		return nil, err
-	}
+	var reportMetrics []*pmmv1.ServerMetric
 
+	var totalTime time.Duration
+telemetryLoop:
 	for _, telemetry := range s.config.telemetry {
+		// locate DS
 		ds, err := s.LocateTelemetryDataSource(telemetry.Source)
 		if err != nil {
 			s.l.Debugf("failed to lookup telemetry datasource for [%s]:[%s]", telemetry.Source, telemetry.ID)
@@ -161,22 +157,38 @@ func (s *Service) prepareReport(ctx context.Context) (*reporter.ReportRequest, e
 			continue
 		}
 
+		// fetch metrics from DS
+		metricFetchStartTime := time.Now()
 		metrics, err := ds.FetchMetrics(ctx, telemetry)
+		metricFetchTook := time.Since(metricFetchStartTime)
+		s.l.Debugf("fetching [%s] took [%s]", telemetry.ID, metricFetchTook)
+		totalTime += metricFetchTook
 		if err != nil {
 			s.l.Debugf("failed to extract metric from datasource for [%s]:[%s]: %v", telemetry.Source, telemetry.ID, err)
 			continue
 		}
 
-		current.Metrics = append(current.Metrics, metrics...)
+		for _, each := range metrics {
+			telemetryMetric, err := s.makeMetric(ctx)
+			if err != nil {
+				s.l.Debugf("failed to make Metric %v", err)
+				continue telemetryLoop
+			}
+
+			telemetryMetric.Metrics = each
+			reportMetrics = append(reportMetrics, telemetryMetric)
+		}
 	}
+	s.l.Debugf("fetching all metrics took [%s]", totalTime)
 
 	return &reporter.ReportRequest{
-		Metrics: []*pmmv1.ServerMetric{current},
+		Metrics: reportMetrics,
 	}, nil
 }
 
-func (s *Service) makeMetric() (*pmmv1.ServerMetric, error) {
+func (s *Service) makeMetric(ctx context.Context) (*pmmv1.ServerMetric, error) {
 	var settings *models.Settings
+	useServerID := false
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
 		if settings, e = models.GetSettings(tx); e != nil {
@@ -186,7 +198,10 @@ func (s *Service) makeMetric() (*pmmv1.ServerMetric, error) {
 		if settings.Telemetry.Disabled {
 			return errors.New("disabled via settings")
 		}
-		if settings.Telemetry.UUID == "" {
+
+		if _, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
+			useServerID = true
+		} else if settings.Telemetry.UUID == "" {
 			settings.Telemetry.UUID, e = generateUUID()
 			if e != nil {
 				return e
@@ -199,11 +214,17 @@ func (s *Service) makeMetric() (*pmmv1.ServerMetric, error) {
 		return nil, err
 	}
 
-	serverID, err := hex.DecodeString(settings.Telemetry.UUID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode UUID %q", settings.Telemetry.UUID)
+	var serverIDToUse string
+	if useServerID {
+		serverIDToUse = strings.ReplaceAll(settings.PMMServerID, "-", "")
+	} else {
+		serverIDToUse = settings.Telemetry.UUID
 	}
 
+	serverID, err := hex.DecodeString(serverIDToUse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverIDToUse)
+	}
 	_, distMethod, _ := getDistributionMethodAndOS(s.l)
 
 	eventID := uuid.New()
