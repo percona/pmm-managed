@@ -94,6 +94,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			if len(result.Username) != 0 {
 				req.Username = result.Username
 			}
+
 			if len(result.Password) != 0 {
 				req.Password = result.Password
 			}
@@ -104,6 +105,10 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 			if result.Port > 0 {
 				req.Port = result.Port
+			}
+
+			if len(result.Socket) > 0 {
+				req.Socket = result.Socket
 			}
 		}
 

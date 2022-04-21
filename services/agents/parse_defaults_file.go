@@ -81,6 +81,7 @@ func (p *ParseDefaultsFile) ParseDefaultsFile(ctx context.Context, pmmAgentID, f
 		Password: parserResponse.GetPassword(),
 		Host:     parserResponse.GetHost(),
 		Port:     parserResponse.GetPort(),
+		Socket:   parserResponse.GetSocket(),
 	}, nil
 }
 
