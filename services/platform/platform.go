@@ -564,7 +564,7 @@ func (s *Service) ServerInfo(ctx context.Context, req *platformpb.ServerInfoRequ
 	}
 
 	serverName := ""
-	var connectedToPortal bool
+	connectedToPortal := false
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
