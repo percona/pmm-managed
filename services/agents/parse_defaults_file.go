@@ -28,20 +28,20 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-// ParseDefaultsFile requests from agent to parse defaultsFile.
-type ParseDefaultsFile struct {
+// DefaultsFileParser requests from agent to parse defaultsFile.
+type DefaultsFileParser struct {
 	r *Registry
 }
 
-// NewParseDefaultsFile creates new ParseDefaultsFile request.
-func NewParseDefaultsFile(r *Registry) *ParseDefaultsFile {
-	return &ParseDefaultsFile{
+// NewDefaultsFileParser creates new ParseDefaultsFile request.
+func NewDefaultsFileParser(r *Registry) *DefaultsFileParser {
+	return &DefaultsFileParser{
 		r: r,
 	}
 }
 
 // ParseDefaultsFile sends request (with file path) to pmm-agent to parse defaults file.
-func (p *ParseDefaultsFile) ParseDefaultsFile(ctx context.Context, pmmAgentID, filePath string, serviceType models.ServiceType) (*models.ParseDefaultsFileResult, error) {
+func (p *DefaultsFileParser) ParseDefaultsFile(ctx context.Context, pmmAgentID, filePath string, serviceType models.ServiceType) (*models.ParseDefaultsFileResult, error) {
 	l := logger.Get(ctx)
 
 	pmmAgent, err := p.r.get(pmmAgentID)
@@ -72,16 +72,16 @@ func (p *ParseDefaultsFile) ParseDefaultsFile(ctx context.Context, pmmAgentID, f
 	if !ok {
 		return nil, errors.New("wrong response from agent (not ParseDefaultsFileResponse model)")
 	}
-	if len(parserResponse.GetError()) != 0 {
-		return nil, errors.New(parserResponse.GetError())
+	if parserResponse.Error != "" {
+		return nil, errors.New(parserResponse.Error)
 	}
 
 	return &models.ParseDefaultsFileResult{
-		Username: parserResponse.GetUsername(),
-		Password: parserResponse.GetPassword(),
-		Host:     parserResponse.GetHost(),
-		Port:     parserResponse.GetPort(),
-		Socket:   parserResponse.GetSocket(),
+		Username: parserResponse.Username,
+		Password: parserResponse.Password,
+		Host:     parserResponse.Host,
+		Port:     parserResponse.Port,
+		Socket:   parserResponse.Socket,
 	}, nil
 }
 

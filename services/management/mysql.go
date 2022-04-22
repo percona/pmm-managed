@@ -42,17 +42,17 @@ type MySQLService struct {
 	state agentsStateUpdater
 	cc    connectionChecker
 	vc    versionCache
-	pfd   defaultsFileParser
+	dfp   defaultsFileParser
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker, vc versionCache, pfd defaultsFileParser) *MySQLService {
+func NewMySQLService(db *reform.DB, state agentsStateUpdater, cc connectionChecker, vc versionCache, dfp defaultsFileParser) *MySQLService {
 	return &MySQLService{
 		db:    db,
 		state: state,
 		cc:    cc,
 		vc:    vc,
-		pfd:   pfd,
+		dfp:   dfp,
 	}
 }
 
@@ -84,30 +84,30 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			return err
 		}
 
-		if len(req.DefaultsFile) != 0 {
-			result, err := s.pfd.ParseDefaultsFile(ctx, req.GetPmmAgentId(), req.GetDefaultsFile(), models.MySQLServiceType)
+		if req.DefaultsFile != "" {
+			result, err := s.dfp.ParseDefaultsFile(ctx, req.PmmAgentId, req.DefaultsFile, models.MySQLServiceType)
 			if err != nil {
 				return status.Error(codes.FailedPrecondition, fmt.Sprintf("Defaults file error: %s.", err))
 			}
 
 			// set username and password from parsed defaults file by agent
-			if len(result.Username) != 0 {
+			if req.Username == "" && result.Username != "" {
 				req.Username = result.Username
 			}
 
-			if len(result.Password) != 0 {
+			if req.Password == "" && result.Password != "" {
 				req.Password = result.Password
 			}
 
-			if len(result.Host) != 0 {
+			if req.Address == "" && result.Host != "" {
 				req.Address = result.Host
 			}
 
-			if result.Port > 0 {
+			if req.Port == 0 && result.Port > 0 {
 				req.Port = result.Port
 			}
 
-			if len(result.Socket) > 0 {
+			if req.Socket == "" && result.Socket != "" {
 				req.Socket = result.Socket
 			}
 		}
