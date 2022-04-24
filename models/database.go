@@ -704,6 +704,10 @@ var databaseSchema = [][]string{
 			ADD COLUMN pmm_server_name VARCHAR NOT NULL,
 			ALTER COLUMN organization_id SET NOT NULL`,
 	},
+	61: {
+		`ALTER TABLE agents
+			ADD COLUMN log_level VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
