@@ -557,13 +557,13 @@ func convertEntitlement(ent *entitlementResponse) (*platformpb.OrganizationEntit
 }
 
 type contactInformation struct {
-	Contact struct {
+	Contacts struct {
 		CustomerSuccess struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`
-		} `json:"customer_succes"` //nolint:tagliatelle
+		} `json:"customer_success"` //nolint:tagliatelle
 		NewTicketURL string `json:"new_ticket_url"` //nolint:tagliatelle
-	} `json:"contact"`
+	} `json:"contacts"`
 }
 
 // GetContactInformation fetches contact information of the Customer Success employee assigned to the Percona customer from Percona Portal.
@@ -612,19 +612,18 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
 
-	platformResp := &contactInformation{}
-	if err := decoder.Decode(platformResp); err != nil {
+	var platformResp contactInformation
+	if err := decoder.Decode(&platformResp); err != nil {
 		s.l.Errorf("Failed to decode response : %s", err)
 		return nil, errInternalServer
 	}
 
-	s.l.Warnf("response from platform: %+v", platformResp.Contact)
 	res := &platformpb.GetContactInformationResponse{
 		CustomerSuccess: &platformpb.GetContactInformationResponse_CustomerSuccess{
-			Name:  platformResp.Contact.CustomerSuccess.Name,
-			Email: platformResp.Contact.CustomerSuccess.Email,
+			Name:  platformResp.Contacts.CustomerSuccess.Name,
+			Email: platformResp.Contacts.CustomerSuccess.Email,
 		},
-		NewTicketUrl: platformResp.Contact.NewTicketURL,
+		NewTicketUrl: platformResp.Contacts.NewTicketURL,
 	}
 
 	// Platform account is not linked to ServiceNow.
