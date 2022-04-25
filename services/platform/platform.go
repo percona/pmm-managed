@@ -575,7 +575,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("GetContactInformation request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
@@ -589,7 +589,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build GetContactInformation request: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	h := r.Header
@@ -598,7 +598,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	resp, err := s.client.Do(r)
 	if err != nil {
 		s.l.Errorf("GetContactInformation request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -607,7 +607,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Failed to decode error message: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -615,7 +615,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	platformResp := &contactInformation{}
 	if err := decoder.Decode(platformResp); err != nil {
 		s.l.Errorf("Failed to decode response : %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	s.l.Warnf("response from platform: %+v", platformResp.Contact)
@@ -630,7 +630,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	// Platform account is not linked to ServiceNow.
 	if res.CustomerSuccess.Email == "" {
 		s.l.Error("Failed to find contact information, non-customer account.")
-		return nil, nonCustomerAccount
+		return nil, status.Error(codes.FailedPrecondition, "Platform account user is not a Percona customer.")
 	}
 
 	return res, nil
