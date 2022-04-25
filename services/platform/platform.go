@@ -20,11 +20,13 @@ package platform
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/percona/pmm/api/platformpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -33,8 +35,6 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm/api/platformpb"
-
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/utils/envvars"
@@ -42,8 +42,10 @@ import (
 
 const rollbackFailed = "Failed to rollback:"
 
-var internalServerError = status.Error(codes.Internal, "Internal server error")
-var nonCustomerAccount = status.Error(codes.FailedPrecondition, "Platform account user is not a Percona customer.")
+var (
+	errInternalServer      = status.Error(codes.Internal, "Internal server error")
+	errGetSSODetailsFailed = status.Error(codes.Aborted, "Failed to fetch SSO details.")
+)
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -59,6 +61,8 @@ type Service struct {
 	supervisord   supervisordService
 	client        http.Client
 	grafanaClient grafanaClient
+
+	platformpb.UnimplementedPlatformServer
 }
 
 type grafanaClient interface {
@@ -66,7 +70,7 @@ type grafanaClient interface {
 }
 
 // New returns platform Service.
-func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient) (*Service, error) {
+func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaClient, c Config) (*Service, error) {
 	l := logrus.WithField("component", "platform")
 
 	host, err := envvars.GetSAASHost()
@@ -77,11 +81,18 @@ func New(db *reform.DB, supervisord supervisordService, grafanaClient grafanaCli
 	timeout := envvars.GetPlatformAPITimeout(l)
 
 	s := Service{
-		host:          host,
-		db:            db,
-		l:             l,
-		supervisord:   supervisord,
-		client:        http.Client{Timeout: timeout},
+		host:        host,
+		db:          db,
+		l:           l,
+		supervisord: supervisord,
+		client: http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: c.SkipTLSVerification, //nolint:gosec
+				},
+			},
+		},
 		grafanaClient: grafanaClient,
 	}
 
@@ -97,7 +108,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	if settings.PMMPublicAddress == "" {
 		return nil, status.Error(codes.FailedPrecondition, "The address of PMM server is not set")
@@ -106,31 +117,32 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 
 	connectResp, err := s.connect(ctx, &connectPMMParams{
 		serverName:                req.ServerName,
-		email:                     req.Email,
-		password:                  req.Password,
 		pmmServerURL:              pmmServerURL,
 		pmmServerOAuthCallbackURL: fmt.Sprintf("%s/login/generic_oauth", pmmServerURL),
 		pmmServerID:               settings.PMMServerID,
+		personalAccessToken:       req.PersonalAccessToken,
 	})
 	if err != nil {
 		return nil, err // this is already a status error
 	}
 
 	err = models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-		ClientID:       connectResp.SSODetails.ClientID,
-		ClientSecret:   connectResp.SSODetails.ClientSecret,
-		IssuerURL:      connectResp.SSODetails.IssuerURL,
-		Scope:          connectResp.SSODetails.Scope,
-		OrganizationID: connectResp.OrganizationID,
+		PMMManagedClientID:     connectResp.SSODetails.PMMManagedClientID,
+		PMMManagedClientSecret: connectResp.SSODetails.PMMManagedClientSecret,
+		GrafanaClientID:        connectResp.SSODetails.GrafanaClientID,
+		IssuerURL:              connectResp.SSODetails.IssuerURL,
+		Scope:                  connectResp.SSODetails.Scope,
+		OrganizationID:         connectResp.OrganizationID,
+		PMMServerName:          req.ServerName,
 	})
 	if err != nil {
 		s.l.Errorf("Failed to insert SSO details: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	if err := s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after connecting PMM to Portal: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	return &platformpb.ConnectResponse{}, nil
 }
@@ -140,13 +152,13 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
-		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+		return nil, errGetSSODetailsFailed
 	}
 
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		s.l.Errorf("Failed to fetch PMM server ID and address: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	err = models.DeletePerconaSSODetails(s.db.Querier)
@@ -155,7 +167,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		if e := s.UpdateSupervisordConfigurations(ctx); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	err = s.disconnect(ctx, &disconnectPMMParams{
@@ -163,10 +175,13 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	})
 	if err != nil {
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
-			ClientID:     ssoDetails.ClientID,
-			ClientSecret: ssoDetails.ClientSecret,
-			IssuerURL:    ssoDetails.IssuerURL,
-			Scope:        ssoDetails.Scope,
+			PMMManagedClientID:     ssoDetails.PMMManagedClientID,
+			PMMManagedClientSecret: ssoDetails.PMMManagedClientSecret,
+			GrafanaClientID:        ssoDetails.GrafanaClientID,
+			IssuerURL:              ssoDetails.IssuerURL,
+			Scope:                  ssoDetails.Scope,
+			OrganizationID:         ssoDetails.OrganizationID,
+			PMMServerName:          ssoDetails.PMMServerName,
 		}); e != nil {
 			s.l.Errorf("%s %s", rollbackFailed, e)
 		}
@@ -179,7 +194,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 
 	if err = s.UpdateSupervisordConfigurations(ctx); err != nil {
 		s.l.Errorf("Failed to update configuration of grafana after disconnect from Platform: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	return &platformpb.DisconnectResponse{}, nil
@@ -192,7 +207,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
-		if !errors.Is(err, reform.ErrNoRows) {
+		if !errors.Is(err, models.ErrNotConnectedToPortal) {
 			return errors.Wrap(err, "failed to get SSO details")
 		}
 	}
@@ -203,7 +218,7 @@ func (s *Service) UpdateSupervisordConfigurations(ctx context.Context) error {
 }
 
 type connectPMMParams struct {
-	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, email, password string
+	pmmServerURL, pmmServerOAuthCallbackURL, pmmServerID, serverName, personalAccessToken string
 }
 
 type connectPMMRequest struct {
@@ -218,10 +233,11 @@ type disconnectPMMParams struct {
 }
 
 type ssoDetails struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Scope        string `json:"scope"`
-	IssuerURL    string `json:"issuer_url"`
+	GrafanaClientID        string `json:"grafana_client_id"`         //nolint:tagliatelle
+	PMMManagedClientID     string `json:"pmm_managed_client_id"`     //nolint:tagliatelle
+	PMMManagedClientSecret string `json:"pmm_managed_client_secret"` //nolint:tagliatelle
+	Scope                  string `json:"scope"`
+	IssuerURL              string `json:"issuer_url"` //nolint:tagliatelle
 }
 
 type connectPMMResponse struct {
@@ -244,19 +260,20 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*conne
 	})
 	if err != nil {
 		s.l.Errorf("Failed to marshal request data: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(marshaled))
 	if err != nil {
 		s.l.Errorf("Failed to build Connect to Platform request: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
-	req.SetBasicAuth(params.email, params.password)
+	h := req.Header
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", params.personalAccessToken))
 	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Connect to Platform request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -265,7 +282,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*conne
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Connect to Platform request failed and we failed to decode error message: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -273,7 +290,7 @@ func (s *Service) connect(ctx context.Context, params *connectPMMParams) (*conne
 	response := &connectPMMResponse{}
 	if err := decoder.Decode(response); err != nil {
 		s.l.Errorf("Failed to decode response into SSO details: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	return response, nil
 }
@@ -285,14 +302,14 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 			return status.Error(codes.FailedPrecondition, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
-		return internalServerError
+		return errInternalServer
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/inventory/%s:disconnect", s.host, params.PMMServerID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build Disconnect to Platform request: %s", err)
-		return internalServerError
+		return errInternalServer
 	}
 
 	h := req.Header
@@ -301,7 +318,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 	resp, err := s.client.Do(req)
 	if err != nil {
 		s.l.Errorf("Disconnect to Platform request failed: %s", err)
-		return internalServerError
+		return errInternalServer
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -310,7 +327,7 @@ func (s *Service) disconnect(ctx context.Context, params *disconnectPMMParams) e
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Disconnect to Platform request failed and we failed to decode error message: %s", err)
-			return internalServerError
+			return errInternalServer
 		}
 		return status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -342,13 +359,13 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
-		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+		return nil, errGetSSODetailsFailed
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/tickets:search", s.host, ssoDetails.OrganizationID)
@@ -356,7 +373,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build SearchOrganizationTickets request: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	h := r.Header
@@ -365,7 +382,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	resp, err := s.client.Do(r)
 	if err != nil {
 		s.l.Errorf("SearchOrganizationTickets request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -374,7 +391,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("SearchOrganizationRequest failed to decode error message: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -385,7 +402,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	platformResponse := &searchOrganizationTicketsResponse{}
 	if err := decoder.Decode(platformResponse); err != nil {
 		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	response := &platformpb.SearchOrganizationTicketsResponse{}
@@ -393,7 +410,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		ticket, err := convertTicket(t)
 		if err != nil {
 			s.l.Errorf("Failed to convert OrganizationTickets: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		response.Tickets = append(response.Tickets, ticket)
 	}
@@ -451,13 +468,13 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
 		}
 		s.l.Errorf("SearchOrganizationEntitlements request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
-		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
+		return nil, errGetSSODetailsFailed
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/orgs/%s/entitlements:search", s.host, ssoDetails.OrganizationID)
@@ -465,7 +482,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		s.l.Errorf("Failed to build SearchOrganizationEntitlements request: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	h := r.Header
@@ -474,7 +491,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 	resp, err := s.client.Do(r)
 	if err != nil {
 		s.l.Errorf("SearchOrganizationEntitlements request failed: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -483,7 +500,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		var gwErr grpcGatewayError
 		if err := decoder.Decode(&gwErr); err != nil {
 			s.l.Errorf("Failed to decode error message: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		return nil, status.Error(codes.Code(gwErr.Code), gwErr.Message)
 	}
@@ -494,7 +511,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 	platformResp := &searchOrganizationEntitlementsResponse{}
 	if err := decoder.Decode(platformResp); err != nil {
 		s.l.Errorf("Failed to decode response into OrganizationTickets: %s", err)
-		return nil, internalServerError
+		return nil, errInternalServer
 	}
 
 	response := &platformpb.SearchOrganizationEntitlementsResponse{}
@@ -502,7 +519,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		entitlement, err := convertEntitlement(e)
 		if err != nil {
 			s.l.Errorf("Failed to convert OrganizationEntitlements: %s", err)
-			return nil, internalServerError
+			return nil, errInternalServer
 		}
 		response.Entitlements = append(response.Entitlements, entitlement)
 	}
@@ -617,4 +634,49 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	}
 
 	return res, nil
+}
+
+func (s *Service) ServerInfo(ctx context.Context, req *platformpb.ServerInfoRequest) (*platformpb.ServerInfoResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.Errorf("Failed to fetch PMM server ID: %s", err)
+		return nil, errInternalServer
+	}
+
+	serverName := ""
+	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
+	if err != nil {
+		s.l.Errorf("failed to get SSO details: %s", err)
+	}
+
+	if ssoDetails != nil {
+		serverName = ssoDetails.PMMServerName
+	}
+
+	return &platformpb.ServerInfoResponse{
+		PmmServerName: serverName,
+		PmmServerId:   settings.PMMServerID,
+	}, nil
+}
+
+// UserStatus API tells whether the logged-in user is a Platform organization member or not.
+func (s *Service) UserStatus(ctx context.Context, req *platformpb.UserStatusRequest) (*platformpb.UserStatusResponse, error) {
+	// We use the access token instead of `models.GetPerconaSSODetails()`.
+	// The reason for that is Frontend needs to use this API to know whether they can
+	// show certain menu items to users "logged in with their Percona Accounts" after PMM
+	// server has been connected to Platform. If we use the presence of SSO details in
+	// the DB as the deciding factor for this it will also return true for the admin user
+	// who connected the PMM server to Platform but wasn't logged into PMM with Platform creds.
+	_, err := s.grafanaClient.GetCurrentUserAccessToken(ctx)
+	if err != nil {
+		if errors.Is(err, grafana.ErrFailedToGetToken) {
+			return nil, status.Error(codes.Unauthenticated, "Failed to get access token. Please sign in using your Percona Account.")
+		}
+		s.l.Errorf("UserStatus request failed: %s", err)
+		return nil, errInternalServer
+	}
+
+	return &platformpb.UserStatusResponse{
+		IsPlatformUser: true,
+	}, nil
 }
