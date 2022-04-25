@@ -17,6 +17,7 @@
 package server
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -84,15 +85,39 @@ func TestListSecurityChecks(t *testing.T) {
 	toggleSTT(t, true)
 	t.Cleanup(func() { restoreSettingsDefaults(t) })
 
-	resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
-	require.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.NotEmpty(t, resp.Payload.Checks)
-	for _, c := range resp.Payload.Checks {
-		assert.NotEmpty(t, c.Name, "%+v", c)
-		assert.NotEmpty(t, c.Summary, "%+v", c)
-		assert.NotEmpty(t, c.Description, "%+v", c)
-	}
+	t.Run("with categories filter", func(t *testing.T) {
+		filter := `{"filter_params": {"category": {"string_values": {"values": ["performance"]}}}}'`
+		filterParams := &security_checks.ListSecurityChecksParamsBodyFilterParams{}
+		err := json.Unmarshal([]byte(filter), filterParams)
+		assert.NoError(t, err)
+
+		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(&security_checks.ListSecurityChecksParams{
+			Body: security_checks.ListSecurityChecksBody{
+				FilterParams: filterParams,
+			},
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.NotEmpty(t, resp.Payload.Checks)
+		for _, c := range resp.Payload.Checks {
+			assert.NotEmpty(t, c.Name, "%+v", c)
+			assert.NotEmpty(t, c.Summary, "%+v", c)
+			assert.NotEmpty(t, c.Description, "%+v", c)
+			assert.Equal(t, c.Category, "performance")
+		}
+	})
+
+	t.Run("without filtering", func(t *testing.T) {
+		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(nil)
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.NotEmpty(t, resp.Payload.Checks)
+		for _, c := range resp.Payload.Checks {
+			assert.NotEmpty(t, c.Name, "%+v", c)
+			assert.NotEmpty(t, c.Summary, "%+v", c)
+			assert.NotEmpty(t, c.Description, "%+v", c)
+		}
+	})
 }
 
 func TestChangeSecurityChecks(t *testing.T) {

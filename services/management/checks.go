@@ -217,49 +217,30 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 		return nil, errors.Wrap(err, "failed to get available checks list")
 	}
 
+	var categories []string
 	checks := make([]*managementpb.SecurityCheck, 0, len(results))
 	if req != nil && req.FilterParams != nil {
 		if req.FilterParams.Category != nil {
 			// we only support filtering by category for now.
-			// later, other "keys" can be supported by "AND-ing" the filters i.e., the response from each filter
-			// can be passed to the next.
+			// later, other "keys" can be supported by also checking for their presence and handling them.
 			if filterValues, ok := req.FilterParams.Category.Value.(*managementpb.InFilter_StringValues); ok {
-				checks = filterByCategory(results, m, filterValues.StringValues.Values)
-				return &managementpb.ListSecurityChecksResponse{Checks: checks}, nil
+				categories = filterValues.StringValues.Values
+			} else {
+				return nil, errors.New("no valid 'string_values' for category filter")
 			}
-
-			return nil, errors.New("no valid 'string_values' for category filter")
 		}
 	}
 
-	for _, c := range results {
-		_, disabled := m[c.Name]
-		checks = append(checks, &managementpb.SecurityCheck{
-			Name:        c.Name,
-			Disabled:    disabled,
-			Summary:     c.Summary,
-			Description: c.Description,
-			Interval:    convertInterval(c.Interval),
-			Category:    c.Category,
-		})
-	}
-
-	return &managementpb.ListSecurityChecksResponse{Checks: checks}, nil
-}
-
-func filterByCategory(checks map[string]check.Check, disabledChecks map[string]struct{}, categories []string) []*managementpb.SecurityCheck {
-	res := make([]*managementpb.SecurityCheck, 0, len(checks))
-
-	cm := make(map[string]struct{}, len(categories))
+	categoryMap := make(map[string]struct{}, len(categories))
 	for _, category := range categories {
-		cm[category] = struct{}{}
+		categoryMap[category] = struct{}{}
 	}
 
 	var disabled bool
-	for _, ch := range checks {
-		if _, ok := cm[ch.Category]; ok {
-			_, disabled = disabledChecks[ch.Name]
-			res = append(res, &managementpb.SecurityCheck{
+	for _, ch := range results {
+		if _, ok := categoryMap[ch.Category]; ok || len(categoryMap) == 0 {
+			_, disabled = m[ch.Name]
+			checks = append(checks, &managementpb.SecurityCheck{
 				Name:        ch.Name,
 				Disabled:    disabled,
 				Summary:     ch.Summary,
@@ -269,7 +250,8 @@ func filterByCategory(checks map[string]check.Check, disabledChecks map[string]s
 			})
 		}
 	}
-	return res
+
+	return &managementpb.ListSecurityChecksResponse{Checks: checks}, nil
 }
 
 // ChangeSecurityChecks enables/disables Security Thread Tool checks by names or changes its execution interval.
