@@ -216,10 +216,6 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		}
 		serviceID = service.ServiceID
 	}
-	var agentProcess string
-	if agent.ProcessExecPath != nil {
-		agentProcess = *agent.ProcessExecPath
-	}
 
 	switch agent.AgentType {
 	case models.PMMAgentType:
@@ -227,7 +223,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			AgentId:         agent.AgentID,
 			RunsOnNodeId:    pointer.GetString(agent.RunsOnNodeID),
 			CustomLabels:    labels,
-			ProcessExecPath: agentProcess,
+			ProcessExecPath: *agent.ProcessExecPath,
 		}, nil
 
 	case models.NodeExporterType:
