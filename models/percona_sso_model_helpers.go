@@ -31,7 +31,10 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-var perconaSSOMtx sync.Mutex
+var (
+	perconaSSOMtx           sync.Mutex
+	ErrNotConnectedToPortal = errors.New("PMM Server is not connected to Portal")
+)
 
 // GetPerconaSSODetails returns PerconaSSODetails if there are any, error otherwise.
 // Access token is automatically refreshed if it is expired.
@@ -42,6 +45,9 @@ func GetPerconaSSODetails(ctx context.Context, q *reform.Querier) (*PerconaSSODe
 
 	ssoDetails, err := q.SelectOneFrom(PerconaSSODetailsTable, "")
 	if err != nil {
+		if err == reform.ErrNoRows {
+			return nil, ErrNotConnectedToPortal
+		}
 		return nil, errors.Wrap(err, "failed to get Percona SSO Details")
 	}
 
@@ -68,7 +74,7 @@ func (sso *PerconaSSODetails) refreshAndGetAccessToken(ctx context.Context, q *r
 		return nil, err
 	}
 
-	authHeader := base64.StdEncoding.EncodeToString([]byte(sso.ClientID + ":" + sso.ClientSecret))
+	authHeader := base64.StdEncoding.EncodeToString([]byte(sso.PMMManagedClientID + ":" + sso.PMMManagedClientSecret))
 	h := req.Header
 	h.Add("Authorization", "Basic "+authHeader)
 	h.Add("Accept", "application/json")
@@ -125,11 +131,13 @@ func DeletePerconaSSODetails(q *reform.Querier) error {
 // InsertPerconaSSODetails inserts a new Percona SSO details.
 func InsertPerconaSSODetails(q *reform.Querier, ssoDetails *PerconaSSODetailsInsert) error {
 	details := &PerconaSSODetails{
-		IssuerURL:      ssoDetails.IssuerURL,
-		ClientID:       ssoDetails.ClientID,
-		ClientSecret:   ssoDetails.ClientSecret,
-		Scope:          ssoDetails.Scope,
-		OrganizationID: ssoDetails.OrganizationID,
+		IssuerURL:              ssoDetails.IssuerURL,
+		PMMManagedClientID:     ssoDetails.PMMManagedClientID,
+		PMMManagedClientSecret: ssoDetails.PMMManagedClientSecret,
+		GrafanaClientID:        ssoDetails.GrafanaClientID,
+		Scope:                  ssoDetails.Scope,
+		OrganizationID:         ssoDetails.OrganizationID,
+		PMMServerName:          ssoDetails.PMMServerName,
 	}
 
 	if err := q.Save(details); err != nil {

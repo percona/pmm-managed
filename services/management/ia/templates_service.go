@@ -406,7 +406,8 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 	}
 
 	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllAlertRuleTemplates", s.host)
-	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil)
+	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil,
+		&saasreq.SaasRequestOptions{SkipTLSVerification: false})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
@@ -509,7 +510,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	templates := s.getTemplates()
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
-		Totals: &iav1beta1.PageTotals{
+		Totals: &managementpb.PageTotals{
 			TotalItems: int32(len(templates)),
 			TotalPages: 1,
 		},

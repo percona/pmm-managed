@@ -688,6 +688,23 @@ var databaseSchema = [][]string{
 			ADD COLUMN organization_id VARCHAR`,
 	},
 	58: {
+		`UPDATE agents SET mongo_db_tls_options = jsonb_set(mongo_db_tls_options, '{stats_collections}', to_jsonb(string_to_array(mongo_db_tls_options->>'stats_collections', ',')))
+			WHERE 'mongo_db_tls_options' is not null AND jsonb_typeof(mongo_db_tls_options->'stats_collections') = 'string'`,
+	},
+	59: {
+		`DELETE FROM percona_sso_details WHERE organization_id IS NULL`,
+	},
+	60: {
+		`ALTER TABLE percona_sso_details
+			RENAME COLUMN client_id TO pmm_managed_client_id;
+		ALTER TABLE percona_sso_details
+			RENAME COLUMN client_secret TO pmm_managed_client_secret;
+		ALTER TABLE percona_sso_details
+			ADD COLUMN grafana_client_id VARCHAR NOT NULL,
+			ADD COLUMN pmm_server_name VARCHAR NOT NULL,
+			ALTER COLUMN organization_id SET NOT NULL`,
+	},
+	61: {
 		`ALTER TABLE agents
 		ADD COLUMN process_exec_path TEXT`,
 	},
@@ -763,8 +780,8 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 
 	if pErr, ok := errDB.(*pq.Error); ok && pErr.Code == "28000" {
 		// invalid_authorization_specification	(see https://www.postgresql.org/docs/current/errcodes-appendix.html)
-		var databaseName = params.Name
-		var roleName = params.Username
+		databaseName := params.Name
+		roleName := params.Username
 
 		if params.Logf != nil {
 			params.Logf("Creating database %s and role %s", databaseName, roleName)

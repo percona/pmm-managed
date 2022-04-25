@@ -1,12 +1,10 @@
 # pmm-api-tests
 
-[![Build Status](https://travis-ci.com/Percona-Lab/pmm-api-tests.svg?branch=master)](https://travis-ci.com/Percona-Lab/pmm-api-tests)
-
 API tests for PMM 2.x
 
 # Setup Instructions
 
-Make sure you have Go 1.16.x installed on your systems, execute the following steps
+Make sure you have Go 1.18.x installed on your systems, execute the following steps
 to setup API-tests in your local systems.
 
 1. Run PMM Server.

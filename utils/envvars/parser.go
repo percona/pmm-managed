@@ -142,6 +142,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
 			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
 
+		case "PMM_PUBLIC_ADDRESS":
+			envSettings.PMMPublicAddress = v
+
 		case envEnableDbaas, envTestDbaas:
 			envSettings.EnableDBaaS, err = strconv.ParseBool(v)
 			if err != nil {
@@ -163,6 +166,11 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 
 			// skip Grafana's environment variables
 			if strings.HasPrefix(k, "GF_") {
+				continue
+			}
+
+			// skip Victoria Metric's environment variables
+			if strings.HasPrefix(k, "VM_") {
 				continue
 			}
 
