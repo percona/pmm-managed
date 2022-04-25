@@ -4,6 +4,8 @@ go 1.18
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
+replace github.com/percona/pmm => github.com/pkadej/pmm v0.0.0-20220421043740-9c806279b2f0
+
 // replace github.com/percona-platform/saas => ../saas
 // replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
