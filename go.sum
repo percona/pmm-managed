@@ -470,8 +470,8 @@ github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2u
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pierrec/lz4/v4 v4.1.14 h1:+fL8AQEZtz/ijeNnpduH0bROTu0O3NZAlPjQxGn8LwE=
 github.com/pierrec/lz4/v4 v4.1.14/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
-github.com/pkadej/pmm v0.0.0-20220421043740-9c806279b2f0 h1:VAiWhS/K9hpMEf0HVL+47rKCQPUtZCEtqo/HvM4aCIw=
-github.com/pkadej/pmm v0.0.0-20220421043740-9c806279b2f0/go.mod h1:T1LlFmiSJQxKX18/lfBfmfj4VuGm2ktUnHlHlJeeQbY=
+github.com/pkadej/pmm v0.0.0-20220425222533-a6e4e7330135 h1:oY+J8Q4uw7q/G19ybdZlfcGW1gh3OlJHJumxpdNF5Ks=
+github.com/pkadej/pmm v0.0.0-20220425222533-a6e4e7330135/go.mod h1:FFbpyZXm+Ilg8M/GewuhdjJhPaW1/v1zjRRerYhCfEA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
