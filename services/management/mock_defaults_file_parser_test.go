@@ -3,6 +3,8 @@
 package management
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 
 	models "github.com/percona/pmm-managed/models"
@@ -13,30 +15,25 @@ type mockDefaultsFileParser struct {
 	mock.Mock
 }
 
-// ParseDefaultsFile provides a mock function with given fields: pmmAgentID, filePath, serviceType
-func (_m *mockDefaultsFileParser) ParseDefaultsFile(pmmAgentID string, filePath string, serviceType models.ServiceType) (string, string, error) {
-	ret := _m.Called(pmmAgentID, filePath, serviceType)
+// ParseDefaultsFile provides a mock function with given fields: ctx, pmmAgentID, filePath, serviceType
+func (_m *mockDefaultsFileParser) ParseDefaultsFile(ctx context.Context, pmmAgentID string, filePath string, serviceType models.ServiceType) (*models.ParseDefaultsFileResult, error) {
+	ret := _m.Called(ctx, pmmAgentID, filePath, serviceType)
 
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string, string, models.ServiceType) string); ok {
-		r0 = rf(pmmAgentID, filePath, serviceType)
+	var r0 *models.ParseDefaultsFileResult
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, models.ServiceType) *models.ParseDefaultsFileResult); ok {
+		r0 = rf(ctx, pmmAgentID, filePath, serviceType)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.ParseDefaultsFileResult)
+		}
 	}
 
-	var r1 string
-	if rf, ok := ret.Get(1).(func(string, string, models.ServiceType) string); ok {
-		r1 = rf(pmmAgentID, filePath, serviceType)
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, models.ServiceType) error); ok {
+		r1 = rf(ctx, pmmAgentID, filePath, serviceType)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(string, string, models.ServiceType) error); ok {
-		r2 = rf(pmmAgentID, filePath, serviceType)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
