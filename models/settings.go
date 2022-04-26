@@ -33,8 +33,8 @@ type MetricsResolutions struct {
 
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
-	// Security Threat Tool enabled
-	STTDisabled bool `json:"stt_enabled"`
+	// Advisor checks disabled, false by default.
+	STTDisabled bool `json:"stt_disabled"`
 	// List of disabled STT checks
 	DisabledSTTChecks []string `json:"disabled_stt_checks"`
 	// STT check intervals
