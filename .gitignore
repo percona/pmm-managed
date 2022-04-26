@@ -1,5 +1,6 @@
 .idea/
 .vscode/
+.DS_Store
 bin/
 fuzzdata/
 cover.out
@@ -14,3 +15,5 @@ pmm-api-tests-junit-report.xml
 .dev.*
 local/
 config/telemetry/dev
+
+pmm-managed
