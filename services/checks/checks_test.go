@@ -815,3 +815,42 @@ func TestToggleCheckAlert(t *testing.T) {
 		ams.AssertCalled(t, "UnsilenceAlerts", ctx, []*ammodels.GettableAlert{testAlert})
 	})
 }
+
+func TestFillQueryPlaceholders(t *testing.T) {
+	t.Parallel()
+
+	target := services.Target{
+		ServiceName: "service_name",
+		NodeName:    "node_name",
+	}
+
+	t.Run("normal with placeholders", func(t *testing.T) {
+		t.Parallel()
+
+		query := "some query with service={{ .ServiceName }} and node={{ .NodeName }}"
+		expected := "some query with service=service_name and node=node_name"
+
+		actual, err := fillQueryPlaceholders(query, target)
+		require.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("normal without placeholders", func(t *testing.T) {
+		t.Parallel()
+
+		query := "some query"
+
+		actual, err := fillQueryPlaceholders(query, target)
+		require.NoError(t, err)
+		assert.Equal(t, query, actual)
+	})
+
+	t.Run("unknown placeholder", func(t *testing.T) {
+		t.Parallel()
+
+		query := "some query with service={{ .ServiceName }} and os={{ .OS }}"
+
+		_, err := fillQueryPlaceholders(query, target)
+		require.EqualError(t, err, "failed to fill query placeholders: template: query:1:53: executing \"query\" at <.OS>: can't evaluate field OS in type struct { ServiceName string; NodeName string }")
+	})
+}
