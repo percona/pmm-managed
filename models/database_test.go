@@ -403,7 +403,7 @@ func TestDatabaseMigrations(t *testing.T) {
 			`INSERT INTO
 			agents(mongo_db_tls_options, agent_id, agent_type, runs_on_node_id, created_at, updated_at, disabled, status, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled, push_metrics, process_exec_path)
 			VALUES
-			('{"stats_collections": "db.col1,db.col2,db.col3"}', 'id', 'pmm-agent', 'node_id' , '03/03/2014 02:03:04', '03/03/2014 02:03:04', false, 'alive', false, false, false, 0, 0, false, false, false, '')`,
+			('{"stats_collections": "db.col1,db.col2,db.col3"}', 'id', 'pmm-agent', 'node_id' , '03/03/2014 02:03:04', '03/03/2014 02:03:04', false, 'alive', false, false, false, 0, 0, false, false, false, 'process_path')`,
 		)
 		require.NoError(t, err)
 
