@@ -770,8 +770,8 @@ unknown_filed: unknown_value
 `)))
 		tests.AssertGRPCError(t, status.New(codes.Aborted,
 			"yaml: unmarshal errors:\n  line 6: field unknown_filed not found in type promscrape.Config;"+
-				" pass -promscrape.config.strictParse=false command-line flag for ignoring unknown fields in yaml config\n"),
-			err)
+				" pass -promscrape.config.strictParse=false command-line flag for ignoring unknown fields in yaml config\n",
+		), err)
 	})
 }
 
