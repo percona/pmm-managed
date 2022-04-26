@@ -214,7 +214,7 @@ func TestSettings(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
-			assert.False(t, ns.SaaS.STTEnabled)
+			assert.False(t, ns.SaaS.STTDisabled)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableTelemetry:  true,
@@ -237,7 +237,7 @@ func TestSettings(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.True(t, ns.Telemetry.Disabled)
-			assert.True(t, ns.SaaS.STTEnabled)
+			assert.True(t, ns.SaaS.STTDisabled)
 
 			// enable both
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -246,7 +246,7 @@ func TestSettings(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
-			assert.True(t, ns.SaaS.STTEnabled)
+			assert.True(t, ns.SaaS.STTDisabled)
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DisableTelemetry: true,
@@ -260,14 +260,14 @@ func TestSettings(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.True(t, ns.Telemetry.Disabled)
-			assert.False(t, ns.SaaS.STTEnabled)
+			assert.False(t, ns.SaaS.STTDisabled)
 
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT: true,
 			})
 			require.NoError(t, err)
 			assert.True(t, ns.Telemetry.Disabled)
-			assert.True(t, ns.SaaS.STTEnabled)
+			assert.True(t, ns.SaaS.STTDisabled)
 
 			// restore initial default state
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
@@ -276,7 +276,7 @@ func TestSettings(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.False(t, ns.Telemetry.Disabled)
-			assert.False(t, ns.SaaS.STTEnabled)
+			assert.False(t, ns.SaaS.STTDisabled)
 		})
 
 		t.Run("Check that telemetry disabling resets telemetry UUID", func(t *testing.T) {

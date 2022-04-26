@@ -278,7 +278,7 @@ func (s *Service) GetSecurityCheckResults() ([]services.CheckResult, error) {
 		return nil, err
 	}
 
-	if !settings.SaaS.STTEnabled {
+	if settings.SaaS.STTDisabled {
 		return nil, services.ErrSTTDisabled
 	}
 
@@ -292,7 +292,7 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 		return nil, err
 	}
 
-	if !settings.SaaS.STTEnabled {
+	if settings.SaaS.STTDisabled {
 		return nil, services.ErrSTTDisabled
 	}
 
@@ -358,7 +358,7 @@ func (s *Service) runChecksGroup(ctx context.Context, intervalGroup check.Interv
 		return errors.WithStack(err)
 	}
 
-	if !settings.SaaS.STTEnabled {
+	if settings.SaaS.STTDisabled {
 		return services.ErrSTTDisabled
 	}
 
@@ -374,7 +374,7 @@ func (s *Service) StartChecks(checkNames []string) error {
 		return errors.WithStack(err)
 	}
 
-	if !settings.SaaS.STTEnabled {
+	if settings.SaaS.STTDisabled {
 		return services.ErrSTTDisabled
 	}
 

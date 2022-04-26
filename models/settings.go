@@ -34,7 +34,7 @@ type MetricsResolutions struct {
 // SaaS contains settings related to the SaaS platform.
 type SaaS struct {
 	// Security Threat Tool enabled
-	STTEnabled bool `json:"stt_enabled"`
+	STTDisabled bool `json:"stt_enabled"`
 	// List of disabled STT checks
 	DisabledSTTChecks []string `json:"disabled_stt_checks"`
 	// STT check intervals
@@ -180,7 +180,7 @@ func (s *Settings) fillDefaults() {
 	// AWSInstanceChecked is false by default
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
-	// SaaS.STTEnabled is false by default
+	// SaaS.STTDisabled is false by default
 	// DBaaS.Enabled is false by default
 	// IntegratedAlerting.Enabled is false by default
 	// VictoriaMetrics CacheEnable is false by default
