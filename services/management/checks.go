@@ -207,9 +207,9 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 		return nil, errors.Wrap(err, "failed to get disabled checks list")
 	}
 
-	m := make(map[string]struct{}, len(disChecks))
+	disabledChecksMap := make(map[string]struct{}, len(disChecks))
 	for _, c := range disChecks {
-		m[c] = struct{}{}
+		disabledChecksMap[c] = struct{}{}
 	}
 
 	results, err := s.checksService.GetChecks()
@@ -239,7 +239,7 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 	var disabled bool
 	for _, ch := range results {
 		if _, ok := categoryMap[ch.Category]; ok || len(categoryMap) == 0 {
-			_, disabled = m[ch.Name]
+			_, disabled = disabledChecksMap[ch.Name]
 			checks = append(checks, &managementpb.SecurityCheck{
 				Name:        ch.Name,
 				Disabled:    disabled,
