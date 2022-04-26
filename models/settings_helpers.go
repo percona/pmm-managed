@@ -38,11 +38,11 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	}
 
 	var s Settings
-	s.fillDefaults()
 
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal settings")
 	}
+	s.fillDefaults()
 
 	return &s, nil
 }
