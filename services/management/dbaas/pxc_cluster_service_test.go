@@ -131,6 +131,7 @@ func TestPXCClusterService(t *testing.T) {
 						MemoryBytes: 256,
 					},
 					DiskSize: 1024 * 1024 * 1024,
+					Image:    "path",
 				},
 				Proxysql: &controllerv1beta1.PXCClusterParams_ProxySQL{
 					ComputeResources: &controllerv1beta1.ComputeResources{
@@ -156,6 +157,7 @@ func TestPXCClusterService(t *testing.T) {
 						MemoryBytes: 256,
 					},
 					DiskSize: 1024 * 1024 * 1024,
+					Image:    "path",
 				},
 				Proxysql: &dbaasv1beta1.PXCClusterParams_ProxySQL{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
@@ -252,6 +254,7 @@ func TestPXCClusterService(t *testing.T) {
 						CpuM:        1,
 						MemoryBytes: 256,
 					},
+					Image: "path",
 				},
 				Proxysql: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams_ProxySQL{
 					ComputeResources: &controllerv1beta1.ComputeResources{
@@ -274,6 +277,7 @@ func TestPXCClusterService(t *testing.T) {
 						CpuM:        1,
 						MemoryBytes: 256,
 					},
+					Image: "path",
 				},
 				Proxysql: &dbaasv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams_ProxySQL{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
