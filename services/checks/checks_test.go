@@ -313,13 +313,6 @@ func TestChangeInterval(t *testing.T) {
 		}
 
 		t.Run("preserve intervals on restarts", func(t *testing.T) {
-			settings, err := models.GetSettings(db)
-			require.NoError(t, err)
-
-			settings.SaaS.STTEnabled = true
-			err = models.SaveSettings(db, settings)
-			require.NoError(t, err)
-
 			err = s.runChecksGroup(context.Background(), "")
 			require.NoError(t, err)
 
@@ -366,27 +359,29 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	t.Run("STT disabled", func(t *testing.T) {
-		s, err := New(nil, nil, db)
-		require.NoError(t, err)
-		results, err := s.GetSecurityCheckResults()
-		assert.Nil(t, results)
-		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
-	})
-
 	t.Run("STT enabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
-		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTEnabled = true
-		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
 		results, err := s.GetSecurityCheckResults()
 		assert.Empty(t, results)
 		require.NoError(t, err)
+	})
+
+	t.Run("STT disabled", func(t *testing.T) {
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTDisabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		results, err := s.GetSecurityCheckResults()
+		assert.Nil(t, results)
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 }
 
@@ -394,21 +389,8 @@ func TestStartChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	t.Run("stt disabled", func(t *testing.T) {
-		s, err := New(nil, nil, db)
-		require.NoError(t, err)
-		err = s.runChecksGroup(context.Background(), "")
-		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
-	})
-
 	t.Run("unknown interval", func(t *testing.T) {
 		s, err := New(nil, nil, db)
-		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTEnabled = true
-		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
 		err = s.runChecksGroup(context.Background(), check.Interval("unknown"))
@@ -421,12 +403,6 @@ func TestStartChecks(t *testing.T) {
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTEnabled = true
-		err = models.SaveSettings(db, settings)
-		require.NoError(t, err)
 
 		s.localChecksFile = testChecksFile
 		s.CollectChecks(context.Background())
@@ -434,6 +410,21 @@ func TestStartChecks(t *testing.T) {
 
 		err = s.runChecksGroup(context.Background(), "")
 		require.NoError(t, err)
+	})
+
+	t.Run("stt disabled", func(t *testing.T) {
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTDisabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		err = s.runChecksGroup(context.Background(), "")
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 }
 
@@ -661,34 +652,12 @@ func TestGetFailedChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	t.Run("STT disabled", func(t *testing.T) {
-		t.Parallel()
-
-		ams := mockAlertmanagerService{}
-		ctx := context.Background()
-		ams.On("GetAlerts", ctx, mock.Anything).Return(nil, services.ErrSTTDisabled)
-
-		s, err := New(nil, &ams, db)
-		require.NoError(t, err)
-		results, err := s.GetChecksResults(ctx, "test_svc")
-		assert.Nil(t, results)
-		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
-	})
-
 	t.Run("no failed check for service", func(t *testing.T) {
-		t.Parallel()
-
 		var ams mockAlertmanagerService
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
 
 		s, err := New(nil, &ams, db)
-		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTEnabled = true
-		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
 		results, err := s.GetChecksResults(context.Background(), "test_svc")
@@ -697,8 +666,6 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("non empty failed checks", func(t *testing.T) {
-		t.Parallel()
-
 		alertLabels := map[string]string{
 			model.AlertNameLabel: "test_check",
 			"alert_id":           "test_alert",
@@ -747,16 +714,30 @@ func TestGetFailedChecks(t *testing.T) {
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTEnabled = true
-		err = models.SaveSettings(db, settings)
-		require.NoError(t, err)
 
 		response, err := s.GetChecksResults(ctx, "test_svc")
 		require.NoError(t, err)
 		assert.Equal(t, results, response)
+	})
+
+	t.Run("STT disabled", func(t *testing.T) {
+		ams := mockAlertmanagerService{}
+		ctx := context.Background()
+		ams.On("GetAlerts", ctx, mock.Anything).Return(nil, services.ErrSTTDisabled)
+
+		s, err := New(nil, &ams, db)
+		require.NoError(t, err)
+
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTDisabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		results, err := s.GetChecksResults(ctx, "test_svc")
+		assert.Nil(t, results)
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 }
 
