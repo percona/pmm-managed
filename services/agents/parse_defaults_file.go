@@ -86,21 +86,13 @@ func (p *DefaultsFileParser) ParseDefaultsFile(ctx context.Context, pmmAgentID, 
 }
 
 func createRequest(configPath string, serviceType models.ServiceType) (*agentpb.ParseDefaultsFileRequest, error) {
-	var request *agentpb.ParseDefaultsFileRequest
-
-	switch serviceType {
-	case models.MySQLServiceType:
-		request = &agentpb.ParseDefaultsFileRequest{
+	if serviceType == models.MySQLServiceType {
+		request := &agentpb.ParseDefaultsFileRequest{
 			ServiceType: inventorypb.ServiceType_MYSQL_SERVICE,
 			ConfigPath:  configPath,
 		}
-	case models.ExternalServiceType:
-	case models.HAProxyServiceType:
-	case models.MongoDBServiceType:
-	case models.PostgreSQLServiceType:
-	case models.ProxySQLServiceType:
-	default:
+		return request, nil
+	} else {
 		return nil, errors.Errorf("unhandled service type %s", serviceType)
 	}
-	return request, nil
 }
