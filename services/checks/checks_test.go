@@ -661,12 +661,6 @@ func TestGetFailedChecks(t *testing.T) {
 
 		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTDisabled = false
-		err = models.SaveSettings(db, settings)
-		require.NoError(t, err)
 
 		results, err := s.GetChecksResults(context.Background(), "test_svc")
 		assert.Empty(t, results)
@@ -723,12 +717,6 @@ func TestGetFailedChecks(t *testing.T) {
 		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{&testAlert}, nil)
 
 		s, err := New(nil, &ams, db)
-		require.NoError(t, err)
-		settings, err := models.GetSettings(db)
-		require.NoError(t, err)
-
-		settings.SaaS.STTDisabled = false
-		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
 		response, err := s.GetChecksResults(ctx, "test_svc")

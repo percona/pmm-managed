@@ -152,7 +152,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.DisableTelemetry {
 		settings.Telemetry.Disabled = true
 		settings.Telemetry.UUID = ""
-		settings.SaaS.STTDisabled = true
 	}
 	if params.EnableTelemetry {
 		settings.Telemetry.Disabled = false
