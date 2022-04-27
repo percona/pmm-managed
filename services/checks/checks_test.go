@@ -653,8 +653,6 @@ func TestGetFailedChecks(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	t.Run("no failed check for service", func(t *testing.T) {
-		t.Parallel()
-
 		var ams mockAlertmanagerService
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
@@ -668,8 +666,6 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("non empty failed checks", func(t *testing.T) {
-		t.Parallel()
-
 		alertLabels := map[string]string{
 			model.AlertNameLabel: "test_check",
 			"alert_id":           "test_alert",
@@ -725,8 +721,6 @@ func TestGetFailedChecks(t *testing.T) {
 	})
 
 	t.Run("STT disabled", func(t *testing.T) {
-		t.Parallel()
-
 		ams := mockAlertmanagerService{}
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return(nil, services.ErrSTTDisabled)
