@@ -53,7 +53,7 @@ type PXCClustersService struct {
 	l                      *logrus.Entry
 	controllerClient       dbaasClient
 	grafanaClient          grafanaClient
-	componentServiceClient componentsServiceProvider
+	componentServiceClient componentsClient
 	versionServiceURL      string
 
 	dbaasv1beta1.UnimplementedPXCClustersServer
@@ -61,7 +61,8 @@ type PXCClustersService struct {
 
 // NewPXCClusterService creates PXC Service.
 func NewPXCClusterService(db *reform.DB, controllerClient dbaasClient, grafanaClient grafanaClient,
-	componentServiceClient componentsServiceProvider, versionServiceURL string) dbaasv1beta1.PXCClustersServer {
+	componentServiceClient componentsClient, versionServiceURL string,
+) dbaasv1beta1.PXCClustersServer {
 	l := logrus.WithField("component", "pxc_cluster")
 	return &PXCClustersService{
 		db:                     db,
@@ -300,7 +301,7 @@ func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster 
 		pretty.Println(pxcComponents)
 		fmt.Println("====================================================================================================")
 
-		pxcVersion, component, err := LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
+		pxcVersion, component, err := s.componentServiceClient.LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
 		if err != nil {
 			return errors.Wrap(err, "cannot get the recommended PXC image name")
 		}
