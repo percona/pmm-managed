@@ -220,7 +220,12 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
 	dbaasv1beta1.RegisterDBClustersServer(gRPCServer, managementdbaas.NewDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
-	dbaasv1beta1.RegisterPXCClustersServer(gRPCServer, managementdbaas.NewPXCClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.componentsService, ""))
+	dbaasv1beta1.RegisterPXCClustersServer(gRPCServer,
+		managementdbaas.NewPXCClusterService(deps.db, deps.dbaasClient,
+			deps.grafanaClient,
+			deps.componentsService,
+			deps.versionServiceClient.GetVersionServiceURL()),
+	)
 	dbaasv1beta1.RegisterPSMDBClustersServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasClient, deps.grafanaClient, deps.versionServiceClient))
 	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasClient))
 	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasClient, deps.versionServiceClient))
@@ -731,6 +736,8 @@ func main() {
 	versionCache := versioncache.New(db, versioner)
 	emailer := alertmanager.NewEmailer(logrus.WithField("component", "alertmanager-emailer").Logger)
 
+	componentsService := managementdbaas.NewComponentsService(db, dbaasClient, versionService)
+
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -930,6 +937,7 @@ func main() {
 				versionCache:         versionCache,
 				supervisord:          supervisord,
 				config:               &cfg.Config,
+				componentsService:    componentsService,
 			})
 	}()
 

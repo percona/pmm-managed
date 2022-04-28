@@ -55,7 +55,7 @@ type installedComponentsVersion struct {
 }
 
 // NewComponentsService creates Components Service.
-func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionServiceClient versionService) dbaasv1beta1.ComponentsServer {
+func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionServiceClient versionService) *ComponentsService {
 	l := logrus.WithField("component", "components_service")
 	return &ComponentsService{
 		l:                    l,
@@ -467,7 +467,7 @@ func (c ComponentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 // recommended versions, returns the latest.
 // Since dbaasv1beta1.Component doesn't have the version number as part of the structure, we also return the
 // version string. This string is used in other places to identify the version.
-func (c ComponentsService) LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1beta1.Component, error) {
+func LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1beta1.Component, error) {
 	if len(m) == 0 {
 		return "", nil, errNoVersionsFound
 	}

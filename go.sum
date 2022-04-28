@@ -475,6 +475,8 @@ github.com/percona/pmm v0.0.0-20220426095359-6ec19a46c5a2 h1:82QYprx2f64L08A7g0Z
 github.com/percona/pmm v0.0.0-20220426095359-6ec19a46c5a2/go.mod h1:FFbpyZXm+Ilg8M/GewuhdjJhPaW1/v1zjRRerYhCfEA=
 github.com/percona/pmm v0.0.0-20220427122756-c52cc545e1f3 h1:6IKHKNDNJADEN/YsvXcUiJ8M75/PW+bJZ3kMb+CL7kM=
 github.com/percona/pmm v0.0.0-20220427122756-c52cc545e1f3/go.mod h1:FFbpyZXm+Ilg8M/GewuhdjJhPaW1/v1zjRRerYhCfEA=
+github.com/percona/pmm v0.0.0-20220427182732-45d372ac3aa4 h1:YNFUqnrK721HCnujd+5JLFZ6v6p9Zk4G5lyjnFZygRk=
+github.com/percona/pmm v0.0.0-20220427182732-45d372ac3aa4/go.mod h1:FFbpyZXm+Ilg8M/GewuhdjJhPaW1/v1zjRRerYhCfEA=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54 h1:aI1emmycDTGWKsBdxFPKZqohfBbK4y2ta9G4+RX7gVg=
 github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=

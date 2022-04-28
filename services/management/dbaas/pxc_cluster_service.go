@@ -49,28 +49,28 @@ var errInvalidClusterName = errors.New("invalid cluster name. It must start with
 
 // PXCClustersService implements PXCClusterServer methods.
 type PXCClustersService struct {
-	db                     *reform.DB
-	l                      *logrus.Entry
-	controllerClient       dbaasClient
-	grafanaClient          grafanaClient
-	componentServiceClient componentsClient
-	versionServiceURL      string
+	db                *reform.DB
+	l                 *logrus.Entry
+	controllerClient  dbaasClient
+	grafanaClient     grafanaClient
+	componentsService componentsService
+	versionServiceURL string
 
 	dbaasv1beta1.UnimplementedPXCClustersServer
 }
 
 // NewPXCClusterService creates PXC Service.
 func NewPXCClusterService(db *reform.DB, controllerClient dbaasClient, grafanaClient grafanaClient,
-	componentServiceClient componentsClient, versionServiceURL string,
+	componentsService componentsService, versionServiceURL string,
 ) dbaasv1beta1.PXCClustersServer {
 	l := logrus.WithField("component", "pxc_cluster")
 	return &PXCClustersService{
-		db:                     db,
-		l:                      l,
-		controllerClient:       controllerClient,
-		grafanaClient:          grafanaClient,
-		versionServiceURL:      versionServiceURL,
-		componentServiceClient: componentServiceClient,
+		db:                db,
+		l:                 l,
+		controllerClient:  controllerClient,
+		grafanaClient:     grafanaClient,
+		versionServiceURL: versionServiceURL,
+		componentsService: componentsService,
 	}
 }
 
@@ -291,7 +291,7 @@ func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster 
 	if req.Name == "" || req.Params.Pxc.Image == "" {
 		// cs := NewComponentsService(s.db, s.controllerClient, s.versionServiceClient)
 
-		pxcComponents, err := s.componentServiceClient.GetPXCComponents(ctx, &dbaasv1beta1.GetPXCComponentsRequest{
+		pxcComponents, err := s.componentsService.GetPXCComponents(ctx, &dbaasv1beta1.GetPXCComponentsRequest{
 			KubernetesClusterName: kubernetesCluster.KubernetesClusterName,
 		})
 		if err != nil {
@@ -301,7 +301,7 @@ func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster 
 		pretty.Println(pxcComponents)
 		fmt.Println("====================================================================================================")
 
-		pxcVersion, component, err := s.componentServiceClient.LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
+		pxcVersion, component, err := LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
 		if err != nil {
 			return errors.Wrap(err, "cannot get the recommended PXC image name")
 		}

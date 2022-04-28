@@ -29,7 +29,7 @@ import (
 //go:generate mockery -name=dbaasClient -case=snake -inpkg -testonly
 //go:generate mockery -name=versionService -case=snake -inpkg -testonly
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
-//go:generate mockery -name=componentsClient -case=snake -inpkg -testonly
+//go:generate mockery -name=componentsService -case=snake -inpkg -testonly
 
 type dbaasClient interface {
 	// CheckKubernetesClusterConnection checks connection to Kubernetes cluster and returns statuses of the cluster and operators.
@@ -99,12 +99,12 @@ type grafanaClient interface {
 	DeleteAPIKeyByID(ctx context.Context, id int64) error
 }
 
-type componentsClient interface {
+type componentsService interface {
 	GetPSMDBComponents(context.Context, *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error)
 	GetPXCComponents(context.Context, *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error)
 	ChangePSMDBComponents(context.Context, *dbaasv1beta1.ChangePSMDBComponentsRequest) (*dbaasv1beta1.ChangePSMDBComponentsResponse, error)
 	ChangePXCComponents(context.Context, *dbaasv1beta1.ChangePXCComponentsRequest) (*dbaasv1beta1.ChangePXCComponentsResponse, error)
 	CheckForOperatorUpdate(context.Context, *dbaasv1beta1.CheckForOperatorUpdateRequest) (*dbaasv1beta1.CheckForOperatorUpdateResponse, error)
 	InstallOperator(context.Context, *dbaasv1beta1.InstallOperatorRequest) (*dbaasv1beta1.InstallOperatorResponse, error)
-	LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1beta1.Component, error)
+	// LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1beta1.Component, error)
 }
