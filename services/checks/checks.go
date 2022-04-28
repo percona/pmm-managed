@@ -69,8 +69,6 @@ const (
 	scriptExecutionTimeout = 5 * time.Second  // time limit for running pmm-managed-starlark
 	resultCheckInterval    = time.Second
 
-	pmmVictoriaMetricsAddress = "http://127.0.0.1:9090/prometheus"
-
 	// Sync with API tests.
 	resolveTimeoutFactor  = 3
 	defaultResendInterval = 2 * time.Second
@@ -85,7 +83,6 @@ const (
 // pmm-agent versions with known changes in Query Actions.
 // To match all pre-release versions add '-0' suffix to specified version.
 var (
-	pmmAgentAny     = version.MustParse("0.0.0")
 	pmmAgent2_6_0   = version.MustParse("2.6.0")
 	pmmAgent2_7_0   = version.MustParse("2.7.0")
 	pmmAgent2_27_0  = version.MustParse("2.27.0-0")
@@ -120,7 +117,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) (*Service, error) {
+func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB, VMAddress string) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
 	resendInterval := defaultResendInterval
@@ -134,7 +131,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		return nil, err
 	}
 
-	vmClient, err := metrics.NewClient(metrics.Config{Address: pmmVictoriaMetricsAddress})
+	vmClient, err := metrics.NewClient(metrics.Config{Address: VMAddress})
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +589,7 @@ func (s *Service) minPMMAgentVersion(c check.Check) *version.Parsed {
 		res := pmmAgent2_6_0 // minimum version that can be used with advisors
 		for _, query := range c.Queries {
 			v := s.minPMMAgentVersionForType(query.Type)
-			if res.Less(v) {
+			if v != nil && res.Less(v) {
 				res = v
 			}
 		}
@@ -630,7 +627,7 @@ func (s *Service) minPMMAgentVersionForType(t check.Type) *version.Parsed {
 	case check.MetricsRange:
 		fallthrough
 	case check.MetricsInstant:
-		return pmmAgentAny
+		return nil // These types of queries don't require pmm agent at all, so any version is good.
 
 	default:
 		s.l.Warnf("minPMMAgentVersion: unhandled check type %q.", t)
