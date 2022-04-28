@@ -15,7 +15,7 @@ go 1.18
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/Azure/azure-sdk-for-go v63.2.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.25
+	github.com/Azure/go-autorest/autorest v0.11.27
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/ClickHouse/clickhouse-go/v2 v2.0.12
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
@@ -35,8 +35,8 @@ require (
 	github.com/lib/pq v1.10.5
 	github.com/minio/minio-go/v7 v7.0.24
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
-	github.com/percona-platform/saas v0.0.0-20220420161008-46675fd07e1d
-	github.com/percona/pmm v0.0.0-20220426141020-4e4aec8809b2
+	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
+	github.com/percona/pmm v0.0.0-20220428091029-a1533c572fd6
 	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
