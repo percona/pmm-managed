@@ -86,12 +86,13 @@ func TestListSecurityChecks(t *testing.T) {
 	t.Cleanup(func() { restoreSettingsDefaults(t) })
 
 	t.Run("with categories filter", func(t *testing.T) {
-		filter := `{"filter_params": {"category": {"string_values": {"values": ["performance"]}}}}`
+		filter := `{"category": {"string_values": {"values": ["performance"]}}}`
 		filterParams := &security_checks.ListSecurityChecksParamsBodyFilterParams{}
 		err := json.Unmarshal([]byte(filter), filterParams)
 		assert.NoError(t, err)
 
 		resp, err := managementClient.Default.SecurityChecks.ListSecurityChecks(&security_checks.ListSecurityChecksParams{
+			Context: pmmapitests.Context,
 			Body: security_checks.ListSecurityChecksBody{
 				FilterParams: filterParams,
 			},
@@ -104,7 +105,7 @@ func TestListSecurityChecks(t *testing.T) {
 				assert.NotEmpty(t, c.Name, "%+v", c)
 				assert.NotEmpty(t, c.Summary, "%+v", c)
 				assert.NotEmpty(t, c.Description, "%+v", c)
-				assert.Equal(t, c.Category, "performance")
+				assert.Equal(t, "performance", c.Category)
 			}
 		}
 	})
