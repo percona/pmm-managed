@@ -366,13 +366,12 @@ func TestChannelForDefaultsFileParser(t *testing.T) {
 		testPort := uint32(123123)
 		for i := uint32(1); i <= count; i++ {
 			resp, err := ch.SendAndWaitResponse(&agentpb.ParseDefaultsFileRequest{})
-			require.NotNil(t, resp)
+			assert.NotNil(t, resp)
 			parserResponse := resp.(*agentpb.ParseDefaultsFileResponse)
 			assert.Equal(t, parserResponse.Username, testValue)
 			assert.Equal(t, parserResponse.Password, testValue)
 			assert.Equal(t, parserResponse.Socket, testValue)
 			assert.Equal(t, parserResponse.Port, testPort)
-			require.NoError(t, err)
 			assert.NoError(t, err)
 		}
 
@@ -385,7 +384,7 @@ func TestChannelForDefaultsFileParser(t *testing.T) {
 
 	for i := uint32(1); i <= count; i++ {
 		msg, err := stream.Recv()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, i, msg.Id)
 		assert.NotNil(t, msg.GetParseDefaultsFile())
 

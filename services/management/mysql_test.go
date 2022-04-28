@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -74,7 +75,7 @@ func setup(t *testing.T) (*MySQLService, func(t *testing.T), context.Context) {
 }
 
 func TestDefaultsFileParserRequest(t *testing.T) {
-	t.Run("Add MySQLService test", func(t *testing.T) {
+	t.Run("Add MySQLService defaults file test", func(t *testing.T) {
 		service, teardown, ctx := setup(t)
 		defer teardown(t)
 
@@ -93,7 +94,6 @@ func TestDefaultsFileParserRequest(t *testing.T) {
 			ServiceName:         "test",
 			DefaultsFile:        "/file/path",
 			SkipConnectionCheck: true,
-			Username:            "overriden",
 		}
 		res, err := service.Add(ctx, req)
 		require.NoError(t, err)
@@ -101,6 +101,52 @@ func TestDefaultsFileParserRequest(t *testing.T) {
 
 		require.Equal(t, res.Service.Address, "192.168.2.1")
 		require.Equal(t, res.Service.Port, uint32(6666))
+		require.Equal(t, res.MysqldExporter.Username, "test")
+	})
+
+	t.Run("Add MySQLService defaults file with overriden params", func(t *testing.T) {
+		service, teardown, ctx := setup(t)
+		defer teardown(t)
+
+		service.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "pmm-server").Once()
+		service.vc.(*mockVersionCache).On("RequestSoftwareVersionsUpdate").Once()
+		service.dfp.(*mockDefaultsFileParser).On("ParseDefaultsFile", ctx, mock.Anything, "/file/path", models.MySQLServiceType).Return(&models.ParseDefaultsFileResult{
+			Username: "test",
+			Socket:   "socks4://localhost",
+		}, nil).Once()
+
+		req := &managementpb.AddMySQLRequest{
+			NodeId:              models.PMMServerNodeID,
+			PmmAgentId:          models.PMMServerAgentID,
+			ServiceName:         "test overriden",
+			DefaultsFile:        "/file/path",
+			Username:            "overriden",
+			SkipConnectionCheck: true,
+		}
+		res, err := service.Add(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+
+		require.Equal(t, res.Service.Socket, "socks4://localhost")
 		require.Equal(t, res.MysqldExporter.Username, "overriden")
+	})
+
+	t.Run("Add MySQLService defaults file parse error", func(t *testing.T) {
+		service, teardown, ctx := setup(t)
+		defer teardown(t)
+
+		service.dfp.(*mockDefaultsFileParser).On("ParseDefaultsFile", ctx, mock.Anything, "/file/path", models.MySQLServiceType).Return(nil, errors.New("dfp error")).Once()
+
+		req := &managementpb.AddMySQLRequest{
+			NodeId:              models.PMMServerNodeID,
+			PmmAgentId:          models.PMMServerAgentID,
+			ServiceName:         "not used",
+			DefaultsFile:        "/file/path",
+			Username:            "overriden",
+			SkipConnectionCheck: true,
+		}
+		res, err := service.Add(ctx, req)
+		require.Error(t, err, "dfp error")
+		require.Nil(t, res)
 	})
 }
