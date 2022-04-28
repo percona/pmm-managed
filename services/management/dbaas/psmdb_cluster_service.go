@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
@@ -42,24 +43,28 @@ const (
 
 // PSMDBClusterService implements PSMDBClusterServer methods.
 type PSMDBClusterService struct {
-	db                   *reform.DB
-	l                    *logrus.Entry
-	controllerClient     dbaasClient
-	grafanaClient        grafanaClient
-	versionServiceClient versionService
+	db                *reform.DB
+	l                 *logrus.Entry
+	controllerClient  dbaasClient
+	grafanaClient     grafanaClient
+	componentsService componentsService
+	versionServiceURL string
 
 	dbaasv1beta1.UnimplementedPSMDBClustersServer
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.PSMDBClustersServer {
+func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient,
+	componentsService componentsService, versionServiceURL string,
+) dbaasv1beta1.PSMDBClustersServer {
 	l := logrus.WithField("component", "psmdb_cluster")
 	return &PSMDBClusterService{
-		db:                   db,
-		l:                    l,
-		controllerClient:     dbaasClient,
-		grafanaClient:        grafanaClient,
-		versionServiceClient: versionServiceClient,
+		db:                db,
+		l:                 l,
+		controllerClient:  dbaasClient,
+		grafanaClient:     grafanaClient,
+		componentsService: componentsService,
+		versionServiceURL: versionServiceURL,
 	}
 }
 
@@ -113,13 +118,13 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	if err := s.fillDefaults(ctx, req); err != nil {
-		return nil, errors.Wrap(err, "cannot create PSMDB cluster")
-	}
-
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.fillDefaults(ctx, kubernetesCluster, req); err != nil {
+		return nil, errors.Wrap(err, "cannot create PSMDB cluster")
 	}
 
 	var pmmParams *dbaascontrollerv1beta1.PMMParams
@@ -153,7 +158,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
-			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
+			VersionServiceUrl: s.versionServiceURL,
 		},
 		Pmm:    pmmParams,
 		Expose: req.Expose,
@@ -173,7 +178,9 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 	return &dbaasv1beta1.CreatePSMDBClusterResponse{}, nil
 }
 
-func (s PSMDBClusterService) fillDefaults(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) error {
+func (s PSMDBClusterService) fillDefaults(ctx context.Context, kubernetesCluster *models.KubernetesCluster,
+	req *dbaasv1beta1.CreatePSMDBClusterRequest,
+) error {
 	if req.Name != "" {
 		r := regexp.MustCompile("^[a-z]([-a-z0-9]*[a-z0-9])?$")
 		if !r.MatchString(req.Name) {
@@ -210,23 +217,30 @@ func (s PSMDBClusterService) fillDefaults(ctx context.Context, req *dbaasv1beta1
 	}
 
 	// Only call the version service if it is really needed.
-	// if req.Name == "" || req.Params.Image == "" {
-	// 	psmdbVersion, component, err := s.versionServiceClient.RecommendedComponentVersion(ctx, "psmdb-operator", "mongod")
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "cannot get the recommended MongoDB image name")
-	// 	}
+	if req.Name == "" || req.Params.Image == "" {
+		psmdbComponents, err := s.componentsService.GetPSMDBComponents(ctx, &dbaasv1beta1.GetPSMDBComponentsRequest{
+			KubernetesClusterName: kubernetesCluster.KubernetesClusterName,
+		})
+		if err != nil {
+			return errors.New("cannot get the list of PXC components")
+		}
 
-	// 	if req.Name == "" {
-	// 		req.Name = fmt.Sprintf("psmdb-%s-%04d", strings.ReplaceAll(psmdbVersion, ".", "-"), rand.Int63n(9999))
-	// 		if len(req.Name) > 22 { // Kubernetes limitation
-	// 			req.Name = req.Name[:21]
-	// 		}
-	// 	}
+		psmdbVersion, component, err := LatestRecommended(psmdbComponents.Versions[0].Matrix.Mongod)
+		if err != nil {
+			return errors.Wrap(err, "cannot get the recommended MongoDB image name")
+		}
 
-	// 	if req.Params.Image == "" {
-	// 		req.Params.Image = component.ImagePath
-	// 	}
-	// }
+		if req.Name == "" {
+			req.Name = fmt.Sprintf("psmdb-%s-%04d", strings.ReplaceAll(psmdbVersion, ".", "-"), rand.Int63n(9999))
+			if len(req.Name) > 22 { // Kubernetes limitation
+				req.Name = req.Name[:21]
+			}
+		}
+
+		if req.Params.Image == "" {
+			req.Params.Image = component.ImagePath
+		}
+	}
 
 	return nil
 }

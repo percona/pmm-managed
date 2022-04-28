@@ -24,7 +24,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kr/pretty"
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/pkg/errors"
@@ -211,7 +210,9 @@ func (s PXCClustersService) CreatePXCCluster(ctx context.Context, req *dbaasv1be
 	return &dbaasv1beta1.CreatePXCClusterResponse{}, nil
 }
 
-func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster *models.KubernetesCluster, req *dbaasv1beta1.CreatePXCClusterRequest) error {
+func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster *models.KubernetesCluster,
+	req *dbaasv1beta1.CreatePXCClusterRequest,
+) error {
 	if req.Name != "" {
 		r := regexp.MustCompile("^[a-z]([-a-z0-9]*[a-z0-9])?$")
 		if !r.MatchString(req.Name) {
@@ -289,17 +290,12 @@ func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster 
 
 	// Only call the version service if it is really needed.
 	if req.Name == "" || req.Params.Pxc.Image == "" {
-		// cs := NewComponentsService(s.db, s.controllerClient, s.versionServiceClient)
-
 		pxcComponents, err := s.componentsService.GetPXCComponents(ctx, &dbaasv1beta1.GetPXCComponentsRequest{
 			KubernetesClusterName: kubernetesCluster.KubernetesClusterName,
 		})
 		if err != nil {
 			return errors.New("cannot get the list of PXC components")
 		}
-		fmt.Println("====================================================================================================")
-		pretty.Println(pxcComponents)
-		fmt.Println("====================================================================================================")
 
 		pxcVersion, component, err := LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
 		if err != nil {
