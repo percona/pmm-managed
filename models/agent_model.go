@@ -442,13 +442,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 		switch {
 		case password != "":
-			u.User = url.UserPassword(username, password)
+			u.User = url.UserPassword(username, "__password__")
 		case username != "":
 			u.User = url.User(username)
 		}
 		dsn := u.String()
 		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Left), tdp.Left)
 		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Right), tdp.Right)
+		dsn = strings.Replace(dsn, ":__password__@", ":"+url.QueryEscape(password)+"@", 1)
 		return dsn
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
