@@ -77,6 +77,13 @@ func TestAgent(t *testing.T) {
 			assert.Equal(t, "mongodb://username:s3cur3+p%40%24%24w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&serverSelectionTimeoutMS=1000", agent.DSN(service, time.Second, "", nil))
 			assert.Equal(t, "mongodb://username:s3cur3+p%40%24%24w0r4.@1.2.3.4:12345/", agent.DSN(service, 0, "", nil))
 		})
+
+		t.Run("MongoDBPasswordContainsPlus", func(t *testing.T) {
+			agent.AgentType = models.MongoDBExporterType
+			agent.Password = pointer.ToString("s3cur3 p@$$w0r4." + "+" + ":__password__@")
+
+			assert.Equal(t, "mongodb://username:s3cur3+p%40%24%24w0r4.%2B%3A__password__%40@1.2.3.4:12345/database?connectTimeoutMS=1000&serverSelectionTimeoutMS=1000", agent.DSN(service, time.Second, "database", nil))
+		})
 	})
 
 	t.Run("DSN socket", func(t *testing.T) {
