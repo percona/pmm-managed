@@ -828,7 +828,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AzureOptions:                   params.AzureOptions,
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
-		LogLevel:                       &params.LogLevel,
+		LogLevel:                       pointer.ToStringOrNil(params.LogLevel),
 	}
 
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
