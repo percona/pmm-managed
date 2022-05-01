@@ -705,6 +705,9 @@ var databaseSchema = [][]string{
 			ALTER COLUMN organization_id SET NOT NULL`,
 	},
 	61: {
+		`UPDATE settings SET settings = settings #- '{sass, stt_enabled}';`,
+	},
+	62: {
 		`ALTER TABLE agents
 			ADD COLUMN log_level VARCHAR`,
 	},
