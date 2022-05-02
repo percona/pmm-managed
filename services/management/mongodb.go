@@ -93,7 +93,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			MongoDBOptions:    mongoDBOptions,
 			PushMetrics:       isPushMode(req.MetricsMode),
 			DisableCollectors: req.DisableCollectors,
-			LogLevel:          req.LogLevel.String(),
+			LogLevel:          specifyLogLevel(req.LogLevel),
 		})
 		if err != nil {
 			return err

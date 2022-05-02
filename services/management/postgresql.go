@@ -92,7 +92,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 			PushMetrics:       isPushMode(req.MetricsMode),
 			DisableCollectors: req.DisableCollectors,
 			PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
-			LogLevel:          req.LogLevel.String(),
+			LogLevel:          specifyLogLevel(req.LogLevel),
 		})
 		if err != nil {
 			return err
