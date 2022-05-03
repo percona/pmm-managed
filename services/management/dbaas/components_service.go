@@ -471,26 +471,18 @@ func LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1be
 	if len(m) == 0 {
 		return "", nil, errNoVersionsFound
 	}
-	latestVersion := goversion.Must(goversion.NewVersion("0.0.0"))
-	latestComponent := &dbaasv1beta1.Component{}
 
 	for version, component := range m {
-		parsedVersion, err := goversion.NewVersion(version)
-		if err != nil {
-			continue
-		}
-		if parsedVersion.GreaterThan(latestVersion) {
-			if component.Status == statusRecommended || latestComponent.Status != statusRecommended {
-				latestVersion = parsedVersion
-				latestComponent = &dbaasv1beta1.Component{
+		if component.Default {
+			return version, &dbaasv1beta1.Component{
 					ImagePath: component.ImagePath,
 					ImageHash: component.ImageHash,
 					Status:    component.Status,
 					Critical:  component.Critical,
-				}
-			}
+				},
+				nil
 		}
 	}
 
-	return latestVersion.String(), latestComponent, nil
+	return "", nil, errors.New("cannot find a default version in the components list")
 }

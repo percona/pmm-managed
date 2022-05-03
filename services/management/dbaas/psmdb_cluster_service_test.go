@@ -164,45 +164,43 @@ func TestPSMDBClusterService(t *testing.T) {
 	t.Run("CreatePSMDBClustersMinimumParams", func(t *testing.T) {
 		dbaasClient.On("CreatePSMDBCluster", ctx, mock.Anything).Return(&controllerv1beta1.CreatePSMDBClusterResponse{}, nil)
 
-		componentsService.On("GetPSMDBComponents", ctx, mock.Anything).Return(
-			&dbaasv1beta1.GetPSMDBComponentsResponse{
-				Versions: []*dbaasv1beta1.OperatorVersion{
-					{
-						Product:  "psmdb-operator",
-						Operator: "1.11.0",
-						Matrix: &dbaasv1beta1.Matrix{
-							Mongod: map[string]*dbaasv1beta1.Component{
-								"4.2.11-12": {
-									ImagePath: "percona/percona-server-mongodb:4.2.11-12",
-									ImageHash: "1909cb7a6ecea9bf0535b54aa86b9ae74ba2fa303c55cf4a1a54262fb0edbd3c",
-									Status:    "available",
-									Critical:  false,
-									Default:   false,
-									Disabled:  false,
-								},
-								"4.2.12-13": {
-									ImagePath: "percona/percona-server-mongodb:4.2.12-13",
-									ImageHash: "dda89e647ea5aa1266055ef465d66a139722d9e3f78a839a90a9f081b09ce26d",
-									Status:    "available",
-									Critical:  false,
-									Default:   false,
-									Disabled:  false,
-								},
-								"4.2.17-17": {
-									ImagePath: "percona/percona-server-mongodb:4.2.17-17",
-									ImageHash: "dde894b50568e088b28767ff18cfbdfe6b2496f12eddb14743d3d33c105e3f01",
-									Status:    "recommended",
-									Critical:  false,
-									Default:   false,
-									Disabled:  false,
-								},
+		psmdbComponents := &dbaasv1beta1.GetPSMDBComponentsResponse{
+			Versions: []*dbaasv1beta1.OperatorVersion{
+				{
+					Product:  "psmdb-operator",
+					Operator: "1.11.0",
+					Matrix: &dbaasv1beta1.Matrix{
+						Mongod: map[string]*dbaasv1beta1.Component{
+							"4.2.11-12": {
+								ImagePath: "percona/percona-server-mongodb:4.2.11-12",
+								ImageHash: "1909cb7a6ecea9bf0535b54aa86b9ae74ba2fa303c55cf4a1a54262fb0edbd3c",
+								Status:    "available",
+								Critical:  false,
+								Default:   false,
+								Disabled:  false,
+							},
+							"4.2.12-13": {
+								ImagePath: "percona/percona-server-mongodb:4.2.12-13",
+								ImageHash: "dda89e647ea5aa1266055ef465d66a139722d9e3f78a839a90a9f081b09ce26d",
+								Status:    "available",
+								Critical:  false,
+								Default:   false,
+								Disabled:  false,
+							},
+							"4.2.17-17": {
+								ImagePath: "percona/percona-server-mongodb:4.2.17-17",
+								ImageHash: "dde894b50568e088b28767ff18cfbdfe6b2496f12eddb14743d3d33c105e3f01",
+								Status:    "recommended",
+								Critical:  false,
+								Default:   true,
+								Disabled:  false,
 							},
 						},
 					},
 				},
 			},
-			nil,
-		)
+		}
+		componentsService.On("GetPSMDBComponents", ctx, mock.Anything).Return(psmdbComponents, nil)
 
 		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient, componentsService, versionService.GetVersionServiceURL())
 

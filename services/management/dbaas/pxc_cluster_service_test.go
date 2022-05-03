@@ -177,45 +177,44 @@ func TestPXCClusterService(t *testing.T) {
 	t.Run("CreatePXCClusterMinimumParams", func(t *testing.T) {
 		dbaasClient.On("CreatePXCCluster", ctx, mock.Anything).Return(&controllerv1beta1.CreatePXCClusterResponse{}, nil)
 
-		componentsClient.On("GetPXCComponents", ctx, mock.Anything).Return(
-			&dbaasv1beta1.GetPXCComponentsResponse{
-				Versions: []*dbaasv1beta1.OperatorVersion{
-					{
-						Product:  "pxc-operator",
-						Operator: "1.10.0",
-						Matrix: &dbaasv1beta1.Matrix{
-							Pxc: map[string]*dbaasv1beta1.Component{
-								"8.0.19-10.1": {
-									ImagePath: "percona/percona-xtradb-cluster:8.0.19-10.1",
-									ImageHash: "1058ae8eded735ebdf664807aad7187942fc9a1170b3fd0369574cb61206b63a",
-									Status:    "available",
-									Critical:  false,
-									Default:   false,
-									Disabled:  false,
-								},
-								"8.0.20-11.1": {
-									ImagePath: "percona/percona-xtradb-cluster:8.0.20-11.1",
-									ImageHash: "54b1b2f5153b78b05d651034d4603a13e685cbb9b45bfa09a39864fa3f169349",
-									Status:    "available",
-									Critical:  false,
-									Default:   false,
-									Disabled:  false,
-								},
-								"8.0.25-15.1": {
-									ImagePath: "percona/percona-xtradb-cluster:8.0.25-15.1",
-									ImageHash: "529e979c86442429e6feabef9a2d9fc362f4626146f208fbfac704e145a492dd",
-									Status:    "recommended",
-									Critical:  false,
-									Default:   true,
-									Disabled:  false,
-								},
+		pxcComponents := &dbaasv1beta1.GetPXCComponentsResponse{
+			Versions: []*dbaasv1beta1.OperatorVersion{
+				{
+					Product:  "pxc-operator",
+					Operator: "1.10.0",
+					Matrix: &dbaasv1beta1.Matrix{
+						Pxc: map[string]*dbaasv1beta1.Component{
+							"8.0.19-10.1": {
+								ImagePath: "percona/percona-xtradb-cluster:8.0.19-10.1",
+								ImageHash: "1058ae8eded735ebdf664807aad7187942fc9a1170b3fd0369574cb61206b63a",
+								Status:    "available",
+								Critical:  false,
+								Default:   false,
+								Disabled:  false,
+							},
+							"8.0.20-11.1": {
+								ImagePath: "percona/percona-xtradb-cluster:8.0.20-11.1",
+								ImageHash: "54b1b2f5153b78b05d651034d4603a13e685cbb9b45bfa09a39864fa3f169349",
+								Status:    "available",
+								Critical:  false,
+								Default:   false,
+								Disabled:  false,
+							},
+							"8.0.25-15.1": {
+								ImagePath: "percona/percona-xtradb-cluster:8.0.25-15.1",
+								ImageHash: "529e979c86442429e6feabef9a2d9fc362f4626146f208fbfac704e145a492dd",
+								Status:    "recommended",
+								Critical:  false,
+								Default:   true,
+								Disabled:  false,
 							},
 						},
 					},
 				},
 			},
-			nil,
-		)
+		}
+		componentsClient.On("GetPXCComponents", ctx, mock.Anything).Return(pxcComponents, nil)
+
 		s := NewPXCClusterService(db, dbaasClient, grafanaClient, componentsClient, versionService.GetVersionServiceURL())
 
 		in := dbaasv1beta1.CreatePXCClusterRequest{
