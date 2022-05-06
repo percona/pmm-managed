@@ -518,6 +518,7 @@ func fillPostgreSQL(mb *qanpb.MetricsBucket, bp *agentpb.MetricsBucket_PostgreSQ
 	mb.Planid = bp.Planid
 	mb.QueryPlan = bp.QueryPlan
 	mb.HistogramItems = convertHistogramItems(bp.HistogramItems)
+	mb.SettingsItems = convertSettingsItems(bp.SettingsItems)
 }
 
 func convertHistogramItems(items []*agentpb.HistogramItem) []string {
@@ -526,6 +527,25 @@ func convertHistogramItems(items []*agentpb.HistogramItem) []string {
 		item := &qanpb.HistogramItem{
 			Range:     v.Range,
 			Frequency: v.Frequency,
+		}
+
+		json, err := json.Marshal(item)
+		if err != nil {
+			continue
+		}
+
+		res = append(res, string(json))
+	}
+
+	return res
+}
+
+func convertSettingsItems(items []*agentpb.SettingsItem) []string {
+	res := []string{}
+	for _, v := range items {
+		item := &qanpb.SettingsItem{
+			Name:  v.Name,
+			Value: v.Value,
 		}
 
 		json, err := json.Marshal(item)
