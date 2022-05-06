@@ -544,8 +544,14 @@ func convertSettingsItems(items []*agentpb.SettingsItem) []string {
 	res := []string{}
 	for _, v := range items {
 		item := &qanpb.SettingsItem{
-			Name:  v.Name,
-			Value: v.Value,
+			Name:         v.Name,
+			Value:        v.Value,
+			DefaultValue: v.DefaultValue,
+			Description:  v.Description,
+			Minimum:      v.Minimum,
+			Maximum:      v.Maximum,
+			Options:      v.Options,
+			Restart:      v.Restart,
 		}
 
 		json, err := json.Marshal(item)
