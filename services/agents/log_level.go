@@ -27,7 +27,7 @@ var exporterLogLevelCommandVersion = version.MustParse("2.28.0")
 
 func withLogLevel(args []string, logLevel *string, pmmAgentVersion *version.Parsed) []string {
 	if pointer.GetString(logLevel) != "" && !pmmAgentVersion.Less(exporterLogLevelCommandVersion) {
-		args = append(args, "-log.level="+pointer.GetString(logLevel))
+		args = append(args, "--log.level="+pointer.GetString(logLevel))
 	}
 
 	return args
