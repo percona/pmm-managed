@@ -297,21 +297,25 @@ func (s PXCClustersService) fillDefaults(ctx context.Context, kubernetesCluster 
 			return errors.New("cannot get the list of PXC components")
 		}
 
-		pxcVersion, component, err := LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
+		component, err := LatestRecommended(pxcComponents.Versions[0].Matrix.Pxc)
 		if err != nil {
 			return errors.Wrap(err, "cannot get the recommended PXC image name")
-		}
-
-		if req.Name == "" {
-			req.Name = fmt.Sprintf("pxc-%s-%04d", strings.ReplaceAll(pxcVersion, ".", "-"), rand.Int63n(9999))
-			if len(req.Name) > 22 { // Kubernetes limitation
-				req.Name = req.Name[:21]
-			}
 		}
 
 		if req.Params.Pxc.Image == "" {
 			req.Params.Pxc.Image = component.ImagePath
 		}
+
+		if req.Name == "" {
+			// Image is a string like this: percona/percona-server-mongodb:4.2.12-13
+			// We need only the version part to build the cluster name.
+			parts := strings.Split(req.Params.Pxc.Image, ":")
+			req.Name = fmt.Sprintf("pxc-%s-%04d", strings.ReplaceAll(parts[len(parts)-1], ".", "-"), rand.Int63n(9999))
+			if len(req.Name) > 22 { // Kubernetes limitation
+				req.Name = req.Name[:21]
+			}
+		}
+
 	}
 
 	return nil

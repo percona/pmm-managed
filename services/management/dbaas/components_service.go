@@ -467,14 +467,14 @@ func (c ComponentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 // recommended versions, returns the latest.
 // Since dbaasv1beta1.Component doesn't have the version number as part of the structure, we also return the
 // version string. This string is used in other places to identify the version.
-func LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1beta1.Component, error) {
+func LatestRecommended(m map[string]*dbaasv1beta1.Component) (*dbaasv1beta1.Component, error) {
 	if len(m) == 0 {
-		return "", nil, errNoVersionsFound
+		return nil, errNoVersionsFound
 	}
 
-	for version, component := range m {
+	for _, component := range m {
 		if component.Default {
-			return version, &dbaasv1beta1.Component{
+			return &dbaasv1beta1.Component{
 					ImagePath: component.ImagePath,
 					ImageHash: component.ImageHash,
 					Status:    component.Status,
@@ -484,5 +484,5 @@ func LatestRecommended(m map[string]*dbaasv1beta1.Component) (string, *dbaasv1be
 		}
 	}
 
-	return "", nil, errors.New("cannot find a default version in the components list")
+	return nil, errors.New("cannot find a default version in the components list")
 }

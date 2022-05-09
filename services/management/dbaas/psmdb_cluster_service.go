@@ -225,20 +225,23 @@ func (s PSMDBClusterService) fillDefaults(ctx context.Context, kubernetesCluster
 			return errors.New("cannot get the list of PXC components")
 		}
 
-		psmdbVersion, component, err := LatestRecommended(psmdbComponents.Versions[0].Matrix.Mongod)
+		component, err := LatestRecommended(psmdbComponents.Versions[0].Matrix.Mongod)
 		if err != nil {
 			return errors.Wrap(err, "cannot get the recommended MongoDB image name")
 		}
 
+		if req.Params.Image == "" {
+			req.Params.Image = component.ImagePath
+		}
+
 		if req.Name == "" {
-			req.Name = fmt.Sprintf("psmdb-%s-%04d", strings.ReplaceAll(psmdbVersion, ".", "-"), rand.Int63n(9999))
+			// Image is a string like this: percona/percona-server-mongodb:4.2.12-13
+			// We need only the version part to build the cluster name.
+			parts := strings.Split(req.Params.Image, ":")
+			req.Name = fmt.Sprintf("psmdb-%s-%04d", strings.ReplaceAll(parts[len(parts)-1], ".", "-"), rand.Int63n(9999))
 			if len(req.Name) > 22 { // Kubernetes limitation
 				req.Name = req.Name[:21]
 			}
-		}
-
-		if req.Params.Image == "" {
-			req.Params.Image = component.ImagePath
 		}
 	}
 
@@ -246,7 +249,6 @@ func (s PSMDBClusterService) fillDefaults(ctx context.Context, kubernetesCluster
 }
 
 // UpdatePSMDBCluster updates PSMDB cluster.
-//nolint:dupl
 func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv1beta1.UpdatePSMDBClusterRequest) (*dbaasv1beta1.UpdatePSMDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
