@@ -225,7 +225,7 @@ func (s PSMDBClusterService) fillDefaults(ctx context.Context, kubernetesCluster
 			return errors.New("cannot get the list of PXC components")
 		}
 
-		component, err := LatestRecommended(psmdbComponents.Versions[0].Matrix.Mongod)
+		component, err := DefaultComponent(psmdbComponents.Versions[0].Matrix.Mongod)
 		if err != nil {
 			return errors.Wrap(err, "cannot get the recommended MongoDB image name")
 		}

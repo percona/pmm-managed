@@ -35,10 +35,6 @@ import (
 	"github.com/percona/pmm-managed/utils/stringset"
 )
 
-const (
-	statusRecommended = "recommended"
-)
-
 type ComponentsService struct {
 	l                    *logrus.Entry
 	db                   *reform.DB
@@ -463,11 +459,8 @@ func (c ComponentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 	return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK}, nil
 }
 
-// LatestRecommended returns the latest recommended version from a list of product versions or, if there are no
-// recommended versions, returns the latest.
-// Since dbaasv1beta1.Component doesn't have the version number as part of the structure, we also return the
-// version string. This string is used in other places to identify the version.
-func LatestRecommended(m map[string]*dbaasv1beta1.Component) (*dbaasv1beta1.Component, error) {
+// DefaultComponent returns the component marked as default in the components list.
+func DefaultComponent(m map[string]*dbaasv1beta1.Component) (*dbaasv1beta1.Component, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
