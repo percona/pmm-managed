@@ -704,6 +704,9 @@ var databaseSchema = [][]string{
 			ADD COLUMN pmm_server_name VARCHAR NOT NULL,
 			ALTER COLUMN organization_id SET NOT NULL`,
 	},
+	61: {
+		`UPDATE settings SET settings = settings #- '{sass, stt_enabled}';`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
@@ -892,7 +895,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false, []string{}); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false, []string{}, nil); err != nil {
 		return err
 	}
 

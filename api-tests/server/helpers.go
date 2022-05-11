@@ -35,7 +35,7 @@ func restoreSettingsDefaults(t *testing.T) {
 
 	res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 		Body: server.ChangeSettingsBody{
-			DisableStt:      true,
+			EnableStt:       true,
 			EnableTelemetry: true,
 			MetricsResolutions: &server.ChangeSettingsParamsBodyMetricsResolutions{
 				Hr: "5s",
@@ -58,7 +58,7 @@ func restoreSettingsDefaults(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, true, res.Payload.Settings.TelemetryEnabled)
-	assert.Equal(t, false, res.Payload.Settings.SttEnabled)
+	assert.Equal(t, true, res.Payload.Settings.SttEnabled)
 	expectedResolutions := &server.ChangeSettingsOKBodySettingsMetricsResolutions{
 		Hr: "5s",
 		Mr: "10s",
@@ -89,10 +89,10 @@ func restoreCheckIntervalDefaults(t *testing.T) {
 	for _, check := range resp.Payload.Checks {
 		params = &security_checks.ChangeSecurityChecksParams{
 			Body: security_checks.ChangeSecurityChecksBody{
-				Params: []*security_checks.ParamsItems0{
+				Params: []*security_checks.ChangeSecurityChecksParamsBodyParamsItems0{
 					{
 						Name:     check.Name,
-						Interval: pointer.ToString(security_checks.ParamsItems0IntervalSTANDARD),
+						Interval: pointer.ToString(security_checks.ChangeSecurityChecksParamsBodyParamsItems0IntervalSTANDARD),
 					},
 				},
 			},
