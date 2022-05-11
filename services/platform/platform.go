@@ -132,7 +132,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 		return nil, errInternalServer
 	}
 
-	if settings.SaaS.STTEnabled {
+	if !settings.SaaS.STTDisabled {
 		s.checksService.CollectChecks(ctx)
 	}
 
@@ -169,7 +169,9 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 	err = s.disconnect(ctx, &disconnectPMMParams{
 		PMMServerID: settings.PMMServerID,
 	})
-	if err != nil {
+	needRecover := err != nil && !req.Force
+
+	if needRecover {
 		if e := models.InsertPerconaSSODetails(s.db.Querier, &models.PerconaSSODetailsInsert{
 			PMMManagedClientID:     ssoDetails.PMMManagedClientID,
 			PMMManagedClientSecret: ssoDetails.PMMManagedClientSecret,
@@ -188,7 +190,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		return nil, err // this is already a status error
 	}
 
-	if settings.SaaS.STTEnabled {
+	if !settings.SaaS.STTDisabled {
 		s.checksService.CollectChecks(ctx)
 	}
 
@@ -643,6 +645,7 @@ func (s *Service) ServerInfo(ctx context.Context, req *platformpb.ServerInfoRequ
 	}
 
 	serverName := ""
+	connectedToPortal := false
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
 		s.l.Errorf("failed to get SSO details: %s", err)
@@ -650,11 +653,14 @@ func (s *Service) ServerInfo(ctx context.Context, req *platformpb.ServerInfoRequ
 
 	if ssoDetails != nil {
 		serverName = ssoDetails.PMMServerName
+		connectedToPortal = true
 	}
 
 	return &platformpb.ServerInfoResponse{
-		PmmServerName: serverName,
-		PmmServerId:   settings.PMMServerID,
+		PmmServerName:        serverName,
+		PmmServerId:          settings.PMMServerID,
+		PmmServerTelemetryId: settings.Telemetry.UUID,
+		ConnectedToPortal:    connectedToPortal,
 	}, nil
 }
 
