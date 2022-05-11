@@ -119,6 +119,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 				TLS:               req.Tls,
 				TLSSkipVerify:     req.TlsSkipVerify,
 				PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
+				LogLevel:          specifyLogLevel(req.LogLevel),
 			})
 			if err != nil {
 				return err
@@ -141,6 +142,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 				TLS:                   req.Tls,
 				TLSSkipVerify:         req.TlsSkipVerify,
 				PostgreSQLOptions:     models.PostgreSQLOptionsFromRequest(req),
+				LogLevel:              specifyLogLevel(req.LogLevel),
 			})
 			if err != nil {
 				return err
