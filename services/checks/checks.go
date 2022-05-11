@@ -37,6 +37,7 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/grafana/gmodels"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -297,6 +298,14 @@ func (s *Service) GetSecurityCheckResults() ([]services.CheckResult, error) {
 	return s.alertsRegistry.getCheckResults(), nil
 }
 
+func labelSetToMap(set gmodels.LabelSet) map[string]string {
+	res := make(map[string]string, len(set))
+	for key, value := range set {
+		res[key] = string(value)
+	}
+	return res
+}
+
 // GetChecksResults returns the failed checks for a given service from AlertManager.
 func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]services.CheckResult, error) {
 	settings, err := models.GetSettings(s.db)
@@ -320,23 +329,23 @@ func (s *Service) GetChecksResults(ctx context.Context, serviceID string) ([]ser
 	checkResults := make([]services.CheckResult, 0, len(res))
 	for _, alert := range res {
 		checkResults = append(checkResults, services.CheckResult{
-			CheckName: alert.Labels[model.AlertNameLabel],
+			CheckName: string(alert.Labels[model.AlertNameLabel]),
 			Silenced:  len(alert.Status.SilencedBy) != 0,
-			AlertID:   alert.Labels["alert_id"],
+			AlertID:   string(alert.Labels["alert_id"]),
 			Interval:  check.Interval(alert.Labels["interval_group"]),
 			Target: services.Target{
-				AgentID:     alert.Labels["agent_id"],
-				ServiceID:   alert.Labels["service_id"],
-				ServiceName: alert.Labels["service_name"],
-				NodeName:    alert.Labels["node_name"],
-				Labels:      alert.Labels,
+				AgentID:     string(alert.Labels["agent_id"]),
+				ServiceID:   string(alert.Labels["service_id"]),
+				ServiceName: string(alert.Labels["service_name"]),
+				NodeName:    string(alert.Labels["node_name"]),
+				Labels:      labelSetToMap(alert.Labels),
 			},
 			Result: check.Result{
-				Summary:     alert.Annotations["summary"],
-				Description: alert.Annotations["description"],
-				ReadMoreURL: alert.Annotations["read_more_url"],
-				Severity:    common.ParseSeverity(alert.Labels["severity"]),
-				Labels:      alert.Labels,
+				Summary:     string(alert.Annotations["summary"]),
+				Description: string(alert.Annotations["description"]),
+				ReadMoreURL: string(alert.Annotations["read_more_url"]),
+				Severity:    common.ParseSeverity(string(alert.Labels["severity"])),
+				Labels:      labelSetToMap(alert.Labels),
 			},
 		})
 	}
