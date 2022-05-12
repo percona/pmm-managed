@@ -453,6 +453,25 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
+	p, err := convertParamsValuesToModel(req.Params)
+	if err != nil {
+		return nil, err
+	}
+	annotations := make(map[string]string)
+	if err = transformMaps(template.Annotations, annotations, p.AsStringMap()); err != nil {
+		return nil, errors.Wrap(err, "failed to fill template annotations placeholders")
+	}
+	annotations["rule"] = req.Name
+
+	labels := make(map[string]string)
+	if err = transformMaps(template.Labels, labels, p.AsStringMap()); err != nil {
+		return nil, errors.Wrap(err, "failed to fill template labels placeholders")
+	}
+	// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
+	labels["ia"] = "1"
+	labels["severity"] = common.Severity(req.Severity).String()
+	labels["template_name"] = req.TemplateName
+
 	r := &ruler.RoutePostNameRulesConfigParams{
 		Recipient: "grafana",
 		Namespace: "Experimental",
@@ -461,8 +480,8 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 			Interval: gmodels.Duration(10 * time.Second),
 			Rules: []*gmodels.PostableExtendedRuleNode{
 				{
-					Annotations: template.Annotations,
-					Labels:      template.Labels,
+					Annotations: annotations,
+					Labels:      labels,
 					For:         gmodels.Duration(req.For.AsDuration()),
 					GrafanaAlert: &gmodels.PostableGrafanaRule{
 						Condition: "B",
@@ -470,12 +489,13 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 							{
 								DatasourceUID: dsResp.Payload.UID,
 								Model: &aQuery{
-									Expr:  expr,
-									RefID: "A",
+									Expr:    expr,
+									RefID:   "A",
+									Instant: true,
 								},
 								RefID: "A",
-								RelativeTimeRange: &gmodels.RelativeTimeRange{ // TODO
-									From: 600,
+								RelativeTimeRange: &gmodels.RelativeTimeRange{ // TODO Range required even for instant queries, but it doesn't affect result
+									From: 60,
 									To:   0,
 								},
 							},
@@ -498,15 +518,41 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 											Type:     "query",
 										},
 									},
-									Reducer: "mean",
-									RefID:   "B",
-									Type:    "classic_conditions",
+									Expression: "A",
+									Reducer:    "count",
+									RefID:      "B",
+									Type:       "reduce",
 								},
 								RefID: "B",
 							},
+							{
+								DatasourceUID: "-100", // TODO who knows why? ¯\_(ツ)_/¯
+								Model: &bQuery{
+									Datasource: Datasource{
+										Type: "__expr__",
+										UID:  "-100",
+									},
+									Conditions: []Condition{
+										{
+											Evaluator: Evaluator{
+												Params: []float64{0},
+												Type:   "gt",
+											},
+											Operator: Operator{Type: "and"},
+											Query:    Query{Params: []string{"A"}},
+											Reducer:  Reducer{Type: "last"},
+											Type:     "query",
+										},
+									},
+									Expression: "$B>0",
+									RefID:      "C",
+									Type:       "math",
+								},
+								RefID: "C",
+							},
 						},
 						ExecErrState: "Alerting",
-						NoDataState:  "NoData",
+						NoDataState:  "Ok",
 						Title:        req.Name,
 					},
 				},
@@ -524,18 +570,19 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 }
 
 type aQuery struct {
-	Expr  string `json:"expr"`
-	RefID string `json:"refId"`
-	Instant
+	Expr    string `json:"expr"`
+	RefID   string `json:"refId"`
+	Instant bool   `json:"instant"`
 }
 
 type bQuery struct {
 	Datasource Datasource  `json:"datasource"`
 	Conditions []Condition `json:"conditions"`
 
-	Reducer string `json:"reducer"`
-	RefID   string `json:"refId"`
-	Type    string `json:"type"`
+	Reducer    string `json:"reducer"`
+	Expression string `json:"expression"`
+	RefID      string `json:"refId"`
+	Type       string `json:"type"`
 }
 
 type Datasource struct {
