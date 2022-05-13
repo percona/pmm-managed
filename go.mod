@@ -3,7 +3,8 @@ module github.com/percona/pmm-managed
 go 1.18
 
 // Use for local development, but do not commit:
-// replace github.com/percona/pmm => ../pmm
+replace github.com/percona/pmm => ../pmm
+
 // replace github.com/percona-platform/saas => ../saas
 // replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
@@ -36,7 +37,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.24
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
 	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
-	github.com/percona/pmm v0.0.0-20220510110703-cd16c3d93199
+	github.com/percona/pmm v0.0.0-20220513204626-f4c3b5528a2e
 	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
