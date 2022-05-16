@@ -27,7 +27,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
@@ -408,7 +407,7 @@ func TestDatabaseMigrations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Apply migration
-		testdb.SetupDB(t, sqlDB, models.SkipFixtures, pointer.ToInt(61))
+		testdb.SetupDB(t, sqlDB, models.SkipFixtures, pointer.ToInt(62))
 
 		agent, err := models.FindAgentByID(db.Querier, "id")
 		require.NoError(t, err)
@@ -416,7 +415,7 @@ func TestDatabaseMigrations(t *testing.T) {
 		require.Equal(t, []string{"db.col1", "db.col2", "db.col3"}, agent.MongoDBOptions.StatsCollections)
 	})
 	t.Run("stats_collections field migration: string array to string array", func(t *testing.T) {
-		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(61))
+		sqlDB := testdb.Open(t, models.SkipFixtures, pointer.ToInt(62))
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		defer sqlDB.Close() //nolint:errcheck
 
