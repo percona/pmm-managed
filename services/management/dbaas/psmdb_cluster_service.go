@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/uuid"
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/pkg/errors"
@@ -238,7 +239,12 @@ func (s PSMDBClusterService) fillDefaults(ctx context.Context, kubernetesCluster
 			// Image is a string like this: percona/percona-server-mongodb:4.2.12-13
 			// We need only the version part to build the cluster name.
 			parts := strings.Split(req.Params.Image, ":")
-			req.Name = fmt.Sprintf("psmdb-%s-%04d", strings.ReplaceAll(parts[len(parts)-1], ".", "-"), rand.Int63n(9999))
+
+			// This is to generate an unique name.
+			uuids := strings.Replace(uuid.New().String(), "-", "", -1)
+			uuids = uuids[len(uuids)-5:]
+
+			req.Name = fmt.Sprintf("psmdb-%s-%s", strings.ReplaceAll(parts[len(parts)-1], ".", "-"), uuids)
 			if len(req.Name) > 22 { // Kubernetes limitation
 				req.Name = req.Name[:21]
 			}
