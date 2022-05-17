@@ -171,6 +171,7 @@ jobs:
           env
           make env-compose-up
           make init
+
       - name: Restore Go build cache
         continue-on-error: true
         run: |
@@ -179,9 +180,6 @@ jobs:
 
       - name: Setup dev-container
         run: docker exec -i --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server .devcontainer/setup.py
-
-      - name: Check updates in dev-container
-        run: docker exec -i --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server time pmm-update -check
 
       - name: Run required checks/linters
         env:
