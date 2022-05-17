@@ -38,6 +38,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/percona/pmm-managed/utils/logger"
+	pprofUtils "github.com/percona/pmm-managed/utils/pprof"
 )
 
 const (
@@ -69,7 +70,7 @@ func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 }
 
 // Zip creates .zip archive with all logs.
-func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
+func (l *Logs) Zip(ctx context.Context, w io.Writer, pprof bool) error {
 	start := time.Now()
 	log := logger.Get(ctx).WithField("component", "logs")
 	log.WithField("d", time.Since(start).Seconds()).Info("Starting...")
@@ -80,12 +81,13 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 
-	files := l.files(ctx)
+	files := l.files(ctx, pprof)
 	log.WithField("d", time.Since(start).Seconds()).Infof("Collected %d files.", len(files))
 
 	for _, file := range files {
 		if ctx.Err() != nil {
 			log.WithField("d", time.Since(start).Seconds()).Warnf("%s; skipping the rest of the files", ctx.Err())
+			log.WithField("d", time.Since(start).Seconds()).Infof("%s; skipping the rest of the files", ctx.Err())
 			break
 		}
 
@@ -127,8 +129,8 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	return nil
 }
 
-// files reads log/config files and returns content.
-func (l *Logs) files(ctx context.Context) []fileContent {
+// files reads log/config/pprof files and returns content.
+func (l *Logs) files(ctx context.Context, pprof bool) []fileContent {
 	files := make([]fileContent, 0, 20)
 
 	// add logs
@@ -213,6 +215,34 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		Data: b,
 		Err:  err,
 	})
+
+	// add pprof
+	// TODO: consider replacing writer with bytes[] in pprofUtils
+	if pprof {
+		var traceBuf bytes.Buffer
+		err = pprofUtils.Trace(&traceBuf, 10)
+		files = append(files, fileContent{
+			Name: "pprof/trace.out",
+			Data: traceBuf.Bytes(),
+			Err:  err,
+		})
+
+		var profileBuf bytes.Buffer
+		err = pprofUtils.Profile(&profileBuf, 60)
+		files = append(files, fileContent{
+			Name: "pprof/profile.pb.gz",
+			Data: profileBuf.Bytes(),
+			Err:  err,
+		})
+
+		var heapBuf bytes.Buffer
+		err = pprofUtils.Heap(&heapBuf, true)
+		files = append(files, fileContent{
+			Name: "pprof/heap.pb.gz",
+			Data: heapBuf.Bytes(),
+			Err:  err,
+		})
+	}
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
 	return files

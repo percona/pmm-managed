@@ -111,8 +111,17 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	l := logrus.WithField("component", "logs.zip")
 
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
+		defaultContextTimeout := 10
+		// increase context timeout if pprof query parameter exist in request
+		pprofQueryParameter, _ := strconv.Atoi(req.FormValue("pprof"))
+		usePprof := pprofQueryParameter > 0
+		if usePprof {
+			// 60 seconds for profile, 10 seconds for trace, 1 sec for heap
+			defaultContextTimeout += 71
+		}
+
 		// fail-safe
-		ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(req.Context(), time.Duration(defaultContextTimeout)*time.Second)
 		defer cancel()
 
 		filename := fmt.Sprintf("pmm-server_%s.zip", time.Now().UTC().Format("2006-01-02_15-04"))
@@ -121,9 +130,10 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 		rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
 
 		ctx = logger.Set(ctx, "logs")
-		if err := logs.Zip(ctx, rw); err != nil {
+		if err := logs.Zip(ctx, rw, usePprof); err != nil {
 			l.Errorf("%+v", err)
 		}
+
 	})
 }
 

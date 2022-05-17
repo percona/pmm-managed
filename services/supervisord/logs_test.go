@@ -124,7 +124,7 @@ func TestFiles(t *testing.T) {
 	l := NewLogs("2.4.5", checker)
 	ctx := logger.Set(context.Background(), t.Name())
 
-	files := l.files(ctx)
+	files := l.files(ctx, false)
 	actual := make([]string, 0, len(files))
 	for _, f := range files {
 		// present only after update
