@@ -68,5 +68,4 @@ func Heap(writer io.Writer, gc bool) error {
 	}
 
 	return p.WriteTo(writer, debug)
-
 }
