@@ -157,7 +157,7 @@ func TestZip(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
 	var buf bytes.Buffer
-	require.NoError(t, l.Zip(ctx, &buf))
+	require.NoError(t, l.Zip(ctx, &buf, false))
 	reader := bytes.NewReader(buf.Bytes())
 	r, err := zip.NewReader(reader, reader.Size())
 	require.NoError(t, err)
