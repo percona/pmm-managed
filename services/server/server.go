@@ -265,19 +265,19 @@ func (s *Server) onlyInstalledVersionResponse(ctx context.Context) *serverpb.Che
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	s.envRW.RLock()
-	updatesDisabled := s.envSettings.DisableUpdates
-	s.envRW.RUnlock()
+	// s.envRW.RLock()
+	// updatesDisabled := s.envSettings.DisableUpdates
+	// s.envRW.RUnlock()
 
 	if req.OnlyInstalledVersion {
 		return s.onlyInstalledVersionResponse(ctx), nil
 	}
 
-	if req.Force {
-		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-			return nil, err
-		}
-	}
+	//if req.Force {
+	//	if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
@@ -297,6 +297,7 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		LatestNewsUrl:   v.LatestNewsURL,
 	}
 
+	updatesDisabled := false
 	if updatesDisabled {
 		res.UpdateAvailable = false
 	}
