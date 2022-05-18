@@ -133,7 +133,6 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 		if err := logs.Zip(ctx, rw, usePprof); err != nil {
 			l.Errorf("%+v", err)
 		}
-
 	})
 }
 
