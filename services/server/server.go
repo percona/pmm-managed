@@ -279,40 +279,41 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	//	}
 	//}
 
-	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
-	if v == nil {
-		return nil, status.Error(codes.Unavailable, "failed to check for updates")
-	}
+	// v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
+	// if v == nil {
+	// 	return nil, status.Error(codes.Unavailable, "failed to check for updates")
+	// }
 
-	res := &serverpb.CheckUpdatesResponse{
-		Installed: &serverpb.VersionInfo{
-			Version:     v.Installed.Version,
-			FullVersion: v.Installed.FullVersion,
-		},
-		Latest: &serverpb.VersionInfo{
-			Version:     v.Latest.Version,
-			FullVersion: v.Latest.FullVersion,
-		},
-		UpdateAvailable: v.UpdateAvailable,
-		LatestNewsUrl:   v.LatestNewsURL,
-	}
+	// res := &serverpb.CheckUpdatesResponse{
+	// 	Installed: &serverpb.VersionInfo{
+	// 		Version:     v.Installed.Version,
+	// 		FullVersion: v.Installed.FullVersion,
+	// 	},
+	// 	Latest: &serverpb.VersionInfo{
+	// 		Version:     v.Latest.Version,
+	// 		FullVersion: v.Latest.FullVersion,
+	// 	},
+	// 	UpdateAvailable: v.UpdateAvailable,
+	// 	LatestNewsUrl:   v.LatestNewsURL,
+	// }
 
+	res := &serverpb.CheckUpdatesResponse{}
 	updatesDisabled := false
 	if updatesDisabled {
 		res.UpdateAvailable = false
 	}
 
-	res.LastCheck = timestamppb.New(lastCheck)
+	// res.LastCheck = timestamppb.New(lastCheck)
 
-	if v.Installed.BuildTime != nil {
-		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-		res.Installed.Timestamp = timestamppb.New(t)
-	}
+	// if v.Installed.BuildTime != nil {
+	// 	t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+	// 	res.Installed.Timestamp = timestamppb.New(t)
+	// }
 
-	if v.Latest.BuildTime != nil {
-		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-		res.Latest.Timestamp = timestamppb.New(t)
-	}
+	// if v.Latest.BuildTime != nil {
+	// 	t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+	// 	res.Latest.Timestamp = timestamppb.New(t)
+	// }
 
 	return res, nil
 }
