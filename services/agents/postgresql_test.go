@@ -73,7 +73,8 @@ func (s *PostgresExporterConfigTestSuite) SetupTest() {
 }
 
 func (s *PostgresExporterConfigTestSuite) TestConfig() {
-	actual := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	requireNoDuplicateFlags(s.T(), actual.Args)
 	s.Require().Equal(s.expected.Args, actual.Args)
@@ -86,7 +87,8 @@ func (s *PostgresExporterConfigTestSuite) TestDatabaseName() {
 		s.postgresql.DatabaseName = "db1"
 		s.expected.Env[0] = "DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/db1?connect_timeout=1&sslmode=disable"
 
-		actual := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+		actual, err := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+		s.Require().NoError(err)
 
 		s.Require().Equal(s.expected.Env, actual.Env)
 	})
@@ -103,7 +105,8 @@ func (s *PostgresExporterConfigTestSuite) TestDatabaseName() {
 func (s *PostgresExporterConfigTestSuite) TestEmptyPassword() {
 	s.exporter.Password = nil
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.Assert().Equal("DATA_SOURCE_NAME=postgres://username@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 }
@@ -111,7 +114,8 @@ func (s *PostgresExporterConfigTestSuite) TestEmptyPassword() {
 func (s *PostgresExporterConfigTestSuite) TestEmptyUsername() {
 	s.exporter.Username = nil
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.Assert().Equal("DATA_SOURCE_NAME=postgres://:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 }
@@ -120,7 +124,8 @@ func (s *PostgresExporterConfigTestSuite) TestEmptyUsernameAndPassword() {
 	s.exporter.Username = nil
 	s.exporter.Password = nil
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.Assert().Equal("DATA_SOURCE_NAME=postgres://1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 }
@@ -132,7 +137,8 @@ func (s *PostgresExporterConfigTestSuite) TestSocket() {
 	s.postgresql.Port = nil
 	s.postgresql.Socket = pointer.ToString("/var/run/postgres")
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.Assert().Equal("DATA_SOURCE_NAME=postgres:///postgres?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable", actual.Env[0])
 }
@@ -144,7 +150,8 @@ func (s *PostgresExporterConfigTestSuite) TestDisabledCollectors() {
 	s.postgresql.Socket = pointer.ToString("/var/run/postgres")
 	s.exporter.DisabledCollectors = []string{"custom_query.hr", "custom_query.hr.directory"}
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, exposeSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
@@ -177,7 +184,8 @@ func (s *PostgresExporterConfigTestSuite) TestAutoDiscovery() {
 		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
 	}
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.expected = &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
@@ -228,7 +236,8 @@ func (s *PostgresExporterConfigTestSuite) TestAzureTimeout() {
 		},
 	}
 
-	actual := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	actual, err := postgresExporterConfig(s.postgresql, s.exporter, redactSecrets, s.pmmAgentVersion)
+	s.Require().NoError(err)
 
 	s.expected = &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,

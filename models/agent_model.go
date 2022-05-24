@@ -496,7 +496,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 
 		u := &url.URL{
-			Scheme:   "postgres",
+			Scheme:   "postgresql",
 			Host:     address,
 			Path:     database,
 			RawQuery: q.Encode(),

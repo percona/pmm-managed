@@ -236,7 +236,11 @@ func (u *StateUpdater) sendSetStateRequest(ctx context.Context, agent *pmmAgentI
 				}
 				agentProcesses[row.AgentID] = cfg
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode, pmmAgentVersion)
+				config, err := postgresExporterConfig(service, row, redactMode, pmmAgentVersion)
+				if err != nil {
+					return errors.Wrap(err, "failed to create postgres exported config")
+				}
+				agentProcesses[row.AgentID] = config
 			case models.ProxySQLExporterType:
 				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.QANMySQLPerfSchemaAgentType:
