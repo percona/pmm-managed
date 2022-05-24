@@ -539,7 +539,13 @@ func CreatePMMAgent(q *reform.Querier, runsOnNodeID string, customLabels map[str
 }
 
 // CreateNodeExporter creates NodeExporter.
-func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string, pushMetrics bool, disableCollectors []string) (*Agent, error) {
+func CreateNodeExporter(q *reform.Querier,
+	pmmAgentID string,
+	customLabels map[string]string,
+	pushMetrics bool,
+	disableCollectors []string,
+	agentPassword *string,
+) (*Agent, error) {
 	// TODO merge into CreateAgent
 
 	id := "/agent_id/" + uuid.New().String()
@@ -562,6 +568,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 		NodeID:             pmmAgent.RunsOnNodeID,
 		PushMetrics:        pushMetrics,
 		DisabledCollectors: disableCollectors,
+		AgentPassword:      agentPassword,
 	}
 	if err := row.SetCustomLabels(customLabels); err != nil {
 		return nil, err
@@ -681,6 +688,7 @@ type CreateAgentParams struct {
 	AzureOptions                   *AzureOptions
 	PushMetrics                    bool
 	DisableCollectors              []string
+	LogLevel                       string
 }
 
 func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
@@ -827,6 +835,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AzureOptions:                   params.AzureOptions,
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
+		LogLevel:                       pointer.ToStringOrNil(params.LogLevel),
 	}
 
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
