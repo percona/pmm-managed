@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -933,6 +934,14 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	}
 
 	return a, nil
+}
+
+func SpecifyLogLevel(variant inventorypb.LogLevel) string {
+	if variant == inventorypb.LogLevel_auto {
+		return ""
+	}
+
+	return variant.String()
 }
 
 // updateExternalExporterParams updates RunsOnNodeID and PMMAgentID params

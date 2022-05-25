@@ -23,12 +23,15 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 func TestAzureExporterConfig(t *testing.T) {
+	pmmAgentVersion := version.MustParse("2.28.0")
+
 	node1 := &models.Node{
 		NodeID:    "/node_id/node1",
 		NodeType:  models.RemoteAzureDatabaseNodeType,
@@ -66,7 +69,7 @@ func TestAzureExporterConfig(t *testing.T) {
 		},
 	}
 
-	actual, err := azureDatabaseExporterConfig(agent, service1, redactSecrets)
+	actual, err := azureDatabaseExporterConfig(agent, service1, redactSecrets, pmmAgentVersion)
 	require.NoError(t, err)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_AZURE_DATABASE_EXPORTER,
