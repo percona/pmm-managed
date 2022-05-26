@@ -237,3 +237,10 @@ func (c *Client) StartMonitoring(ctx context.Context, in *controllerv1beta1.Star
 	defer c.connM.RUnlock()
 	return c.kubernetesClient.StartMonitoring(ctx, in, opts...)
 }
+
+// StartMonitoring sets up victoria metrics operator to monitor kubernetes cluster.
+func (c *Client) StopMonitoring(ctx context.Context, in *controllerv1beta1.StopMonitoringRequest, opts ...grpc.CallOption) (*controllerv1beta1.StopMonitoringResponse, error) {
+	c.connM.RLock()
+	defer c.connM.RUnlock()
+	return c.kubernetesClient.StopMonitoring(ctx, in, opts...)
+}
