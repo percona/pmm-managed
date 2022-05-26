@@ -111,8 +111,6 @@ func TestCheckUpdates(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	t.Skip("skipping updates test in GitHub actions")
-
 	// do not run this test in parallel with other tests
 	if !pmmapitests.RunUpdateTest {
 		t.Skip("skipping PMM Server update test")
