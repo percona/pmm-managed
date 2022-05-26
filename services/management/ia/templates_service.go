@@ -19,11 +19,8 @@ package ia
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -31,7 +28,6 @@ import (
 	"text/template"
 	"time"
 
-	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
@@ -49,12 +45,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/saasreq"
-	"github.com/percona/pmm-managed/utils/signatures"
+	"github.com/percona/pmm-managed/utils/portal"
 )
 
 const (
-	templatesDir = "/srv/ia/templates"
+	templatesDir         = "/srv/ia/templates"
+	portalRequestTimeout = 2 * time.Minute // time limit to get templates list from the portal
+
 )
 
 // templateInfo represents alerting rule template information from various sources.
@@ -72,6 +69,7 @@ type templateInfo struct {
 type TemplatesService struct {
 	db                *reform.DB
 	l                 *logrus.Entry
+	portalClient      *portal.Client
 	userTemplatesPath string
 
 	host       string
@@ -84,7 +82,7 @@ type TemplatesService struct {
 }
 
 // NewTemplatesService creates a new TemplatesService.
-func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
+func NewTemplatesService(db *reform.DB, portalClient *portal.Client) (*TemplatesService, error) {
 	l := logrus.WithField("component", "management/ia/templates")
 
 	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
@@ -92,7 +90,7 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 		l.Error(err)
 	}
 
-	host, err := envvars.GetSAASHost()
+	host, err := envvars.GetPlatformAddress()
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +98,7 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 	s := &TemplatesService{
 		db:                db,
 		l:                 l,
+		portalClient:      portalClient,
 		userTemplatesPath: templatesDir,
 		host:              host,
 		templates:         make(map[string]templateInfo),
@@ -382,7 +381,6 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 			},
 		)
 	}
-
 	return res, nil
 }
 
@@ -398,39 +396,13 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 		return nil, nil
 	}
 
-	s.l.Infof("Downloading templates from %s ...", s.host)
+	nCtx, cancel := context.WithTimeout(ctx, portalRequestTimeout)
+	defer cancel()
 
-	var accessToken string
-	if ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier); err == nil {
-		accessToken = ssoDetails.AccessToken.AccessToken
-	}
-
-	endpoint := fmt.Sprintf("https://%s/v1/check/GetAllAlertRuleTemplates", s.host)
-	bodyBytes, err := saasreq.MakeRequest(ctx, http.MethodPost, endpoint, accessToken, nil,
-		&saasreq.SaasRequestOptions{SkipTLSVerification: false})
+	templates, err := s.portalClient.GetTemplates(nCtx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to dial")
+		return nil, errors.WithStack(err)
 	}
-
-	var resp *api.GetAllAlertRuleTemplatesResponse
-	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
-		return nil, err
-	}
-
-	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {
-		return nil, err
-	}
-
-	// be liberal about files from SaaS for smooth transition to future versions
-	params := &alert.ParseParams{
-		DisallowUnknownFields:    false,
-		DisallowInvalidTemplates: false,
-	}
-	templates, err := alert.Parse(strings.NewReader(resp.File), params)
-	if err != nil {
-		return nil, err
-	}
-
 	return templates, nil
 }
 

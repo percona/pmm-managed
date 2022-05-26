@@ -37,6 +37,7 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/portal"
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
@@ -227,6 +228,11 @@ func TestListAlerts(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
+	portalClient, err := portal.NewClient(db)
+	require.NoError(t, err)
+	portalClient.SetAddress(devPortalAddress)
+	portalClient.SetPublicKeys([]string{devPortalPublicKey})
+
 	q := db.Querier
 	now := strfmt.DateTime(time.Now())
 
@@ -270,7 +276,7 @@ func TestListAlerts(t *testing.T) {
 	}
 	mockAlert.On("GetAlerts", ctx, mock.Anything).Return(mockedAlerts, nil)
 
-	tmplSvc, err := NewTemplatesService(db)
+	tmplSvc, err := NewTemplatesService(db, portalClient)
 	require.NoError(t, err)
 	tmplSvc.CollectTemplates(ctx)
 	svc := NewAlertsService(db, mockAlert, tmplSvc)

@@ -20,6 +20,7 @@ package envvars
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -32,9 +33,12 @@ import (
 )
 
 const (
-	defaultSaaSHost = "check.percona.com"
-	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
-	envPublicKey    = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	defaultSaaSHost      = "check.percona.com" // TODO remove
+	defaultPortalAddress = "https://check.percona.com"
+	envSaaSHost          = "PERCONA_TEST_SAAS_HOST" // TODO remove
+	envPortalAddress     = "PERCONA_TEST_PLATFORM_ADDRESS"
+	envPlatformInsecure  = "PERCONA_TEST_PLATFORM_INSECURE"
+	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
 	envTestDbaas              = "PERCONA_TEST_DBAAS"
 	envEnableDbaas            = "ENABLE_DBAAS"
@@ -230,17 +234,34 @@ func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
 	return duration
 }
 
-// GetSAASHost returns SaaS host env variable value if it's present and valid.
+// GetPlatformAddress returns SaaS host env variable value if it's present and valid.
 // Otherwise returns defaultSaaSHost.
-func GetSAASHost() (string, error) {
-	v := os.Getenv(envSaaSHost)
-	host, err := parseSAASHost(v)
-	if err != nil {
-		return "", err
+func GetPlatformAddress() (string, error) {
+	address := os.Getenv(envPortalAddress)
+	if address == "" {
+		logrus.Infof("Using default Percona Portal address %q.", defaultPortalAddress)
+		return defaultPortalAddress, nil
 	}
 
-	logrus.Infof("Using SaaS host %q.", host)
-	return host, nil
+	u, err := url.Parse(address)
+	if err != nil {
+		return "", errors.Errorf("invalid percona portal address: %s", err)
+	}
+	if u.Scheme == "" {
+		return "", errors.Errorf("invalid percona portal address: %s - missing protocol scheme", address)
+	}
+	if u.Host == "" {
+		return "", errors.Errorf("invalid percona platform address: %s - missing host", address)
+	}
+
+	logrus.Infof("Using Percona Portal address %q.", address)
+	return address, nil
+}
+
+func GetPlatformInsecure() bool {
+	insecure, _ := strconv.ParseBool(os.Getenv(envPlatformInsecure))
+
+	return insecure
 }
 
 // GetPublicKeys returns public keys used to dowload checks from SaaS.
