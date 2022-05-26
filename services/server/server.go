@@ -265,19 +265,19 @@ func (s *Server) onlyInstalledVersionResponse(ctx context.Context) *serverpb.Che
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	// s.envRW.RLock()
-	// updatesDisabled := s.envSettings.DisableUpdates
-	// s.envRW.RUnlock()
+	s.envRW.RLock()
+	updatesDisabled := s.envSettings.DisableUpdates
+	s.envRW.RUnlock()
 
 	if req.OnlyInstalledVersion {
 		return s.onlyInstalledVersionResponse(ctx), nil
 	}
 
-	//if req.Force {
-	//	if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-	//		return nil, err
-	//	}
-	//}
+	if req.Force {
+		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
+			return nil, err
+		}
+	}
 
 	// v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	// if v == nil {
@@ -298,22 +298,22 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	// }
 
 	res := &serverpb.CheckUpdatesResponse{}
-	updatesDisabled := false
+	updatesDisabled = false
 	if updatesDisabled {
 		res.UpdateAvailable = false
 	}
 
 	// res.LastCheck = timestamppb.New(lastCheck)
 
-	// if v.Installed.BuildTime != nil {
-	// 	t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-	// 	res.Installed.Timestamp = timestamppb.New(t)
-	// }
-
-	// if v.Latest.BuildTime != nil {
-	// 	t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-	// 	res.Latest.Timestamp = timestamppb.New(t)
-	// }
+	//	if v.Installed.BuildTime != nil {
+	//		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+	//		res.Installed.Timestamp = timestamppb.New(t)
+	//	}
+	//
+	//	if v.Latest.BuildTime != nil {
+	//		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+	//		res.Latest.Timestamp = timestamppb.New(t)
+	//	}
 
 	return res, nil
 }
