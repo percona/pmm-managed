@@ -447,6 +447,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			PmmAgentId:      pointer.GetString(agent.PMMAgentID),
 			Status:          inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
 			ProcessExecPath: processExecPath,
+			ListenPort:      uint32(pointer.GetUint16(agent.ListenPort)),
 		}, nil
 
 	default:
