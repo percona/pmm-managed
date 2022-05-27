@@ -70,7 +70,7 @@ func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 }
 
 // Zip creates .zip archive with all logs.
-func (l *Logs) Zip(ctx context.Context, w io.Writer, pprof bool) error {
+func (l *Logs) Zip(ctx context.Context, w io.Writer, pprofSettings *pprofUtils.Config) error {
 	start := time.Now()
 	log := logger.Get(ctx).WithField("component", "logs")
 	log.WithField("d", time.Since(start).Seconds()).Info("Starting...")
@@ -81,13 +81,12 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer, pprof bool) error {
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 
-	files := l.files(ctx, pprof)
+	files := l.files(ctx, pprofSettings)
 	log.WithField("d", time.Since(start).Seconds()).Infof("Collected %d files.", len(files))
 
 	for _, file := range files {
 		if ctx.Err() != nil {
 			log.WithField("d", time.Since(start).Seconds()).Warnf("%s; skipping the rest of the files", ctx.Err())
-			log.WithField("d", time.Since(start).Seconds()).Infof("%s; skipping the rest of the files", ctx.Err())
 			break
 		}
 
@@ -130,7 +129,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer, pprof bool) error {
 }
 
 // files reads log/config/pprof files and returns content.
-func (l *Logs) files(ctx context.Context, pprof bool) []fileContent {
+func (l *Logs) files(ctx context.Context, pprofSettings *pprofUtils.Config) []fileContent {
 	files := make([]fileContent, 0, 20)
 
 	// add logs
@@ -217,29 +216,25 @@ func (l *Logs) files(ctx context.Context, pprof bool) []fileContent {
 	})
 
 	// add pprof
-	// TODO: consider replacing writer with bytes[] in pprofUtils
-	if pprof {
-		var traceBuf bytes.Buffer
-		err = pprofUtils.Trace(&traceBuf, 10)
+	if pprofSettings != nil {
+		traceBytes, err := pprofUtils.Trace(pprofSettings.TraceDuration)
 		files = append(files, fileContent{
 			Name: "pprof/trace.out",
-			Data: traceBuf.Bytes(),
+			Data: traceBytes,
 			Err:  err,
 		})
 
-		var profileBuf bytes.Buffer
-		err = pprofUtils.Profile(&profileBuf, 60)
+		profileBytes, err := pprofUtils.Profile(pprofSettings.ProfileDuration)
 		files = append(files, fileContent{
 			Name: "pprof/profile.pb.gz",
-			Data: profileBuf.Bytes(),
+			Data: profileBytes,
 			Err:  err,
 		})
 
-		var heapBuf bytes.Buffer
-		err = pprofUtils.Heap(&heapBuf, true)
+		heapBytes, err := pprofUtils.Heap(true)
 		files = append(files, fileContent{
 			Name: "pprof/heap.pb.gz",
-			Data: heapBuf.Bytes(),
+			Data: heapBytes,
 			Err:  err,
 		})
 	}

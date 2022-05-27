@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm-managed/utils/pprof"
 )
 
 var commonExpectedFiles = []string{
@@ -55,6 +56,9 @@ var commonExpectedFiles = []string{
 	"pmm.conf",
 	"pmm.ini",
 	"postgresql.log",
+	"pprof/heap.pb.gz",
+	"pprof/profile.pb.gz",
+	"pprof/trace.out",
 	"qan-api2.ini",
 	"qan-api2.log",
 	"supervisorctl_status.log",
@@ -124,7 +128,10 @@ func TestFiles(t *testing.T) {
 	l := NewLogs("2.4.5", checker)
 	ctx := logger.Set(context.Background(), t.Name())
 
-	files := l.files(ctx, false)
+	files := l.files(ctx, &pprof.Config{
+		ProfileDuration: 1 * time.Second,
+		TraceDuration:   1 * time.Second,
+	})
 	actual := make([]string, 0, len(files))
 	for _, f := range files {
 		// present only after update
@@ -157,7 +164,10 @@ func TestZip(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
 	var buf bytes.Buffer
-	require.NoError(t, l.Zip(ctx, &buf, false))
+	require.NoError(t, l.Zip(ctx, &buf, &pprof.Config{
+		ProfileDuration: 1 * time.Second,
+		TraceDuration:   1 * time.Second,
+	}))
 	reader := bytes.NewReader(buf.Bytes())
 	r, err := zip.NewReader(reader, reader.Size())
 	require.NoError(t, err)

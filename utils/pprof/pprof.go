@@ -17,8 +17,8 @@
 package pprof
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
@@ -27,45 +27,53 @@ import (
 
 // Profile responds with the pprof-formatted cpu profile.
 // Profiling lasts for duration specified in seconds.
-func Profile(writer io.Writer, duration int64) error {
-	if err := pprof.StartCPUProfile(writer); err != nil {
-		return err
+func Profile(duration time.Duration) ([]byte, error) {
+	var profileBuf bytes.Buffer
+	if err := pprof.StartCPUProfile(&profileBuf); err != nil {
+		return nil, err
 	}
 
-	time.Sleep(time.Duration(duration) * time.Second)
+	time.Sleep(duration)
 	pprof.StopCPUProfile()
 
-	return nil
+	return profileBuf.Bytes(), nil
 }
 
 // Trace responds with the execution trace in binary form.
 // Tracing lasts for duration specified in seconds.
-func Trace(writer io.Writer, duration int64) error {
-	if err := trace.Start(writer); err != nil {
-		return err
+func Trace(duration time.Duration) ([]byte, error) {
+	var traceBuf bytes.Buffer
+	if err := trace.Start(&traceBuf); err != nil {
+		return nil, err
 	}
 
-	time.Sleep(time.Duration(duration) * time.Second)
+	time.Sleep(duration)
 	trace.Stop()
 
-	return nil
+	return traceBuf.Bytes(), nil
 }
 
 // Heap responds with the pprof-formatted profile named "heap".
 // listing the available profiles.
 // You can specify the gc parameter to run gc before taking the heap sample.
-func Heap(writer io.Writer, gc bool) error {
+func Heap(gc bool) ([]byte, error) {
+	var heapBuf bytes.Buffer
 	debug := 0
 	profile := "heap"
 
 	p := pprof.Lookup(profile)
 	if p == nil {
-		return fmt.Errorf("profile cannot be found: %s", profile)
+		return nil, fmt.Errorf("profile cannot be found: %s", profile)
 	}
 
 	if gc {
 		runtime.GC()
 	}
 
-	return p.WriteTo(writer, debug)
+	err := p.WriteTo(&heapBuf, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return heapBuf.Bytes(), nil
 }

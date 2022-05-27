@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,11 +28,10 @@ import (
 func TestHeap(t *testing.T) {
 	t.Parallel()
 	t.Run("Heap test", func(t *testing.T) {
-		var heapBuf bytes.Buffer
-		err := Heap(&heapBuf, true)
+		heapBytes, err := Heap(true)
 
 		// read gzip
-		reader, err := gzip.NewReader(&heapBuf)
+		reader, err := gzip.NewReader(bytes.NewBuffer(heapBytes))
 		assert.NoError(t, err)
 
 		var resB bytes.Buffer
@@ -44,14 +44,13 @@ func TestHeap(t *testing.T) {
 func TestProfile(t *testing.T) {
 	t.Parallel()
 	t.Run("Profile test", func(t *testing.T) {
-		var profileBuf bytes.Buffer
-		err := Profile(&profileBuf, 1)
+		profileBytes, err := Profile(1 * time.Second)
 
 		assert.NoError(t, err)
-		assert.True(t, len(profileBuf.Bytes()) != 0)
+		assert.True(t, len(profileBytes) != 0)
 
 		// read gzip
-		reader, err := gzip.NewReader(&profileBuf)
+		reader, err := gzip.NewReader(bytes.NewBuffer(profileBytes))
 		assert.NoError(t, err)
 
 		var resB bytes.Buffer
@@ -65,10 +64,9 @@ func TestProfile(t *testing.T) {
 func TestTrace(t *testing.T) {
 	t.Parallel()
 	t.Run("Trace test", func(t *testing.T) {
-		var traceBuf bytes.Buffer
-		err := Trace(&traceBuf, 1)
+		traceBytes, err := Trace(1 * time.Second)
 
 		assert.NoError(t, err)
-		assert.True(t, len(traceBuf.Bytes()) != 0)
+		assert.True(t, len(traceBytes) != 0)
 	})
 }
