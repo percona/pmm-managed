@@ -133,7 +133,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			}
 		}
 
-		if rule != nil && len(rule.Filters) > 0 {
+		if rule != nil && len(rule.Filters) != 0 {
 			pass, err := satisfiesFilters(alert, rule.Filters)
 			if err != nil {
 				return nil, err
