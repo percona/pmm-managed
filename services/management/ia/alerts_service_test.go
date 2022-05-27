@@ -252,13 +252,25 @@ func TestListAlerts(t *testing.T) {
 	const alertsCount = 25
 	mockAlert := &mockAlertManager{}
 	var mockedAlerts []*ammodels.GettableAlert
+
+	// We use this function to emulate user have created a rule that doesn't exist in DB and have no label "alertname",
+	// but user still want to see such alerts in IA UI.
+	chooseLabels := func(i int) map[string]string {
+		if i != 0 {
+			return map[string]string{
+				"ia":        "1",
+				"alertname": rule.ID,
+			}
+		}
+		return map[string]string{
+			"ia": "1",
+		}
+	}
+
 	for i := 0; i < alertsCount; i++ {
 		mockedAlerts = append(mockedAlerts, &ammodels.GettableAlert{
 			Alert: ammodels.Alert{
-				Labels: map[string]string{
-					"ia":        "1",
-					"alertname": rule.ID,
-				},
+				Labels: chooseLabels(i),
 			},
 			Fingerprint: pointer.ToString(strconv.Itoa(i)),
 			Status: &ammodels.AlertStatus{
