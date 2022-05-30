@@ -253,24 +253,13 @@ func TestListAlerts(t *testing.T) {
 	mockAlert := &mockAlertManager{}
 	var mockedAlerts []*ammodels.GettableAlert
 
-	// We use this function to emulate user have created a rule that doesn't exist in DB and have no label "alertname",
-	// but user still want to see such alerts in IA UI.
-	chooseLabels := func(i int) map[string]string {
-		if i != 0 {
-			return map[string]string{
-				"ia":        "1",
-				"alertname": rule.ID,
-			}
-		}
-		return map[string]string{
-			"ia": "1",
-		}
-	}
-
-	for i := 0; i < alertsCount; i++ {
+	for i := 0; i < alertsCount-1; i++ {
 		mockedAlerts = append(mockedAlerts, &ammodels.GettableAlert{
 			Alert: ammodels.Alert{
-				Labels: chooseLabels(i),
+				Labels: map[string]string{
+					"ia":        "1",
+					"alertname": rule.ID,
+				},
 			},
 			Fingerprint: pointer.ToString(strconv.Itoa(i)),
 			Status: &ammodels.AlertStatus{
@@ -280,6 +269,23 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
+
+	// This additional alert emulates the one created by user directly, without IA UI.
+	// Since user added "ia" label, he wants to see alert in IA UI. We want to be sure he will.
+	mockedAlerts = append(mockedAlerts, &ammodels.GettableAlert{
+		Alert: ammodels.Alert{
+			Labels: map[string]string{
+				"ia": "1",
+			},
+		},
+		Fingerprint: pointer.ToString(strconv.Itoa(alertsCount - 1)),
+		Status: &ammodels.AlertStatus{
+			State: pointer.ToString("active"),
+		},
+		StartsAt:  &now,
+		UpdatedAt: &now,
+	})
+
 	mockAlert.On("GetAlerts", ctx, mock.Anything).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
