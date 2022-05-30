@@ -707,6 +707,14 @@ var databaseSchema = [][]string{
 	61: {
 		`UPDATE settings SET settings = settings #- '{sass, stt_enabled}';`,
 	},
+	62: {
+		`ALTER TABLE agents
+		ADD COLUMN process_exec_path TEXT`,
+	},
+	63: {
+		`ALTER TABLE agents
+			ADD COLUMN log_level VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
