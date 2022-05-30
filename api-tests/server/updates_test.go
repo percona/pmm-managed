@@ -40,9 +40,10 @@ func TestCheckUpdates(t *testing.T) {
 	// that call should always be fast
 	version, err := serverClient.Default.Server.Version(server.NewVersionParamsWithTimeout(fast))
 	require.NoError(t, err)
-	if version.Payload.Server == nil || version.Payload.Server.Version == "" {
-		t.Skip("skipping test in developer's environment")
-	}
+	assert.NotEmpty(t, version)
+	// if version.Payload.Server == nil || version.Payload.Server.Version == "" {
+	// 	t.Skip("skipping test in developer's environment")
+	// }
 
 	params := &server.CheckUpdatesParams{
 		Context: pmmapitests.Context,
