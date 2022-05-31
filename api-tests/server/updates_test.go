@@ -18,6 +18,7 @@ package server
 
 import (
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -41,9 +42,9 @@ func TestCheckUpdates(t *testing.T) {
 	version, err := serverClient.Default.Server.Version(server.NewVersionParamsWithTimeout(fast))
 	require.NoError(t, err)
 	assert.NotEmpty(t, version)
-	// if version.Payload.Server == nil || version.Payload.Server.Version == "" {
-	// 	t.Skip("skipping test in developer's environment")
-	// }
+	if version.Payload.Server == nil || version.Payload.Server.Version == "" {
+		t.Skip("skipping test in developer's environment")
+	}
 
 	params := &server.CheckUpdatesParams{
 		Context: pmmapitests.Context,
@@ -95,6 +96,9 @@ func TestCheckUpdates(t *testing.T) {
 	})
 
 	t.Run("Force", func(t *testing.T) {
+		if os.Getenv("IS_JENKINS") != "" {
+			t.Skip("Skipping testing in Jenkins")
+		}
 		params = &server.CheckUpdatesParams{
 			Body: server.CheckUpdatesBody{
 				Force: true,
