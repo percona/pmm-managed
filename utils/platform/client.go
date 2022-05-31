@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package portal implements HTTP client for Percona Portal.
-package portal
+// Package platform implements HTTP client for Percona Platform.
+package platform
 
 import (
 	"bytes"
@@ -44,7 +44,8 @@ import (
 	"github.com/percona/pmm-managed/utils/signatures"
 )
 
-// Client is HTTP Percona Portal client.
+// Client is HTTP Percona Platform client.
+// TODO: Replace this client with generated one https://jira.percona.com/browse/SAAS-956
 type Client struct {
 	db *reform.DB
 
@@ -54,7 +55,7 @@ type Client struct {
 	publicKeys []string
 }
 
-// NewClient creates new Percona Portal client.
+// NewClient creates new Percona Platform client.
 func NewClient(db *reform.DB) (*Client, error) {
 	l := logrus.WithField("component", "portal client")
 
@@ -96,7 +97,7 @@ func (c *Client) SetPublicKeys(keys []string) {
 	c.publicKeys = keys
 }
 
-// GetChecks download checks from Percona Portal. It also validates content and checks signatures.
+// GetChecks download checks from Percona Platform. It also validates content and checks signatures.
 func (c *Client) GetChecks(ctx context.Context) ([]check.Check, error) {
 	const path = "/v1/check/GetAllChecks"
 
@@ -134,7 +135,7 @@ func (c *Client) GetChecks(ctx context.Context) ([]check.Check, error) {
 	return checks, nil
 }
 
-// GetTemplates download templates from Percona Portal. It also validates content and checks signatures.
+// GetTemplates download templates from Percona Platform. It also validates content and checks signatures.
 func (c *Client) GetTemplates(ctx context.Context) ([]alert.Template, error) {
 	const path = "/v1/check/GetAllAlertRuleTemplates"
 
@@ -171,7 +172,7 @@ func (c *Client) GetTemplates(ctx context.Context) ([]alert.Template, error) {
 	return templates, nil
 }
 
-// SendTelemetry sends telemetry data to Percona Portal.
+// SendTelemetry sends telemetry data to Percona Platform.
 func (c *Client) SendTelemetry(ctx context.Context, report *reporter.ReportRequest) error {
 	const path = "/v1/telemetry/Report"
 
@@ -193,7 +194,7 @@ func (c *Client) SendTelemetry(ctx context.Context, report *reporter.ReportReque
 	return nil
 }
 
-// Connect send connect request to Percona Portal.
+// Connect send connect request to Percona Platform.
 func (c *Client) Connect(ctx context.Context, accessToken, pmmServerID, pmmServerName, pmmServerURL, pmmServerOAuthCallbackURL string) (*ConnectPMMResponse, error) {
 	const path = "/v1/orgs/inventory"
 
@@ -228,7 +229,7 @@ func (c *Client) Connect(ctx context.Context, accessToken, pmmServerID, pmmServe
 	return &resp, nil
 }
 
-// Disconnect send disconnect request to Percona Portal.
+// Disconnect send disconnect request to Percona Platform.
 func (c *Client) Disconnect(ctx context.Context, accessToken, pmmServerID string) error {
 	const path = "/v1/orgs/inventory/%s:disconnect"
 

@@ -93,7 +93,7 @@ import (
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/portal"
+	platformClient "github.com/percona/pmm-managed/utils/platform"
 )
 
 const (
@@ -131,7 +131,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 type gRPCServerDeps struct {
 	db                   *reform.DB
 	vmdb                 *victoriametrics.Service
-	portalClient         *portal.Client
+	portalClient         *platformClient.Client
 	server               *server.Server
 	agentsRegistry       *agents.Registry
 	handler              *agents.Handler
@@ -691,7 +691,7 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
 
-	portalClient, err := portal.NewClient(db)
+	portalClient, err := platformClient.NewClient(db)
 	if err != nil {
 		l.Fatalf("Could not create Percona Portal client: %s", err)
 	}

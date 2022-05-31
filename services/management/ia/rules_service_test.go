@@ -37,7 +37,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
-	"github.com/percona/pmm-managed/utils/portal"
+	"github.com/percona/pmm-managed/utils/platform"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
@@ -47,7 +47,7 @@ func TestCreateAlertRule(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	portalClient, err := portal.NewClient(db)
+	portalClient, err := platform.NewClient(db)
 	require.NoError(t, err)
 	portalClient.SetAddress(devPortalAddress)
 	portalClient.SetPublicKeys([]string{devPortalPublicKey})

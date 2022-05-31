@@ -19,7 +19,6 @@ package envvars
 
 import (
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -33,10 +32,8 @@ import (
 )
 
 const (
-	defaultSaaSHost      = "check.percona.com" // TODO remove
 	defaultPortalAddress = "https://check.percona.com"
-	envSaaSHost          = "PERCONA_TEST_SAAS_HOST" // TODO remove
-	envPortalAddress     = "PERCONA_TEST_PLATFORM_ADDRESS"
+	envPlatformAddress   = "PERCONA_TEST_PLATFORM_ADDRESS"
 	envPlatformInsecure  = "PERCONA_TEST_PLATFORM_INSECURE"
 	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
@@ -146,8 +143,8 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
 
-		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
-			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
+		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST", "PERCONA_TEST_SAAS_HOST":
+			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envPlatformAddress)
 
 		case "PMM_PUBLIC_ADDRESS":
 			envSettings.PMMPublicAddress = v
@@ -244,10 +241,10 @@ func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
 	return duration
 }
 
-// GetPlatformAddress returns SaaS host env variable value if it's present and valid.
-// Otherwise returns defaultSaaSHost.
+// GetPlatformAddress returns Percona Platform address env variable value if it's present and valid.
+// Otherwise returns default Percona Platform address.
 func GetPlatformAddress() (string, error) {
-	address := os.Getenv(envPortalAddress)
+	address := os.Getenv(envPlatformAddress)
 	if address == "" {
 		logrus.Infof("Using default Percona Portal address %q.", defaultPortalAddress)
 		return defaultPortalAddress, nil
@@ -268,6 +265,7 @@ func GetPlatformAddress() (string, error) {
 	return address, nil
 }
 
+// GetPlatformInsecure returns true if invalid/self-signed TLS certificates allowed. Default is false.
 func GetPlatformInsecure() bool {
 	insecure, _ := strconv.ParseBool(os.Getenv(envPlatformInsecure))
 
@@ -281,26 +279,6 @@ func GetPublicKeys() []string {
 	}
 
 	return nil
-}
-
-// parseSAASHost parses, validates and returns SAAS host, otherwise returns error.
-func parseSAASHost(v string) (string, error) {
-	if v == "" {
-		logrus.Infof("Using default SaaS host %q.", defaultSaaSHost)
-		return defaultSaaSHost, nil
-	}
-	if strings.HasPrefix(v, ":") {
-		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, v)
-	}
-
-	host, _, err := net.SplitHostPort(v)
-	if err != nil && strings.Count(v, ":") >= 1 {
-		return "", err
-	}
-	if host == "" {
-		host = v
-	}
-	return host, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {

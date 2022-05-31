@@ -37,7 +37,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/portal"
+	"github.com/percona/pmm-managed/utils/platform"
 )
 
 const (
@@ -49,7 +49,7 @@ const (
 type Service struct {
 	db                  *reform.DB
 	l                   *logrus.Entry
-	portalClient        *portal.Client
+	portalClient        *platform.Client
 	start               time.Time
 	config              ServiceConfig
 	dsRegistry          DataSourceLocator
@@ -70,7 +70,7 @@ var (
 )
 
 // NewService creates a new service.
-func NewService(db *reform.DB, portalClient *portal.Client, pmmVersion string, config ServiceConfig) (*Service, error) {
+func NewService(db *reform.DB, portalClient *platform.Client, pmmVersion string, config ServiceConfig) (*Service, error) {
 	if config.SaasHostname == "" {
 		return nil, errors.New("empty host")
 	}

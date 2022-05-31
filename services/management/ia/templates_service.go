@@ -45,7 +45,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/portal"
+	"github.com/percona/pmm-managed/utils/platform"
 )
 
 const (
@@ -69,7 +69,7 @@ type templateInfo struct {
 type TemplatesService struct {
 	db                *reform.DB
 	l                 *logrus.Entry
-	portalClient      *portal.Client
+	portalClient      *platform.Client
 	userTemplatesPath string
 
 	host       string
@@ -82,7 +82,7 @@ type TemplatesService struct {
 }
 
 // NewTemplatesService creates a new TemplatesService.
-func NewTemplatesService(db *reform.DB, portalClient *portal.Client) (*TemplatesService, error) {
+func NewTemplatesService(db *reform.DB, portalClient *platform.Client) (*TemplatesService, error) {
 	l := logrus.WithField("component", "management/ia/templates")
 
 	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)

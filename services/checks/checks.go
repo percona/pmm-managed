@@ -47,7 +47,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
-	"github.com/percona/pmm-managed/utils/portal"
+	"github.com/percona/pmm-managed/utils/platform"
 )
 
 const (
@@ -86,7 +86,7 @@ var (
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
-	portalClient        *portal.Client
+	portalClient        *platform.Client
 	agentsRegistry      agentsRegistry
 	alertmanagerService alertmanagerService
 	db                  *reform.DB
@@ -111,7 +111,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(db *reform.DB, portalClient *portal.Client, agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, VMAddress string) (*Service, error) {
+func New(db *reform.DB, portalClient *platform.Client, agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, VMAddress string) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
 	resendInterval := defaultResendInterval

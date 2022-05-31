@@ -33,7 +33,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/grafana"
-	"github.com/percona/pmm-managed/utils/portal"
+	"github.com/percona/pmm-managed/utils/platform"
 )
 
 const rollbackFailed = "Failed to rollback:"
@@ -44,7 +44,7 @@ var errGetSSODetailsFailed = status.Error(codes.Aborted, "Failed to fetch SSO de
 type Service struct {
 	db            *reform.DB
 	l             *logrus.Entry
-	portalClient  *portal.Client
+	client        *platform.Client
 	grafanaClient grafanaClient
 	supervisord   supervisordService
 	checksService checksService
@@ -53,12 +53,12 @@ type Service struct {
 }
 
 // New returns platform Service.
-func New(portalClient *portal.Client, db *reform.DB, supervisord supervisordService, checksService checksService, grafanaClient grafanaClient) (*Service, error) {
+func New(client *platform.Client, db *reform.DB, supervisord supervisordService, checksService checksService, grafanaClient grafanaClient) (*Service, error) {
 	l := logrus.WithField("component", "platform")
 
 	s := Service{
 		db:            db,
-		portalClient:  portalClient,
+		client:        client,
 		l:             l,
 		supervisord:   supervisord,
 		checksService: checksService,
@@ -87,7 +87,7 @@ func (s *Service) Connect(ctx context.Context, req *platformpb.ConnectRequest) (
 	pmmServerURL := fmt.Sprintf("https://%s/graph", settings.PMMPublicAddress)
 	pmmServerOAuthCallbackURL := fmt.Sprintf("%s/login/generic_oauth", pmmServerURL)
 
-	resp, err := s.portalClient.Connect(ctx, req.PersonalAccessToken, settings.PMMServerID, req.ServerName, pmmServerURL, pmmServerOAuthCallbackURL)
+	resp, err := s.client.Connect(ctx, req.PersonalAccessToken, settings.PMMServerID, req.ServerName, pmmServerURL, pmmServerOAuthCallbackURL)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (s *Service) Disconnect(ctx context.Context, req *platformpb.DisconnectRequ
 		return nil, err
 	}
 
-	err = s.portalClient.Disconnect(ctx, userAccessToken, settings.PMMServerID)
+	err = s.client.Disconnect(ctx, userAccessToken, settings.PMMServerID)
 	needRecover := err != nil && !req.Force
 
 	if needRecover {
@@ -217,7 +217,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 		return nil, errGetSSODetailsFailed
 	}
 
-	resp, err := s.portalClient.SearchOrgTickets(ctx, accessToken, ssoDetails.OrganizationID)
+	resp, err := s.client.SearchOrgTickets(ctx, accessToken, ssoDetails.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (s *Service) SearchOrganizationTickets(ctx context.Context, req *platformpb
 	return response, nil
 }
 
-func convertTicket(t *portal.TicketResponse) (*platformpb.OrganizationTicket, error) {
+func convertTicket(t *platform.TicketResponse) (*platformpb.OrganizationTicket, error) {
 	createTime, err := time.Parse(time.RFC3339, t.CreateTime)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 		return nil, errGetSSODetailsFailed
 	}
 
-	resp, err := s.portalClient.SearchOrgEntitlements(ctx, accessToken, ssoDetails.OrganizationID)
+	resp, err := s.client.SearchOrgEntitlements(ctx, accessToken, ssoDetails.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +289,7 @@ func (s *Service) SearchOrganizationEntitlements(ctx context.Context, req *platf
 	return response, nil
 }
 
-func convertEntitlement(ent *portal.EntitlementResponse) (*platformpb.OrganizationEntitlement, error) {
+func convertEntitlement(ent *platform.EntitlementResponse) (*platformpb.OrganizationEntitlement, error) {
 	startDate, err := time.Parse(time.RFC3339, ent.StartDate)
 	if err != nil {
 		return nil, err
@@ -336,7 +336,7 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 		return nil, status.Error(codes.Aborted, "PMM server is not connected to Portal")
 	}
 
-	resp, err := s.portalClient.GetContactInformation(ctx, accessToken, ssoDetails.OrganizationID)
+	resp, err := s.client.GetContactInformation(ctx, accessToken, ssoDetails.OrganizationID)
 
 	response := &platformpb.GetContactInformationResponse{
 		CustomerSuccess: &platformpb.GetContactInformationResponse_CustomerSuccess{
