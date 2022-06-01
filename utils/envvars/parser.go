@@ -32,14 +32,14 @@ import (
 )
 
 const (
-	defaultPortalAddress = "https://check.percona.com"
-	envPlatformAddress   = "PERCONA_TEST_PLATFORM_ADDRESS"
-	envPlatformInsecure  = "PERCONA_TEST_PLATFORM_INSECURE"
-	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	defaultPlatformAddress = "https://check.percona.com"
+	envPlatformAddress     = "PERCONA_TEST_PLATFORM_ADDRESS"
+	envPlatformInsecure    = "PERCONA_TEST_PLATFORM_INSECURE"
+	envPlatformPublicKey   = "PERCONA_TEST_PLATFORM_PUBLIC_KEY"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
 	envTestDbaas              = "PERCONA_TEST_DBAAS"
 	envEnableDbaas            = "ENABLE_DBAAS"
-	envPlatfromAPITimeout     = "PERCONA_PLATFORM_API_TIMEOUT"
+	envPlatformAPITimeout     = "PERCONA_PLATFORM_API_TIMEOUT"
 	defaultPlatformAPITimeout = 30 * time.Second
 )
 
@@ -146,6 +146,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST", "PERCONA_TEST_SAAS_HOST":
 			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envPlatformAddress)
 
+		case "PERCONA_TEST_CHECKS_PUBLIC_KEY":
+			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envPlatformPublicKey)
+
 		case "PMM_PUBLIC_ADDRESS":
 			envSettings.PMMPublicAddress = v
 
@@ -161,7 +164,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				warns = append(warns, fmt.Sprintf("environment variable %q IS DEPRECATED AND WILL BE REMOVED, USE %q INSTEAD", envTestDbaas, envEnableDbaas))
 			}
 
-		case envPlatfromAPITimeout:
+		case envPlatformAPITimeout:
 			// This variable is not part of the settings and is parsed separately.
 			continue
 
@@ -221,7 +224,7 @@ func parseStringDuration(value string) (time.Duration, error) {
 
 func parsePlatformAPITimeout(d string) (time.Duration, string) {
 	if d == "" {
-		msg := fmt.Sprintf("Environment variable %q is not set, using %q as a default timeout for platform API.", envPlatfromAPITimeout, defaultPlatformAPITimeout.String())
+		msg := fmt.Sprintf("Environment variable %q is not set, using %q as a default timeout for platform API.", envPlatformAPITimeout, defaultPlatformAPITimeout.String())
 		return defaultPlatformAPITimeout, msg
 	}
 	duration, err := parseStringDuration(d)
@@ -235,7 +238,7 @@ func parsePlatformAPITimeout(d string) (time.Duration, string) {
 
 // GetPlatformAPITimeout returns timeout duration for requests to Platform.
 func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
-	d := os.Getenv(envPlatfromAPITimeout)
+	d := os.Getenv(envPlatformAPITimeout)
 	duration, msg := parsePlatformAPITimeout(d)
 	l.Info(msg)
 	return duration
@@ -246,19 +249,12 @@ func GetPlatformAPITimeout(l *logrus.Entry) time.Duration {
 func GetPlatformAddress() (string, error) {
 	address := os.Getenv(envPlatformAddress)
 	if address == "" {
-		logrus.Infof("Using default Percona Portal address %q.", defaultPortalAddress)
-		return defaultPortalAddress, nil
+		logrus.Infof("Using default Percona Platform address %q.", defaultPlatformAddress)
+		return defaultPlatformAddress, nil
 	}
 
-	u, err := url.Parse(address)
-	if err != nil {
-		return "", errors.Errorf("invalid percona portal address: %s", err)
-	}
-	if u.Scheme == "" {
-		return "", errors.Errorf("invalid percona portal address: %s - missing protocol scheme", address)
-	}
-	if u.Host == "" {
-		return "", errors.Errorf("invalid percona platform address: %s - missing host", address)
+	if _, err := url.Parse(address); err != nil {
+		return "", errors.Errorf("invalid percona platform address: %s", err)
 	}
 
 	logrus.Infof("Using Percona Portal address %q.", address)
@@ -274,7 +270,7 @@ func GetPlatformInsecure() bool {
 
 // GetPublicKeys returns public keys used to dowload checks from SaaS.
 func GetPublicKeys() []string {
-	if v := os.Getenv(envPublicKey); v != "" {
+	if v := os.Getenv(envPlatformPublicKey); v != "" {
 		return strings.Split(v, ",")
 	}
 

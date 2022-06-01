@@ -156,31 +156,6 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 	})
 
-	t.Run("Parse SAAS host", func(t *testing.T) {
-		t.Parallel()
-
-		userCase := []struct {
-			value   string
-			err     string
-			respVal string
-		}{
-			{value: "host", err: "", respVal: "host"},
-			{value: ":111", err: `environment variable "PERCONA_TEST_SAAS_HOST" has invalid format ":111". Expected host[:port]`, respVal: ""},
-			{value: "host:555", err: "", respVal: "host"},
-			{value: "[2001:cafe:8221:9a0f:4dc7:4bb:8581:d186]:333", err: "", respVal: "2001:cafe:8221:9a0f:4dc7:4bb:8581:d186"},
-			{value: "ho:st:444", err: "address ho:st:444: too many colons in address", respVal: ""},
-		}
-		for _, c := range userCase {
-			value, err := parseSAASHost(c.value)
-			assert.Equal(t, c.respVal, value)
-			if c.err == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.Equal(t, c.err, err.Error())
-			}
-		}
-	})
-
 	t.Run("Parse Platform API Timeout", func(t *testing.T) {
 		t.Parallel()
 
