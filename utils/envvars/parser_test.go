@@ -123,15 +123,15 @@ func TestEnvVarValidator(t *testing.T) {
 		assert.Nil(t, gotWarns)
 	})
 
-	t.Run("SAAS env vars with warnings", func(t *testing.T) {
+	t.Run("PERCONA_TEST_PLATFORM_ADDRESS env vars with warnings", func(t *testing.T) {
 		t.Parallel()
 
 		envs := []string{
-			"PERCONA_TEST_SAAS_HOST=host:333",
+			"PERCONA_TEST_PLATFORM_ADDRESS=https://host:333",
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedWarns := []string{
-			`environment variable "PERCONA_TEST_SAAS_HOST" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
+			`environment variable "PERCONA_TEST_PLATFORM_ADDRESS" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
 		}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
@@ -147,8 +147,9 @@ func TestEnvVarValidator(t *testing.T) {
 			"PERCONA_TEST_AUTH_HOST",
 			"PERCONA_TEST_CHECKS_HOST",
 			"PERCONA_TEST_TELEMETRY_HOST",
+			"PERCONA_TEST_SAAS_HOST",
 		} {
-			expected := fmt.Errorf(`environment variable %q is removed and replaced by "PERCONA_TEST_SAAS_HOST"`, k)
+			expected := fmt.Errorf(`environment variable %q is removed and replaced by "PERCONA_TEST_PLATFORM_ADDRESS"`, k)
 			envs := []string{k + "=host:333"}
 			_, gotErrs, gotWarns := ParseEnvVars(envs)
 			assert.Equal(t, []error{expected}, gotErrs)
