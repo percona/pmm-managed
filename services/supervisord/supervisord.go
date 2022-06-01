@@ -47,6 +47,11 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const (
+	defaultClickhouseDatabase = "pmm"
+	defaultClickhouseAddr     = "127.0.0.1:9000"
+)
+
 // Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
 	configDir         string
@@ -400,12 +405,36 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings, ssoDetails *models.PerconaSSODetails) ([]byte, error) {
+	clickhouseDatabase, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_DATABASE")
+	if !ok {
+		clickhouseDatabase = defaultClickhouseDatabase
+	}
+
+	clickhouseAddr, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_ADDR")
+	if !ok {
+		clickhouseAddr = defaultClickhouseAddr
+	}
+
+	clickhousePoolSize, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_POOL_SIZE")
+	if !ok {
+		clickhousePoolSize = ""
+	}
+
+	clickhouseBlockSize, ok := os.LookupEnv("PERCONA_TEST_PMM_CLICKHOUSE_BLOCK_SIZE")
+	if !ok {
+		clickhouseBlockSize = ""
+	}
+
 	templateParams := map[string]interface{}{
-		"DataRetentionHours": int(settings.DataRetention.Hours()),
-		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
-		"VMAlertFlags":       s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
-		"PerconaTestDbaas":   settings.DBaaS.Enabled,
+		"DataRetentionHours":  int(settings.DataRetention.Hours()),
+		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
+		"VMAlertFlags":        s.vmParams.VMAlertFlags,
+		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
+		"PerconaTestDbaas":    settings.DBaaS.Enabled,
+		"ClickhouseAddr":      clickhouseAddr,
+		"ClickhouseDatabase":  clickhouseDatabase,
+		"ClickhousePoolSize":  clickhousePoolSize,
+		"ClickhouseBlockSize": clickhouseBlockSize,
 	}
 
 	if ssoDetails != nil {
@@ -487,7 +516,7 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	restore := true
 	defer func() {
 		if restore {
-			if err = ioutil.WriteFile(path, oldCfg, 0644); err != nil {
+			if err = ioutil.WriteFile(path, oldCfg, 0o644); err != nil {
 				s.l.Errorf("Failed to restore: %s.", err)
 			}
 			if err = s.reload(name); err != nil {
@@ -497,7 +526,7 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	}()
 
 	// write and reload
-	if err = ioutil.WriteFile(path, cfg, 0644); err != nil {
+	if err = ioutil.WriteFile(path, cfg, 0o644); err != nil {
 		return false, errors.WithStack(err)
 	}
 	if err = s.reload(name); err != nil {
@@ -604,6 +633,8 @@ command =
 		--promscrape.streamParse=true
 		--prometheusDataPath=/srv/prometheus/data
 		--http.pathPrefix=/prometheus
+		--envflag.enable
+		--envflag.prefix=VM_
 user = pmm
 autorestart = true
 autostart = true
@@ -679,6 +710,11 @@ priority = 13
 command =
 	/usr/sbin/percona-qan-api2
 		--data-retention={{ .DataRetentionDays }}
+environment =
+	PERCONA_TEST_PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
+	PERCONA_TEST_PMM_CLICKHOUSE_DATABASE="{{ .ClickhouseDatabase }}",
+{{ if .ClickhousePoolSize }}	PERCONA_TEST_PMM_CLICKHOUSE_POOL_SIZE={{ .ClickhousePoolSize }},{{- end}}
+{{ if .ClickhouseBlockSize }}	PERCONA_TEST_PMM_CLICKHOUSE_BLOCK_SIZE={{ .ClickhouseBlockSize }}{{- end}}
 user = pmm
 autorestart = true
 autostart = true
@@ -709,16 +745,19 @@ command =
         cfg:default.server.domain="{{ .PMMServerAddress }}"
         cfg:default.auth.generic_oauth.enabled=true
         cfg:default.auth.generic_oauth.name="Percona Account"
-        cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.ClientID }}"
-        cfg:default.auth.generic_oauth.client_secret="{{ .PerconaSSODetails.ClientSecret }}"
+        cfg:default.auth.generic_oauth.client_id="{{ .PerconaSSODetails.GrafanaClientID }}"
         cfg:default.auth.generic_oauth.scopes="openid profile email offline_access percona"
         cfg:default.auth.generic_oauth.auth_url="{{ .PerconaSSODetails.IssuerURL }}/authorize"
         cfg:default.auth.generic_oauth.token_url="{{ .PerconaSSODetails.IssuerURL }}/token"
         cfg:default.auth.generic_oauth.api_url="{{ .PerconaSSODetails.IssuerURL }}/userinfo"
 		cfg:default.auth.generic_oauth.role_attribute_path="contains(portal_admin_orgs[*], '{{ .PerconaSSODetails.OrganizationID }}') && 'Admin' || 'Viewer'"
+		cfg:default.auth.generic_oauth.use_pkce="true"
 
 environment=GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"
         {{- end}}
+environment =
+    PERCONA_TEST_PMM_CLICKHOUSE_ADDR="{{ .ClickhouseAddr }}",
+	{{- if .PerconaSSODetails}}GF_AUTH_SIGNOUT_REDIRECT_URL="https://{{ .IssuerDomain }}/login/signout?fromURI=https://{{ .PMMServerAddress }}/graph/login"{{- end}}
 user = grafana
 directory = /usr/share/grafana
 autorestart = true

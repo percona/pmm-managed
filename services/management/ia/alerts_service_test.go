@@ -28,8 +28,10 @@ import (
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -250,7 +252,8 @@ func TestListAlerts(t *testing.T) {
 	const alertsCount = 25
 	mockAlert := &mockAlertManager{}
 	var mockedAlerts []*ammodels.GettableAlert
-	for i := 0; i < alertsCount; i++ {
+
+	for i := 0; i < alertsCount-1; i++ {
 		mockedAlerts = append(mockedAlerts, &ammodels.GettableAlert{
 			Alert: ammodels.Alert{
 				Labels: map[string]string{
@@ -266,7 +269,24 @@ func TestListAlerts(t *testing.T) {
 			UpdatedAt: &now,
 		})
 	}
-	mockAlert.On("GetAlerts", ctx).Return(mockedAlerts, nil)
+
+	// This additional alert emulates the one created by user directly, without IA UI.
+	// Since user added "ia" label, he wants to see alert in IA UI. We want to be sure he will.
+	mockedAlerts = append(mockedAlerts, &ammodels.GettableAlert{
+		Alert: ammodels.Alert{
+			Labels: map[string]string{
+				"ia": "1",
+			},
+		},
+		Fingerprint: pointer.ToString(strconv.Itoa(alertsCount - 1)),
+		Status: &ammodels.AlertStatus{
+			State: pointer.ToString("active"),
+		},
+		StartsAt:  &now,
+		UpdatedAt: &now,
+	})
+
+	mockAlert.On("GetAlerts", ctx, mock.Anything).Return(mockedAlerts, nil)
 
 	tmplSvc, err := NewTemplatesService(db)
 	require.NoError(t, err)
@@ -315,7 +335,7 @@ func TestListAlerts(t *testing.T) {
 
 	t.Run("pagination", func(t *testing.T) {
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 1,
 			},
 		})
@@ -326,7 +346,7 @@ func TestListAlerts(t *testing.T) {
 		assert.EqualValues(t, res.Totals.TotalPages, alertsCount)
 
 		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 10,
 				Index:    2,
 			},
@@ -336,7 +356,6 @@ func TestListAlerts(t *testing.T) {
 		assert.True(t, findAlerts(res.Alerts, "20", "21", "22", "23", "24"), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, alertsCount)
 		assert.EqualValues(t, res.Totals.TotalPages, 3)
-
 	})
 
 	t.Run("fetch more than available", func(t *testing.T) {
@@ -345,7 +364,7 @@ func TestListAlerts(t *testing.T) {
 			expect = append(expect, *m.Fingerprint)
 		}
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: alertsCount * 2,
 			},
 		})
@@ -354,7 +373,7 @@ func TestListAlerts(t *testing.T) {
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 
 		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
-			PageParams: &iav1beta1.PageParams{
+			PageParams: &managementpb.PageParams{
 				PageSize: 1,
 				Index:    alertsCount * 2,
 			},
@@ -363,5 +382,4 @@ func TestListAlerts(t *testing.T) {
 		assert.Len(t, res.Alerts, 0)
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 	})
-
 }

@@ -45,13 +45,14 @@ var (
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
-	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+	pmmAgentVersion *version.Parsed,
+) (*agentpb.SetStateRequest_AgentProcess, error) {
 	tdp := exporter.TemplateDelimiters(service)
 
 	var args []string
 	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
-	// Starting with PMM 2.25.0, we changes the discovering-mode making it to discover all databases.
-	// Until now, discovering mode was not workign properly and was enabled only if mongodb.collstats-colls=
+	// Starting with PMM 2.25.0, we change the discovering-mode making it to discover all databases.
+	// Until now, discovering mode was not working properly and was enabled only if mongodb.collstats-colls=
 	// was specified in the command line.
 	switch {
 	case !pmmAgentVersion.Less(v2_25_99): // >= 2.26
@@ -81,6 +82,8 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
 	}
 
+	args = withLogLevel(args, exporter.LogLevel, pmmAgentVersion)
+
 	sort.Strings(args)
 
 	database := ""
@@ -89,7 +92,6 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	}
 	env := []string{
 		fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, database, tdp)),
-		fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.GetAgentPassword()),
 	}
 
 	res := &agentpb.SetStateRequest_AgentProcess{
@@ -104,7 +106,12 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
 	}
-	return res
+
+	if err := ensureAuthParams(exporter, res, pmmAgentVersion, v2_27_99); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
@@ -118,7 +125,7 @@ func v226Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 		collstatsLimit = exporter.MongoDBOptions.CollectionsLimit
 	}
 
-	collectors := defaultCollectors(collectAll, collstatsLimit)
+	collectors := defaultCollectors(collectAll)
 
 	for _, collector := range exporter.DisabledCollectors {
 		col, ok := collectors[strings.ToLower(collector)]
@@ -215,7 +222,7 @@ func v225Args(exporter *models.Agent, tdp *models.DelimiterPair) []string {
 	return args
 }
 
-func defaultCollectors(collectAll bool, collstatsLimit int32) map[string]collectorArgs {
+func defaultCollectors(collectAll bool) map[string]collectorArgs {
 	return map[string]collectorArgs{
 		"diagnosticdata": {
 			enabled:     true,
@@ -227,7 +234,7 @@ func defaultCollectors(collectAll bool, collstatsLimit int32) map[string]collect
 		},
 		// disabled until we have better information on the resources usage impact
 		"collstats": {
-			enabled:     collectAll && collstatsLimit != 0,
+			enabled:     collectAll,
 			enableParam: "--collector.collstats",
 		},
 		// disabled until we have better information on the resources usage impact
@@ -237,7 +244,7 @@ func defaultCollectors(collectAll bool, collstatsLimit int32) map[string]collect
 		},
 		// disabled until we have better information on the resources usage impact
 		"indexstats": {
-			enabled:     collectAll && collstatsLimit != 0,
+			enabled:     collectAll,
 			enableParam: "--collector.indexstats",
 		},
 		// disabled until we have better information on the resources usage impact

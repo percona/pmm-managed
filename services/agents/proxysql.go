@@ -37,7 +37,8 @@ var (
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
 func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
-	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+	pmmAgentVersion *version.Parsed,
+) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -61,6 +62,8 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 	}
 
 	args = collectors.FilterOutCollectors("-collect.", args, exporter.DisabledCollectors)
+
+	args = withLogLevel(args, exporter.LogLevel, pmmAgentVersion)
 
 	sort.Strings(args)
 

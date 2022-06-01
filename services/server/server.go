@@ -78,6 +78,8 @@ type Server struct {
 	envSettings *models.ChangeSettingsParams
 
 	sshKeyM sync.Mutex
+
+	serverpb.UnimplementedServerServer
 }
 
 type dbaasClient interface {
@@ -393,7 +395,7 @@ func (s *Server) writeUpdateAuthToken(token string) error {
 	a := &pmmUpdateAuth{
 		AuthToken: token,
 	}
-	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600|os.ModeExclusive)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -446,15 +448,14 @@ func (s *Server) convertSettings(settings *models.Settings, connectedToPlatform 
 		SshKey:               settings.SSHKey,
 		AwsPartitions:        settings.AWSPartitions,
 		AlertManagerUrl:      settings.AlertManagerURL,
-		SttEnabled:           settings.SaaS.STTEnabled,
+		SttEnabled:           !settings.SaaS.STTDisabled,
 		DbaasEnabled:         settings.DBaaS.Enabled,
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
 		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
 		BackupManagementEnabled: settings.BackupManagement.Enabled,
-
-		ConnectedToPlatform: connectedToPlatform,
+		ConnectedToPlatform:     connectedToPlatform,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -703,7 +704,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 	// When STT moved from disabled state to enabled force checks download and execution.
 	var sttStarted bool
-	if !oldSettings.SaaS.STTEnabled && newSettings.SaaS.STTEnabled {
+	if oldSettings.SaaS.STTDisabled && !newSettings.SaaS.STTDisabled {
 		sttStarted = true
 		if err := s.checksService.StartChecks(nil); err != nil {
 			s.l.Error(err)
@@ -711,7 +712,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	// When STT moved from enabled state to disabled drop all existing STT alerts.
-	if oldSettings.SaaS.STTEnabled && !newSettings.SaaS.STTEnabled {
+	if !oldSettings.SaaS.STTDisabled && newSettings.SaaS.STTDisabled {
 		s.checksService.CleanupAlerts()
 	}
 
@@ -798,7 +799,7 @@ func (s *Server) UpdateConfigurations(ctx context.Context) error {
 	}
 	ssoDetails, err := models.GetPerconaSSODetails(ctx, s.db.Querier)
 	if err != nil {
-		if !errors.Is(err, reform.ErrNoRows) {
+		if !errors.Is(err, models.ErrNotConnectedToPortal) {
 			return errors.Wrap(err, "failed to get SSO details")
 		}
 	}
@@ -819,7 +820,7 @@ func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 	tempFile.Close()                 //nolint:errcheck
 	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
-	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), 0600); err != nil {
+	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), 0o600); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -849,7 +850,7 @@ func (s *Server) writeSSHKey(sshKey string) error {
 		return errors.WithStack(err)
 	}
 	sshDirPath := path.Join(usr.HomeDir, ".ssh")
-	if err = os.MkdirAll(sshDirPath, 0700); err != nil {
+	if err = os.MkdirAll(sshDirPath, 0o700); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -865,7 +866,7 @@ func (s *Server) writeSSHKey(sshKey string) error {
 		return errors.WithStack(err)
 	}
 	keysPath := path.Join(sshDirPath, "authorized_keys")
-	if err = ioutil.WriteFile(keysPath, []byte(sshKey), 0600); err != nil {
+	if err = ioutil.WriteFile(keysPath, []byte(sshKey), 0o600); err != nil {
 		return errors.WithStack(err)
 	}
 	if err = os.Chown(keysPath, uid, gid); err != nil {

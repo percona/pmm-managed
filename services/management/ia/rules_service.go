@@ -29,6 +29,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -55,6 +56,8 @@ type RulesService struct {
 	vmalert      vmAlert
 	alertManager alertManager
 	rulesPath    string // used for testing
+
+	iav1beta1.UnimplementedRulesServer
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
@@ -313,7 +316,7 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		totalPages++
 	}
 
-	totals := &iav1beta1.PageTotals{
+	totals := &managementpb.PageTotals{
 		TotalItems: int32(totalItems),
 		TotalPages: int32(totalPages),
 	}
@@ -513,6 +516,7 @@ func (s *RulesService) updateConfigurations() {
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 }
+
 func convertModelToParamsDefinitions(definitions models.AlertExprParamsDefinitions) ([]*iav1beta1.ParamDefinition, error) {
 	res := make([]*iav1beta1.ParamDefinition, 0, len(definitions))
 	for _, definition := range definitions {

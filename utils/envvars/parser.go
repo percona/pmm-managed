@@ -88,6 +88,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PERCONA_TEST_VERSION_SERVICE_URL":
 			// skip pmm-managed environment variables that are already handled by kingpin
 			continue
+		case "PERCONA_TEST_PMM_CLICKHOUSE_DATABASE", "PERCONA_TEST_PMM_CLICKHOUSE_ADDR", "PERCONA_TEST_PMM_CLICKHOUSE_BLOCK_SIZE", "PERCONA_TEST_PMM_CLICKHOUSE_POOL_SIZE":
+			// skip env variables for external clickhouse
+			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
@@ -142,6 +145,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
 			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
 
+		case "PMM_PUBLIC_ADDRESS":
+			envSettings.PMMPublicAddress = v
+
 		case envEnableDbaas, envTestDbaas:
 			envSettings.EnableDBaaS, err = strconv.ParseBool(v)
 			if err != nil {
@@ -166,8 +172,23 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				continue
 			}
 
+			// skip Victoria Metric's environment variables
+			if strings.HasPrefix(k, "VM_") {
+				continue
+			}
+
 			// skip supervisord environment variables
 			if strings.HasPrefix(k, "SUPERVISOR_") {
+				continue
+			}
+
+			// skip kubernetes environment variables
+			if strings.HasPrefix(k, "KUBERNETES_") {
+				continue
+			}
+
+			// skip kubernetes monitoring environment variables
+			if strings.HasPrefix(k, "MONITORING_") {
 				continue
 			}
 
