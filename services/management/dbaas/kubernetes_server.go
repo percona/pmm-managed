@@ -364,7 +364,7 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 		})
 
 		if err != nil {
-			return errors.Wrap(err, "cannot stop monitoring")
+			k.l.Warnf("cannot stop monitoring: %s", err)
 		}
 
 		pxcClusters, err := k.dbaasClient.ListPXCClusters(ctx,
