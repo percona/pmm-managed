@@ -137,8 +137,6 @@ func TestDownloadTemplates(t *testing.T) {
 
 	svc, err := NewTemplatesService(db, portalClient)
 	require.NoError(t, err)
-	svc.host = devPortalAddress
-	svc.publicKeys = []string{devPortalPublicKey}
 
 	t.Run("normal", func(t *testing.T) {
 		assert.Empty(t, svc.getTemplates())

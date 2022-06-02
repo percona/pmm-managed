@@ -44,7 +44,6 @@ import (
 	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
-	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/platform"
 )
 
@@ -72,9 +71,6 @@ type TemplatesService struct {
 	portalClient      *platform.Client
 	userTemplatesPath string
 
-	host       string
-	publicKeys []string
-
 	rw        sync.RWMutex
 	templates map[string]templateInfo
 
@@ -90,23 +86,12 @@ func NewTemplatesService(db *reform.DB, portalClient *platform.Client) (*Templat
 		l.Error(err)
 	}
 
-	host, err := envvars.GetPlatformAddress()
-	if err != nil {
-		return nil, err
-	}
-
 	s := &TemplatesService{
 		db:                db,
 		l:                 l,
 		portalClient:      portalClient,
 		userTemplatesPath: templatesDir,
-		host:              host,
 		templates:         make(map[string]templateInfo),
-	}
-
-	if k := envvars.GetPublicKeys(); k != nil {
-		l.Warnf("Public keys changed to %q.", k)
-		s.publicKeys = k
 	}
 
 	return s, nil
