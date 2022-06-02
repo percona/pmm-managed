@@ -465,3 +465,11 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		panic(fmt.Errorf("unhandled Agent type %s", agent.AgentType))
 	}
 }
+
+func SpecifyLogLevel(variant inventorypb.LogLevel) string {
+	if variant == inventorypb.LogLevel_auto {
+		return ""
+	}
+
+	return variant.String()
+}
