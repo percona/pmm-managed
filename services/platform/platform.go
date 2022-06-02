@@ -337,6 +337,9 @@ func (s *Service) GetContactInformation(ctx context.Context, req *platformpb.Get
 	}
 
 	resp, err := s.client.GetContactInformation(ctx, accessToken, ssoDetails.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
 
 	response := &platformpb.GetContactInformationResponse{
 		CustomerSuccess: &platformpb.GetContactInformationResponse_CustomerSuccess{
