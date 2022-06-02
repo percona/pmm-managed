@@ -36,7 +36,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.27
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
 	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
-	github.com/percona/pmm v0.0.0-20220525201549-eda29cad842f
+	github.com/percona/pmm v0.0.0-20220601235657-42d659733aa3
 	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -128,8 +128,8 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200824052919-0d455de96546 // indirect
-	github.com/stretchr/objx v0.3.0 // indirect
-	go.mongodb.org/mongo-driver v1.9.0 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
+	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.opentelemetry.io/otel v1.7.0 // indirect
 	go.opentelemetry.io/otel/trace v1.7.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
