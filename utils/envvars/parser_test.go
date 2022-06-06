@@ -92,6 +92,21 @@ func TestEnvVarValidator(t *testing.T) {
 		assert.Nil(t, gotWarns)
 	})
 
+	t.Run("PMM internal env vars", func(t *testing.T) {
+		t.Parallel()
+
+		envs := []string{
+			"PMM_DEBUG=0",
+			"PMM_ADMIN_PASSWORD=admin",
+		}
+		expectedEnvVars := &models.ChangeSettingsParams{}
+
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
+		assert.Equal(t, gotEnvVars, expectedEnvVars)
+		assert.Nil(t, gotErrs)
+		assert.Nil(t, gotWarns)
+	})
+
 	t.Run("Invalid env variables values", func(t *testing.T) {
 		t.Parallel()
 
