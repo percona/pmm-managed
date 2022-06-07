@@ -70,7 +70,7 @@ func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 }
 
 // Zip creates .zip archive with all logs.
-func (l *Logs) Zip(ctx context.Context, w io.Writer, pprofSettings *pprofUtils.Config) error {
+func (l *Logs) Zip(ctx context.Context, w io.Writer, pprofConfig *pprofUtils.Config) error {
 	start := time.Now()
 	log := logger.Get(ctx).WithField("component", "logs")
 	log.WithField("d", time.Since(start).Seconds()).Info("Starting...")
@@ -81,7 +81,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer, pprofSettings *pprofUtils.C
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 
-	files := l.files(ctx, pprofSettings)
+	files := l.files(ctx, pprofConfig)
 	log.WithField("d", time.Since(start).Seconds()).Infof("Collected %d files.", len(files))
 
 	for _, file := range files {
