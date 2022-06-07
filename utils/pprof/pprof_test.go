@@ -37,7 +37,7 @@ func TestHeap(t *testing.T) {
 		var resB bytes.Buffer
 		_, err = resB.ReadFrom(reader)
 		assert.NoError(t, err)
-		assert.True(t, len(resB.Bytes()) != 0)
+		assert.NotEmpty(t, resB.Bytes())
 	})
 }
 
@@ -47,7 +47,7 @@ func TestProfile(t *testing.T) {
 		profileBytes, err := Profile(1 * time.Second)
 
 		assert.NoError(t, err)
-		assert.True(t, len(profileBytes) != 0)
+		assert.NotEmpty(t, profileBytes)
 
 		// read gzip
 		reader, err := gzip.NewReader(bytes.NewBuffer(profileBytes))
@@ -57,7 +57,7 @@ func TestProfile(t *testing.T) {
 		_, err = resB.ReadFrom(reader)
 		assert.NoError(t, err)
 
-		assert.True(t, len(resB.Bytes()) != 0)
+		assert.NotEmpty(t, resB.Bytes())
 	})
 }
 
@@ -67,6 +67,6 @@ func TestTrace(t *testing.T) {
 		traceBytes, err := Trace(1 * time.Second)
 
 		assert.NoError(t, err)
-		assert.True(t, len(traceBytes) != 0)
+		assert.NotEmpty(t, traceBytes)
 	})
 }

@@ -129,7 +129,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer, pprofSettings *pprofUtils.C
 }
 
 // files reads log/config/pprof files and returns content.
-func (l *Logs) files(ctx context.Context, pprofSettings *pprofUtils.Config) []fileContent {
+func (l *Logs) files(ctx context.Context, pprofConfig *pprofUtils.Config) []fileContent {
 	files := make([]fileContent, 0, 20)
 
 	// add logs
@@ -216,15 +216,15 @@ func (l *Logs) files(ctx context.Context, pprofSettings *pprofUtils.Config) []fi
 	})
 
 	// add pprof
-	if pprofSettings != nil {
-		traceBytes, err := pprofUtils.Trace(pprofSettings.TraceDuration)
+	if pprofConfig != nil {
+		traceBytes, err := pprofUtils.Trace(pprofConfig.TraceDuration)
 		files = append(files, fileContent{
 			Name: "pprof/trace.out",
 			Data: traceBytes,
 			Err:  err,
 		})
 
-		profileBytes, err := pprofUtils.Profile(pprofSettings.ProfileDuration)
+		profileBytes, err := pprofUtils.Profile(pprofConfig.ProfileDuration)
 		files = append(files, fileContent{
 			Name: "pprof/profile.pb.gz",
 			Data: profileBytes,
