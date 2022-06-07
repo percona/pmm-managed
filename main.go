@@ -117,11 +117,6 @@ const (
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	l := logrus.WithField("component", "logs.zip")
 
-	cfg := config.NewService()
-	if err := cfg.Load(); err != nil {
-		l.Panicf("Failed to load config: %+v", err)
-	}
-
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
 		contextTimeout := defaultContextTimeout
 		// increase context timeout if pprof query parameter exist in request
