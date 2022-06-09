@@ -635,6 +635,7 @@ command =
 		--http.pathPrefix=/prometheus
 		--envflag.enable
 		--envflag.prefix=VM_
+		--search.minStalenessInterval=1ms
 user = pmm
 autorestart = true
 autostart = true
