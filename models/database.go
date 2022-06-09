@@ -707,6 +707,14 @@ var databaseSchema = [][]string{
 	61: {
 		`UPDATE settings SET settings = settings #- '{sass, stt_enabled}';`,
 	},
+	62: {
+		`ALTER TABLE agents
+		ADD COLUMN process_exec_path TEXT`,
+	},
+	63: {
+		`ALTER TABLE agents
+			ADD COLUMN log_level VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
@@ -895,7 +903,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false, []string{}); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false, []string{}, nil); err != nil {
 		return err
 	}
 
