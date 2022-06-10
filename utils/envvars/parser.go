@@ -257,7 +257,7 @@ func GetPlatformAddress() (string, error) {
 		return "", errors.Errorf("invalid percona platform address: %s", err)
 	}
 
-	logrus.Infof("Using Percona Portal address %q.", address)
+	logrus.Infof("Using Percona Platform address %q.", address)
 	return address, nil
 }
 
@@ -268,8 +268,8 @@ func GetPlatformInsecure() bool {
 	return insecure
 }
 
-// GetPublicKeys returns public keys used to dowload checks from SaaS.
-func GetPublicKeys() []string {
+// GetPlatformPublicKeys returns public keys used to verify signatures of files downloaded form Percona Portal.
+func GetPlatformPublicKeys() []string {
 	if v := os.Getenv(envPlatformPublicKey); v != "" {
 		return strings.Split(v, ",")
 	}

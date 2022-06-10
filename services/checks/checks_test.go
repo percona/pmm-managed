@@ -43,11 +43,11 @@ import (
 )
 
 const (
-	devPortalAddress   = "https://check-dev.percona.com"
-	devPortalPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
-	testChecksFile     = "../../testdata/checks/checks.yml"
-	issuerURL          = "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
-	vmAddress          = "http://127.0.0.1:9090/prometheus/"
+	devPlatformAddress   = "https://check-dev.percona.com"
+	devPlatformPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
+	testChecksFile       = "../../testdata/checks/checks.yml"
+	issuerURL            = "https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7/v1"
+	vmAddress            = "http://127.0.0.1:9090/prometheus/"
 )
 
 func TestDownloadChecks(t *testing.T) {
@@ -58,10 +58,12 @@ func TestDownloadChecks(t *testing.T) {
 
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-	portalClient, err := platform.NewClient(db)
+	platformClient, err := platform.NewClient(db, devPlatformAddress)
 	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
+
+	s, err := New(db, platformClient, nil, nil, vmAddress)
+	s.platformPublicKeys = []string{devPlatformPublicKey}
+	require.NoError(t, err)
 
 	insertSSODetails := &models.PerconaSSODetailsInsert{
 		IssuerURL:              issuerURL,
@@ -70,9 +72,6 @@ func TestDownloadChecks(t *testing.T) {
 		Scope:                  "percona",
 	}
 	err = models.InsertPerconaSSODetails(db.Querier, insertSSODetails)
-	require.NoError(t, err)
-
-	s, err := New(db, portalClient, nil, nil, vmAddress)
 	require.NoError(t, err)
 
 	t.Run("normal", func(t *testing.T) {
@@ -150,13 +149,11 @@ func TestCollectChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	portalClient, err := platform.NewClient(db)
+	platformClient, err := platform.NewClient(db, devPlatformAddress)
 	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
 	t.Run("collect local checks", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, platformClient, nil, nil, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -180,9 +177,9 @@ func TestCollectChecks(t *testing.T) {
 	})
 
 	t.Run("download checks", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, platformClient, nil, nil, vmAddress)
+		s.platformPublicKeys = []string{devPlatformPublicKey}
 		require.NoError(t, err)
-		s.localChecksFile = testChecksFile
 
 		s.CollectChecks(context.Background())
 		assert.NotEmpty(t, s.checks)
@@ -193,12 +190,8 @@ func TestDisableChecks(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-		portalClient, err := platform.NewClient(db)
-		require.NoError(t, err)
-		portalClient.SetAddress(devPortalAddress)
-		portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -223,12 +216,8 @@ func TestDisableChecks(t *testing.T) {
 	t.Run("disable same check twice", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-		portalClient, err := platform.NewClient(db)
-		require.NoError(t, err)
-		portalClient.SetAddress(devPortalAddress)
-		portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -256,12 +245,8 @@ func TestDisableChecks(t *testing.T) {
 	t.Run("disable unknown check", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-		portalClient, err := platform.NewClient(db)
-		require.NoError(t, err)
-		portalClient.SetAddress(devPortalAddress)
-		portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -281,12 +266,7 @@ func TestEnableChecks(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-		portalClient, err := platform.NewClient(db)
-		require.NoError(t, err)
-		portalClient.SetAddress(devPortalAddress)
-		portalClient.SetPublicKeys([]string{devPortalPublicKey})
-
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -318,12 +298,7 @@ func TestChangeInterval(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-		portalClient, err := platform.NewClient(db)
-		require.NoError(t, err)
-		portalClient.SetAddress(devPortalAddress)
-		portalClient.SetPublicKeys([]string{devPortalPublicKey})
-
-		s, err := New(db, portalClient, nil, &ams, vmAddress)
+		s, err := New(db, nil, nil, &ams, vmAddress)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
@@ -394,13 +369,8 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	portalClient, err := platform.NewClient(db)
-	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
-
 	t.Run("STT enabled", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 
 		results, err := s.GetSecurityCheckResults()
@@ -409,7 +379,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	})
 
 	t.Run("STT disabled", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 
 		settings, err := models.GetSettings(db)
@@ -429,14 +399,10 @@ func TestStartChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	portalClient, err := platform.NewClient(db)
-	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
-
 	t.Run("unknown interval", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
+		s.localChecksFile = testChecksFile
 
 		err = s.runChecksGroup(context.Background(), check.Interval("unknown"))
 		assert.EqualError(t, err, "unknown check interval: unknown")
@@ -446,7 +412,7 @@ func TestStartChecks(t *testing.T) {
 		var ams mockAlertmanagerService
 		ams.On("SendAlerts", mock.Anything, mock.Anything).Return()
 
-		s, err := New(db, portalClient, nil, &ams, vmAddress)
+		s, err := New(db, nil, nil, &ams, vmAddress)
 		require.NoError(t, err)
 
 		s.localChecksFile = testChecksFile
@@ -458,7 +424,7 @@ func TestStartChecks(t *testing.T) {
 	})
 
 	t.Run("stt disabled", func(t *testing.T) {
-		s, err := New(db, portalClient, nil, nil, vmAddress)
+		s, err := New(db, nil, nil, nil, vmAddress)
 		require.NoError(t, err)
 
 		settings, err := models.GetSettings(db)
@@ -612,12 +578,8 @@ func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion str
 func TestFindTargets(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	portalClient, err := platform.NewClient(db)
-	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
-	s, err := New(db, portalClient, nil, nil, vmAddress)
+	s, err := New(db, nil, nil, nil, vmAddress)
 	require.NoError(t, err)
 
 	t.Run("unknown service", func(t *testing.T) {
@@ -702,17 +664,12 @@ func TestGetFailedChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	portalClient, err := platform.NewClient(db)
-	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
-
 	t.Run("no failed check for service", func(t *testing.T) {
 		var ams mockAlertmanagerService
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{}, nil)
 
-		s, err := New(db, portalClient, nil, &ams, vmAddress)
+		s, err := New(db, nil, nil, &ams, vmAddress)
 		require.NoError(t, err)
 
 		results, err := s.GetChecksResults(context.Background(), "test_svc")
@@ -767,7 +724,7 @@ func TestGetFailedChecks(t *testing.T) {
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return([]*ammodels.GettableAlert{&testAlert}, nil)
 
-		s, err := New(db, portalClient, nil, &ams, vmAddress)
+		s, err := New(db, nil, nil, &ams, vmAddress)
 		require.NoError(t, err)
 
 		response, err := s.GetChecksResults(ctx, "test_svc")
@@ -780,7 +737,7 @@ func TestGetFailedChecks(t *testing.T) {
 		ctx := context.Background()
 		ams.On("GetAlerts", ctx, mock.Anything).Return(nil, services.ErrSTTDisabled)
 
-		s, err := New(db, portalClient, nil, &ams, vmAddress)
+		s, err := New(db, nil, nil, &ams, vmAddress)
 		require.NoError(t, err)
 
 		settings, err := models.GetSettings(db)

@@ -44,7 +44,9 @@ import (
 	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
+	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/platform"
+	"github.com/percona/pmm-managed/utils/signatures"
 )
 
 const (
@@ -66,10 +68,11 @@ type templateInfo struct {
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
-	db                *reform.DB
-	l                 *logrus.Entry
-	portalClient      *platform.Client
-	userTemplatesPath string
+	db                 *reform.DB
+	l                  *logrus.Entry
+	platformClient     *platform.Client
+	userTemplatesPath  string
+	platformPublicKeys []string
 
 	rw        sync.RWMutex
 	templates map[string]templateInfo
@@ -78,7 +81,7 @@ type TemplatesService struct {
 }
 
 // NewTemplatesService creates a new TemplatesService.
-func NewTemplatesService(db *reform.DB, portalClient *platform.Client) (*TemplatesService, error) {
+func NewTemplatesService(db *reform.DB, platformClient *platform.Client) (*TemplatesService, error) {
 	l := logrus.WithField("component", "management/ia/templates")
 
 	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
@@ -86,12 +89,19 @@ func NewTemplatesService(db *reform.DB, portalClient *platform.Client) (*Templat
 		l.Error(err)
 	}
 
+	var platformPublicKeys []string
+	if k := envvars.GetPlatformPublicKeys(); k != nil {
+		l.Warnf("Percona Platform public keys changed to %q.", k)
+		platformPublicKeys = k
+	}
+
 	s := &TemplatesService{
-		db:                db,
-		l:                 l,
-		portalClient:      portalClient,
-		userTemplatesPath: templatesDir,
-		templates:         make(map[string]templateInfo),
+		db:                 db,
+		l:                  l,
+		platformClient:     platformClient,
+		userTemplatesPath:  templatesDir,
+		platformPublicKeys: platformPublicKeys,
+		templates:          make(map[string]templateInfo),
 	}
 
 	return s, nil
@@ -384,10 +394,25 @@ func (s *TemplatesService) downloadTemplates(ctx context.Context) ([]alert.Templ
 	nCtx, cancel := context.WithTimeout(ctx, portalRequestTimeout)
 	defer cancel()
 
-	templates, err := s.portalClient.GetTemplates(nCtx)
+	resp, err := s.platformClient.GetTemplates(nCtx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.platformPublicKeys); err != nil {
+		return nil, err
+	}
+
+	// be liberal about files from SaaS for smooth transition to future versions
+	params := &alert.ParseParams{
+		DisallowUnknownFields:    false,
+		DisallowInvalidTemplates: false,
+	}
+	templates, err := alert.Parse(strings.NewReader(resp.File), params)
+	if err != nil {
+		return nil, err
+	}
+
 	return templates, nil
 }
 

@@ -46,11 +46,8 @@ func TestCreateAlertRule(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-	portalClient, err := platform.NewClient(db)
+	platformClient, err := platform.NewClient(db, devPlatformAddress)
 	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
 	// Enable IA
 	settings, err := models.GetSettings(db)
@@ -78,8 +75,9 @@ func TestCreateAlertRule(t *testing.T) {
 	channelID := respC.ChannelId
 
 	// Load test templates
-	templates, err := NewTemplatesService(db, portalClient)
+	templates, err := NewTemplatesService(db, platformClient)
 	require.NoError(t, err)
+	templates.platformPublicKeys = []string{devPlatformPublicKey}
 	templates.userTemplatesPath = testTemplates2
 	templates.CollectTemplates(ctx)
 

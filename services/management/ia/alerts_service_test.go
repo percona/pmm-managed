@@ -227,11 +227,8 @@ func TestListAlerts(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-	portalClient, err := platform.NewClient(db)
+	platformClient, err := platform.NewClient(db, devPlatformAddress)
 	require.NoError(t, err)
-	portalClient.SetAddress(devPortalAddress)
-	portalClient.SetPublicKeys([]string{devPortalPublicKey})
 
 	q := db.Querier
 	now := strfmt.DateTime(time.Now())
@@ -294,7 +291,8 @@ func TestListAlerts(t *testing.T) {
 
 	mockAlert.On("GetAlerts", ctx, mock.Anything).Return(mockedAlerts, nil)
 
-	tmplSvc, err := NewTemplatesService(db, portalClient)
+	tmplSvc, err := NewTemplatesService(db, platformClient)
+	tmplSvc.platformPublicKeys = []string{devPlatformPublicKey}
 	require.NoError(t, err)
 	tmplSvc.CollectTemplates(ctx)
 	svc := NewAlertsService(db, mockAlert, tmplSvc)

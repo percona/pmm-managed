@@ -93,6 +93,7 @@ import (
 	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/services/vmalert"
 	"github.com/percona/pmm-managed/utils/clean"
+	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 	platformClient "github.com/percona/pmm-managed/utils/platform"
@@ -699,12 +700,17 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
 
-	portalClient, err := platformClient.NewClient(db)
+	platformAddress, err := envvars.GetPlatformAddress()
+	if err != nil {
+		l.Fatal(err)
+	}
+
+	platformClient, err := platformClient.NewClient(db, platformAddress)
 	if err != nil {
 		l.Fatalf("Could not create Percona Portal client: %s", err)
 	}
 
-	telemetry, err := telemetry.NewService(db, portalClient, version.Version, cfg.Config.Services.Telemetry)
+	telemetry, err := telemetry.NewService(db, platformClient, version.Version, cfg.Config.Services.Telemetry)
 	if err != nil {
 		l.Fatalf("Could not create telemetry service: %s", err)
 	}
@@ -719,7 +725,7 @@ func main() {
 
 	actionsService := agents.NewActionsService(agentsRegistry)
 
-	checksService, err := checks.New(db, portalClient, actionsService, alertManager, *victoriaMetricsURLF)
+	checksService, err := checks.New(db, platformClient, actionsService, alertManager, *victoriaMetricsURLF)
 	if err != nil {
 		l.Fatalf("Could not create checks service: %s", err)
 	}
@@ -727,7 +733,7 @@ func main() {
 	prom.MustRegister(checksService)
 
 	// Integrated alerts services
-	templatesService, err := ia.NewTemplatesService(db, portalClient)
+	templatesService, err := ia.NewTemplatesService(db, platformClient)
 	if err != nil {
 		l.Fatalf("Could not create templates service: %s", err)
 	}
@@ -920,7 +926,7 @@ func main() {
 			&gRPCServerDeps{
 				db:                   db,
 				vmdb:                 vmdb,
-				portalClient:         portalClient,
+				portalClient:         platformClient,
 				server:               server,
 				agentsRegistry:       agentsRegistry,
 				handler:              agentsHandler,

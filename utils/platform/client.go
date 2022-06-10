@@ -25,12 +25,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
-	"github.com/percona-platform/saas/pkg/alert"
-	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -41,7 +38,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
-	"github.com/percona/pmm-managed/utils/signatures"
 )
 
 // Client is HTTP Percona Platform client.
@@ -49,35 +45,22 @@ import (
 type Client struct {
 	db *reform.DB
 
-	address    string
-	l          *logrus.Entry
-	client     http.Client
-	publicKeys []string
+	address string
+	l       *logrus.Entry
+	client  http.Client
 }
 
 // NewClient creates new Percona Platform client.
-func NewClient(db *reform.DB) (*Client, error) {
+func NewClient(db *reform.DB, address string) (*Client, error) {
 	l := logrus.WithField("component", "portal client")
-
-	address, err := envvars.GetPlatformAddress()
-	if err != nil {
-		return nil, err
-	}
 
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.InsecureSkipVerify = envvars.GetPlatformInsecure()
 
-	var publicKeys []string
-	if k := envvars.GetPublicKeys(); k != nil {
-		l.Warnf("Public keys changed to %q.", k)
-		publicKeys = k
-	}
-
 	return &Client{
-		db:         db,
-		l:          l,
-		address:    address,
-		publicKeys: publicKeys,
+		db:      db,
+		l:       l,
+		address: address,
 		client: http.Client{
 			Timeout: envvars.GetPlatformAPITimeout(l),
 			Transport: &http.Transport{
@@ -87,18 +70,8 @@ func NewClient(db *reform.DB) (*Client, error) {
 	}, nil
 }
 
-// SetAddress overrides Percona Platform address.
-func (c *Client) SetAddress(address string) {
-	c.address = address
-}
-
-// SetPublicKeys overrides Percona Platform public keys.
-func (c *Client) SetPublicKeys(keys []string) {
-	c.publicKeys = keys
-}
-
 // GetChecks download checks from Percona Platform. It also validates content and checks signatures.
-func (c *Client) GetChecks(ctx context.Context) ([]check.Check, error) {
+func (c *Client) GetChecks(ctx context.Context) (*api.GetAllChecksResponse, error) {
 	const path = "/v1/check/GetAllChecks"
 
 	var accessToken string
@@ -112,31 +85,16 @@ func (c *Client) GetChecks(ctx context.Context) ([]check.Check, error) {
 		return nil, errors.Wrap(err, "failed to download checks")
 	}
 
-	var resp *api.GetAllChecksResponse
+	var resp api.GetAllChecksResponse
 	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
 		return nil, err
 	}
 
-	if err = signatures.Verify(c.l, resp.File, resp.Signatures, c.publicKeys); err != nil {
-		return nil, err
-	}
-
-	// be liberal about files from SaaS for smooth transition to future versions
-	params := &check.ParseParams{
-		DisallowUnknownFields: false,
-		DisallowInvalidChecks: false,
-	}
-
-	checks, err := check.Parse(strings.NewReader(resp.File), params)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return checks, nil
+	return &resp, nil
 }
 
 // GetTemplates download templates from Percona Platform. It also validates content and checks signatures.
-func (c *Client) GetTemplates(ctx context.Context) ([]alert.Template, error) {
+func (c *Client) GetTemplates(ctx context.Context) (*api.GetAllAlertRuleTemplatesResponse, error) {
 	const path = "/v1/check/GetAllAlertRuleTemplates"
 
 	var accessToken string
@@ -150,26 +108,12 @@ func (c *Client) GetTemplates(ctx context.Context) ([]alert.Template, error) {
 		return nil, errors.Wrap(err, "failed to download checks")
 	}
 
-	var resp *api.GetAllAlertRuleTemplatesResponse
+	var resp api.GetAllAlertRuleTemplatesResponse
 	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
 		return nil, err
 	}
 
-	if err = signatures.Verify(c.l, resp.File, resp.Signatures, c.publicKeys); err != nil {
-		return nil, err
-	}
-
-	// be liberal about files from SaaS for smooth transition to future versions
-	params := &alert.ParseParams{
-		DisallowUnknownFields:    false,
-		DisallowInvalidTemplates: false,
-	}
-	templates, err := alert.Parse(strings.NewReader(resp.File), params)
-	if err != nil {
-		return nil, err
-	}
-
-	return templates, nil
+	return &resp, nil
 }
 
 // SendTelemetry sends telemetry data to Percona Platform.

@@ -47,7 +47,9 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/platform"
+	"github.com/percona/pmm-managed/utils/signatures"
 )
 
 const (
@@ -86,17 +88,18 @@ var (
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
-	portalClient        *platform.Client
+	platformClient      *platform.Client
 	agentsRegistry      agentsRegistry
 	alertmanagerService alertmanagerService
 	db                  *reform.DB
 	alertsRegistry      *registry
 	vmClient            v1.API
 
-	l               *logrus.Entry
-	startDelay      time.Duration
-	resendInterval  time.Duration
-	localChecksFile string // For testing
+	l                  *logrus.Entry
+	startDelay         time.Duration
+	resendInterval     time.Duration
+	platformPublicKeys []string
+	localChecksFile    string // For testing
 
 	cm     sync.Mutex
 	checks map[string]check.Check
@@ -111,7 +114,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(db *reform.DB, portalClient *platform.Client, agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, VMAddress string) (*Service, error) {
+func New(db *reform.DB, platformClient *platform.Client, agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, VMAddress string) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
 	resendInterval := defaultResendInterval
@@ -125,6 +128,12 @@ func New(db *reform.DB, portalClient *platform.Client, agentsRegistry agentsRegi
 		return nil, err
 	}
 
+	var platformPublicKeys []string
+	if k := envvars.GetPlatformPublicKeys(); k != nil {
+		l.Warnf("Percona Platform public keys changed to %q.", k)
+		platformPublicKeys = k
+	}
+
 	s := &Service{
 		db:                  db,
 		agentsRegistry:      agentsRegistry,
@@ -132,11 +141,12 @@ func New(db *reform.DB, portalClient *platform.Client, agentsRegistry agentsRegi
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 		vmClient:            v1.NewAPI(vmClient),
 
-		l:               l,
-		portalClient:    portalClient,
-		startDelay:      defaultStartDelay,
-		resendInterval:  resendInterval,
-		localChecksFile: os.Getenv(envCheckFile),
+		l:                  l,
+		platformClient:     platformClient,
+		startDelay:         defaultStartDelay,
+		resendInterval:     resendInterval,
+		platformPublicKeys: platformPublicKeys,
+		localChecksFile:    os.Getenv(envCheckFile),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -1410,7 +1420,22 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	nCtx, cancel := context.WithTimeout(ctx, portalRequestTimeout)
 	defer cancel()
 
-	checks, err := s.portalClient.GetChecks(nCtx)
+	resp, err := s.platformClient.GetChecks(nCtx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.platformPublicKeys); err != nil {
+		return nil, err
+	}
+
+	// be liberal about files from SaaS for smooth transition to future versions
+	params := &check.ParseParams{
+		DisallowUnknownFields: false,
+		DisallowInvalidChecks: false,
+	}
+
+	checks, err := check.Parse(strings.NewReader(resp.File), params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
