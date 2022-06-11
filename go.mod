@@ -4,6 +4,7 @@ go 1.18
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
+// replace github.com/percona/pmm => ../pmm
 // replace github.com/percona-platform/saas => ../saas
 // replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
@@ -14,7 +15,7 @@ go 1.18
 
 require (
 	github.com/AlekSi/pointer v1.2.0
-	github.com/Azure/azure-sdk-for-go v64.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.27
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/ClickHouse/clickhouse-go/v2 v2.0.14
@@ -36,7 +37,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.27
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
 	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
-	github.com/percona/pmm v0.0.0-20220607205648-09f121d3db4b
+	github.com/percona/pmm v0.0.0-20220611202732-d62fa290c974
 	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -138,7 +139,7 @@ require (
 	golang.org/x/tools v0.1.9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	gopkg.in/ini.v1 v1.66.4 // indirect
+	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
