@@ -120,9 +120,12 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
 		contextTimeout := defaultContextTimeout
 		// increase context timeout if pprof query parameter exist in request
-		pprofQueryParameter, _ := strconv.Atoi(req.FormValue("pprof"))
+		pprofQueryParameter, err := strconv.ParseBool(req.FormValue("pprof"))
+		if err != nil {
+			l.Debug("Unable to read 'pprof' query param. Using default: pprof=false")
+		}
 		var pprofConfig *pprof.Config
-		if pprofQueryParameter > 0 {
+		if pprofQueryParameter {
 			contextTimeout += pProfProfileDuration + pProfTraceDuration
 			pprofConfig = &pprof.Config{
 				ProfileDuration: pProfProfileDuration,

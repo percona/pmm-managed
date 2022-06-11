@@ -28,7 +28,6 @@ import (
 
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/telemetry"
-	"github.com/percona/pmm-managed/utils/pprof"
 )
 
 const (
@@ -50,7 +49,6 @@ type Config struct {
 	Services struct {
 		Platform  platform.Config         `yaml:"platform"`
 		Telemetry telemetry.ServiceConfig `yaml:"telemetry"`
-		Pprof     pprof.Config            `yaml:"pprof"`
 	} `yaml:"services"`
 }
 
@@ -96,7 +94,6 @@ func (s *Service) Load() error {
 	if err := cfg.Services.Telemetry.Init(s.l); err != nil {
 		return err
 	}
-	cfg.Services.Pprof.Init()
 	s.Config = cfg
 
 	return nil

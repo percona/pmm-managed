@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -217,26 +218,41 @@ func (l *Logs) files(ctx context.Context, pprofConfig *pprofUtils.Config) []file
 
 	// add pprof
 	if pprofConfig != nil {
-		traceBytes, err := pprofUtils.Trace(pprofConfig.TraceDuration)
-		files = append(files, fileContent{
-			Name: "pprof/trace.out",
-			Data: traceBytes,
-			Err:  err,
-		})
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			traceBytes, err := pprofUtils.Trace(pprofConfig.TraceDuration)
+			files = append(files, fileContent{
+				Name: "pprof/trace.out",
+				Data: traceBytes,
+				Err:  err,
+			})
+		}()
 
-		profileBytes, err := pprofUtils.Profile(pprofConfig.ProfileDuration)
-		files = append(files, fileContent{
-			Name: "pprof/profile.pb.gz",
-			Data: profileBytes,
-			Err:  err,
-		})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			profileBytes, err := pprofUtils.Profile(pprofConfig.ProfileDuration)
+			files = append(files, fileContent{
+				Name: "pprof/profile.pb.gz",
+				Data: profileBytes,
+				Err:  err,
+			})
+		}()
 
-		heapBytes, err := pprofUtils.Heap(true)
-		files = append(files, fileContent{
-			Name: "pprof/heap.pb.gz",
-			Data: heapBytes,
-			Err:  err,
-		})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			heapBytes, err := pprofUtils.Heap(true)
+			files = append(files, fileContent{
+				Name: "pprof/heap.pb.gz",
+				Data: heapBytes,
+				Err:  err,
+			})
+		}()
+
+		wg.Wait()
 	}
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
