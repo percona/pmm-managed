@@ -29,16 +29,15 @@ import (
 	"time"
 
 	"github.com/go-openapi/runtime"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	httptransport "github.com/go-openapi/runtime/client"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/utils/tlsconfig"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -106,7 +105,6 @@ func establishPostgresConnection(t *testing.T, username, password string) bool {
 
 func getBaseURL(serverURL string) (*url.URL, error) {
 	baseURL, err := url.Parse(serverURL)
-
 	if err != nil {
 		logrus.Warnf("Failed to parse PMM Server URL: %s.", err)
 		return nil, err
@@ -127,7 +125,6 @@ func getBaseURL(serverURL string) (*url.URL, error) {
 
 func initClients(serverURL string) error {
 	url, err := getBaseURL(serverURL)
-
 	if err != nil {
 		return err
 	}
@@ -139,7 +136,6 @@ func initClients(serverURL string) error {
 }
 
 func init() {
-
 	var serverURL string
 
 	flag.StringVar(&serverURL, "pmm.server-url", "https://admin:admin@localhost/", "PMM Server URL [PMM_SERVER_URL].")
@@ -212,7 +208,6 @@ func Transport(baseURL *url.URL, insecureTLS bool) *httptransport.Runtime {
 
 func getPMMAgentForDBConnection() (string, string) {
 	agentListResponse, err := inventoryClient.Default.Agents.ListAgents(nil)
-
 	if err != nil {
 		logrus.Fatalf("Failed to get list of agents: %s", err.Error())
 	}
