@@ -38,7 +38,7 @@ require (
 	github.com/percona-platform/dbaas-api v0.0.0-20220110092915-5aacd784d472
 	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
 	github.com/percona/pmm v0.0.0-20220613185940-593b9a167d9f
-	github.com/percona/promconfig v0.2.4-0.20211110115058-98687f586f54
+	github.com/percona/promconfig v0.2.5-0.20220614151255-5619997cf14d
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/alertmanager v0.24.0
