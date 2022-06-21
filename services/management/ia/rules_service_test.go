@@ -37,6 +37,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
+	"github.com/percona/pmm-managed/utils/platform"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
@@ -45,6 +46,8 @@ func TestCreateAlertRule(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	platformClient, err := platform.NewClient(db, devPlatformAddress)
+	require.NoError(t, err)
 
 	// Enable IA
 	settings, err := models.GetSettings(db)
@@ -72,8 +75,9 @@ func TestCreateAlertRule(t *testing.T) {
 	channelID := respC.ChannelId
 
 	// Load test templates
-	templates, err := NewTemplatesService(db)
+	templates, err := NewTemplatesService(db, platformClient)
 	require.NoError(t, err)
+	templates.platformPublicKeys = []string{devPlatformPublicKey}
 	templates.userTemplatesPath = testTemplates2
 	templates.CollectTemplates(ctx)
 
