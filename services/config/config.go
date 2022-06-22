@@ -94,7 +94,6 @@ func (s *Service) Load() error {
 	if err := cfg.Services.Telemetry.Init(s.l); err != nil {
 		return err
 	}
-
 	s.Config = cfg
 
 	return nil
