@@ -2,9 +2,25 @@
 version: '3.7'
 
 services:
+  pmm-client:
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-client:dev-latest}
+    container_name: pmm-agent_pmm-client
+    depends_on:
+      - pmm-server
+    environment:
+      - PMM_AGENT_CONFIG_FILE=pmm-agent.yml
+      - PMM_AGENT_SERVER_USERNAME=admin
+      - PMM_AGENT_SERVER_PASSWORD=admin
+      - PMM_AGENT_SERVER_ADDRESS=pmm-server:443
+      - PMM_AGENT_SERVER_INSECURE_TLS=true
+    volumes:
+      - ./setup.sh:/setup.sh
+    entrypoint: ["/setup.sh"]
+
   pmm-server:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
     container_name: pmm-agent_pmm-server
+    hostname: pmm-server
     ports:
       - 127.0.0.1:80:80
       - 127.0.0.1:443:443
@@ -60,6 +76,7 @@ services:
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:11}
     container_name: pmm-agent_postgres
+    hostname: pmm-agent_postgres
     command: >
       -c shared_preload_libraries=pg_stat_statements
       -c track_activity_query_size=2048
